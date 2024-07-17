@@ -1,0 +1,24 @@
+--- a/net/minecraft/stats/StatsCounter.java
++++ b/net/minecraft/stats/StatsCounter.java
+@@ -14,11 +_,20 @@
+ 
+     public void increment(Player p_13024_, Stat<?> p_13025_, int p_13026_) {
+         int i = (int)Math.min((long)this.getValue(p_13025_) + (long)p_13026_, 2147483647L);
++
++        // CraftBukkit start - fire Statistic events
++        org.bukkit.event.Cancellable cancellable = org.bukkit.craftbukkit.event.CraftEventFactory.handleStatisticsIncrease(p_13024_, p_13025_, this.getValue(p_13025_), i);
++        if (cancellable != null && cancellable.isCancelled()) {
++            return;
++        }
++        // CraftBukkit end
++
+         this.setValue(p_13024_, p_13025_, i);
+     }
+ 
+     public void setValue(Player p_13020_, Stat<?> p_13021_, int p_13022_) {
+-        this.stats.put(p_13021_, p_13022_);
++        net.neoforged.neoforge.event.StatAwardEvent event = net.neoforged.neoforge.event.EventHooks.onStatAward(p_13020_, p_13021_,p_13022_);
++        if (!event.isCanceled()) this.stats.put(event.getStat(), event.getValue());
+     }
+ 
+     public <T> int getValue(StatType<T> p_13018_, T p_13019_) {

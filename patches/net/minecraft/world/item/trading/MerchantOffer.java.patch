@@ -1,0 +1,34 @@
+--- a/net/minecraft/world/item/trading/MerchantOffer.java
++++ b/net/minecraft/world/item/trading/MerchantOffer.java
+@@ -39,6 +_,18 @@
+     public float priceMultiplier;
+     public int xp;
+ 
++    // CraftBukkit start
++    private org.bukkit.craftbukkit.inventory.CraftMerchantRecipe bukkitHandle;
++    public org.bukkit.craftbukkit.inventory.CraftMerchantRecipe asBukkit() {
++        return (bukkitHandle == null) ? bukkitHandle = new org.bukkit.craftbukkit.inventory.CraftMerchantRecipe(this) : bukkitHandle;
++    }
++
++    public MerchantOffer(ItemCost baseCostA, Optional<ItemCost> costB, ItemStack result, int uses, int maxUses, int experience, float priceMultiplier, int demand, org.bukkit.craftbukkit.inventory.CraftMerchantRecipe bukkit) {
++        this(baseCostA, costB, result, uses, maxUses, experience, priceMultiplier, demand);
++        this.bukkitHandle = bukkit;
++    }
++    // CraftBukkit end
++
+     private MerchantOffer(
+         ItemCost p_330734_,
+         Optional<ItemCost> p_331500_,
+@@ -206,7 +_,11 @@
+         if (!this.satisfiedBy(p_45362_, p_45363_)) {
+             return false;
+         } else {
+-            p_45362_.shrink(this.getCostA().getCount());
++            // CraftBukkit start
++            if (!this.getCostA().isEmpty()) {
++                p_45363_.shrink(this.getCostA().getCount());
++            }
++            // CraftBukkit end
+             if (!this.getCostB().isEmpty()) {
+                 p_45363_.shrink(this.getCostB().getCount());
+             }

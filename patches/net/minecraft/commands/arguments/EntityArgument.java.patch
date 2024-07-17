@@ -1,0 +1,28 @@
+--- a/net/minecraft/commands/arguments/EntityArgument.java
++++ b/net/minecraft/commands/arguments/EntityArgument.java
+@@ -95,9 +_,15 @@
+     }
+ 
+     public EntitySelector parse(StringReader p_91451_) throws CommandSyntaxException {
++        // CraftBukkit start
++        return parse(p_91451_, false);
++    }
++
++    public EntitySelector parse(StringReader p_91451_, boolean overridePermissions) throws CommandSyntaxException {
++        // CraftBukkit end
+         int i = 0;
+         EntitySelectorParser entityselectorparser = new EntitySelectorParser(p_91451_);
+-        EntitySelector entityselector = entityselectorparser.parse();
++        EntitySelector entityselector = entityselectorparser.parse(overridePermissions); // CraftBukkit
+         if (entityselector.getMaxResults() > 1 && this.single) {
+             if (this.playersOnly) {
+                 p_91451_.setCursor(0);
+@@ -119,7 +_,7 @@
+         if (p_91482_.getSource() instanceof SharedSuggestionProvider sharedsuggestionprovider) {
+             StringReader stringreader = new StringReader(p_91483_.getInput());
+             stringreader.setCursor(p_91483_.getStart());
+-            EntitySelectorParser entityselectorparser = new EntitySelectorParser(stringreader, sharedsuggestionprovider.hasPermission(2));
++            EntitySelectorParser entityselectorparser = new EntitySelectorParser(stringreader, net.neoforged.neoforge.common.CommonHooks.canUseEntitySelectors(sharedsuggestionprovider));
+ 
+             try {
+                 entityselectorparser.parse();
