@@ -23,32 +23,23 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.util.Unit;
 import net.minecraft.world.Container;
-import net.minecraft.world.IInventory;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
-import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityAreaEffectCloud;
-import net.minecraft.world.entity.EntityLiving;
-import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.animal.AbstractFish;
 import net.minecraft.world.entity.animal.AbstractGolem;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.WaterAnimal;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.monster.EntityIllagerWizard;
-import net.minecraft.world.entity.monster.EntityStrider;
 import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.monster.Slime;
-import net.minecraft.world.entity.monster.piglin.EntityPiglin;
+import net.minecraft.world.entity.monster.SpellcasterIllager;
 import net.minecraft.world.entity.npc.Npc;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.EntityFireworks;
-import net.minecraft.world.entity.projectile.IProjectile;
-import net.minecraft.world.entity.raid.EntityRaider;
+import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.CraftingContainer;
@@ -57,30 +48,26 @@ import net.minecraft.world.inventory.RecipeBookType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
-import net.minecraft.world.level.ChunkCoordIntPair;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
-import net.minecraft.world.level.World;
-import net.minecraft.world.level.block.entity.TileEntitySign;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.BlockPropertyInstrument;
+import net.minecraft.world.level.block.entity.SignBlockEntity;
+import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
+import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.LootTableInfo;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParameters;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
-import net.minecraft.world.phys.MovingObjectPositionBlock;
-import net.minecraft.world.phys.MovingObjectPositionEntity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.phys.Vec3D;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Statistic.Type;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.Sign;
 import org.bukkit.block.sign.Side;
 import org.bukkit.craftbukkit.CraftChunk;
@@ -124,6 +111,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Pig;
 import org.bukkit.entity.PigZombie;
 import org.bukkit.entity.Piglin;
+import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.Raider;
 import org.bukkit.entity.Spellcaster;
@@ -287,7 +275,7 @@ public class CraftEventFactory {
     /**
      * PlayerSignOpenEvent
      */
-    public static boolean callPlayerSignOpenEvent(net.minecraft.world.entity.player.Player player, TileEntitySign tileEntitySign, boolean front, PlayerSignOpenEvent.Cause cause) {
+    public static boolean callPlayerSignOpenEvent(net.minecraft.world.entity.player.Player player, SignBlockEntity tileEntitySign, boolean front, PlayerSignOpenEvent.Cause cause) {
         final Block block = CraftBlock.at(tileEntitySign.getLevel(), tileEntitySign.getBlockPos());
         final Sign sign = (Sign) CraftBlockStates.getBlockState(block);
         final Side side = (front) ? Side.FRONT : Side.BACK;
@@ -306,10 +294,10 @@ public class CraftEventFactory {
     /**
      * PlayerBedEnterEvent
      */
-    public static Either<Player.BedSleepingProblem, Unit> callPlayerBedEnterEvent(net.minecraft.world.entity.player.Player player, BlockPos bed, Either<Player.BedSleepingProblem, Unit> nmsBedResult) {
-        BedEnterResult bedEnterResult = nmsBedResult.mapBoth(new Function<Player.BedSleepingProblem, BedEnterResult>() {
+    public static Either<net.minecraft.world.entity.player.Player.BedSleepingProblem, Unit> callPlayerBedEnterEvent(net.minecraft.world.entity.player.Player player, BlockPos bed, Either<net.minecraft.world.entity.player.Player.BedSleepingProblem, Unit> nmsBedResult) {
+        BedEnterResult bedEnterResult = nmsBedResult.mapBoth(new Function<net.minecraft.world.entity.player.Player.BedSleepingProblem, BedEnterResult>() {
             @Override
-            public BedEnterResult apply(Player.BedSleepingProblem t) {
+            public BedEnterResult apply(net.minecraft.world.entity.player.Player.BedSleepingProblem t) {
                 switch (t) {
                     case NOT_POSSIBLE_HERE:
                         return BedEnterResult.NOT_POSSIBLE_HERE;
@@ -332,7 +320,7 @@ public class CraftEventFactory {
         if (result == Result.ALLOW) {
             return Either.right(Unit.INSTANCE);
         } else if (result == Result.DENY) {
-            return Either.left(Player.BedSleepingProblem.OTHER_PROBLEM);
+            return Either.left(net.minecraft.world.entity.player.Player.BedSleepingProblem.OTHER_PROBLEM);
         }
 
         return nmsBedResult;
@@ -837,7 +825,7 @@ public class CraftEventFactory {
     /**
      * BlockFadeEvent
      */
-    public static BlockFadeEvent callBlockFadeEvent(LevelAccessor world, BlockPos pos, BlockState newBlock) {
+    public static BlockFadeEvent callBlockFadeEvent(LevelAccessor world, BlockPos pos, net.minecraft.world.level.block.state.BlockState newBlock) {
         CraftBlockState state = CraftBlockStates.getBlockState(world, pos);
         state.setData(newBlock);
 
@@ -846,7 +834,7 @@ public class CraftEventFactory {
         return event;
     }
 
-    public static boolean handleMoistureChangeEvent(Level world, BlockPos pos, BlockState newBlock, int flag) {
+    public static boolean handleMoistureChangeEvent(Level world, BlockPos pos, net.minecraft.world.level.block.state.BlockState newBlock, int flag) {
         CraftBlockState state = CraftBlockStates.getBlockState(world, pos, flag);
         state.setData(newBlock);
 
@@ -859,13 +847,13 @@ public class CraftEventFactory {
         return !event.isCancelled();
     }
 
-    public static boolean handleBlockSpreadEvent(Level world, BlockPos source, BlockPos target, BlockState block) {
+    public static boolean handleBlockSpreadEvent(Level world, BlockPos source, BlockPos target, net.minecraft.world.level.block.state.BlockState block) {
         return handleBlockSpreadEvent(world, source, target, block, 2);
     }
 
     public static BlockPos sourceBlockOverride = null; // SPIGOT-7068: Add source block override, not the most elegant way but better than passing down a BlockPos up to five methods deep.
 
-    public static boolean handleBlockSpreadEvent(LevelAccessor world, BlockPos source, BlockPos target, BlockState block, int flag) {
+    public static boolean handleBlockSpreadEvent(LevelAccessor world, BlockPos source, BlockPos target, net.minecraft.world.level.block.state.BlockState block, int flag) {
         // Suppress during worldgen
         if (!(world instanceof Level)) {
             world.setBlock(target, block, flag);
@@ -960,7 +948,7 @@ public class CraftEventFactory {
         } else if (damager != null || source.getDirectEntity() != null) {
             DamageCause cause = (source.isSweep()) ? DamageCause.ENTITY_SWEEP_ATTACK : DamageCause.ENTITY_ATTACK;
 
-            if (damager instanceof IProjectile) {
+            if (damager instanceof net.minecraft.world.entity.projectile.Projectile) {
                 if (damager.getBukkitEntity() instanceof ThrownPotion) {
                     cause = DamageCause.MAGIC;
                 } else if (damager.getBukkitEntity() instanceof Projectile) {
@@ -1159,11 +1147,11 @@ public class CraftEventFactory {
         return event;
     }
 
-    public static boolean handleBlockGrowEvent(Level world, BlockPos pos, BlockState block) {
+    public static boolean handleBlockGrowEvent(Level world, BlockPos pos, net.minecraft.world.level.block.state.BlockState block) {
         return handleBlockGrowEvent(world, pos, block, 3);
     }
 
-    public static boolean handleBlockGrowEvent(Level world, BlockPos pos, BlockState newData, int flag) {
+    public static boolean handleBlockGrowEvent(Level world, BlockPos pos, net.minecraft.world.level.block.state.BlockState newData, int flag) {
         Block block = world.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
         CraftBlockState state = (CraftBlockState) block.getState();
         state.setData(newData);
@@ -1178,7 +1166,7 @@ public class CraftEventFactory {
         return !event.isCancelled();
     }
 
-    public static FluidLevelChangeEvent callFluidLevelChangeEvent(Level world, BlockPos block, BlockState newData) {
+    public static FluidLevelChangeEvent callFluidLevelChangeEvent(Level world, BlockPos block, net.minecraft.world.level.block.state.BlockState newData) {
         FluidLevelChangeEvent event = new FluidLevelChangeEvent(CraftBlock.at(world, block), CraftBlockData.fromData(newData));
         world.getCraftServer().getPluginManager().callEvent(event);
         return event;
@@ -1206,11 +1194,11 @@ public class CraftEventFactory {
         return !event.isCancelled();
     }
 
-    public static boolean callEntityChangeBlockEvent(Entity entity, BlockPos position, BlockState newBlock) {
+    public static boolean callEntityChangeBlockEvent(Entity entity, BlockPos position, net.minecraft.world.level.block.state.BlockState newBlock) {
         return callEntityChangeBlockEvent(entity, position, newBlock, false);
     }
 
-    public static boolean callEntityChangeBlockEvent(Entity entity, BlockPos position, BlockState newBlock, boolean cancelled) {
+    public static boolean callEntityChangeBlockEvent(Entity entity, BlockPos position, net.minecraft.world.level.block.state.BlockState newBlock, boolean cancelled) {
         Block block = entity.level().getWorld().getBlockAt(position.getX(), position.getY(), position.getZ());
 
         EntityChangeBlockEvent event = new EntityChangeBlockEvent(entity.getBukkitEntity(), block, CraftBlockData.fromData(newBlock));
@@ -1299,14 +1287,14 @@ public class CraftEventFactory {
         Block hitBlock = null;
         BlockFace hitFace = null;
         if (position.getType() == HitResult.Type.BLOCK) {
-            MovingObjectPositionBlock positionBlock = (MovingObjectPositionBlock) position;
+            BlockHitResult positionBlock = (BlockHitResult) position;
             hitBlock = CraftBlock.at(entity.level(), positionBlock.getBlockPos());
             hitFace = CraftBlock.notchToBlockFace(positionBlock.getDirection());
         }
 
         org.bukkit.entity.Entity hitEntity = null;
         if (position.getType() == HitResult.Type.ENTITY) {
-            hitEntity = ((MovingObjectPositionEntity) position).getEntity().getBukkitEntity();
+            hitEntity = ((EntityHitResult) position).getEntity().getBukkitEntity();
         }
 
         ProjectileHitEvent event = new ProjectileHitEvent((Projectile) entity.getBukkitEntity(), hitEntity, hitBlock, hitFace);
@@ -1320,14 +1308,14 @@ public class CraftEventFactory {
         Block hitBlock = null;
         BlockFace hitFace = null;
         if (position.getType() == HitResult.Type.BLOCK) {
-            MovingObjectPositionBlock positionBlock = (MovingObjectPositionBlock) position;
+            BlockHitResult positionBlock = (BlockHitResult) position;
             hitBlock = CraftBlock.at(entity.level(), positionBlock.getBlockPos());
             hitFace = CraftBlock.notchToBlockFace(positionBlock.getDirection());
         }
 
         org.bukkit.entity.Entity hitEntity = null;
         if (position.getType() == HitResult.Type.ENTITY) {
-            hitEntity = ((MovingObjectPositionEntity) position).getEntity().getBukkitEntity();
+            hitEntity = ((EntityHitResult) position).getEntity().getBukkitEntity();
         }
 
         ExpBottleEvent event = new ExpBottleEvent(bottle, hitEntity, hitBlock, hitFace, exp);
@@ -1335,13 +1323,13 @@ public class CraftEventFactory {
         return event;
     }
 
-    public static BlockRedstoneEvent callRedstoneChange(World world, BlockPos pos, int oldCurrent, int newCurrent) {
+    public static BlockRedstoneEvent callRedstoneChange(Level world, BlockPos pos, int oldCurrent, int newCurrent) {
         BlockRedstoneEvent event = new BlockRedstoneEvent(world.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ()), oldCurrent, newCurrent);
         world.getCraftServer().getPluginManager().callEvent(event);
         return event;
     }
 
-    public static NotePlayEvent callNotePlayEvent(World world, BlockPos pos, BlockPropertyInstrument instrument, int note) {
+    public static NotePlayEvent callNotePlayEvent(Level world, BlockPos pos, NoteBlockInstrument instrument, int note) {
         NotePlayEvent event = new NotePlayEvent(world.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ()), org.bukkit.Instrument.getByType((byte) instrument.ordinal()), new org.bukkit.Note(note));
         world.getCraftServer().getPluginManager().callEvent(event);
         return event;
@@ -1353,7 +1341,7 @@ public class CraftEventFactory {
         Bukkit.getPluginManager().callEvent(event);
     }
 
-    public static BlockIgniteEvent callBlockIgniteEvent(World world, BlockPos block, BlockPos source) {
+    public static BlockIgniteEvent callBlockIgniteEvent(Level world, BlockPos block, BlockPos source) {
         org.bukkit.World bukkitWorld = world.getWorld();
         Block igniter = bukkitWorld.getBlockAt(source.getX(), source.getY(), source.getZ());
         IgniteCause cause;
@@ -1374,7 +1362,7 @@ public class CraftEventFactory {
         return event;
     }
 
-    public static BlockIgniteEvent callBlockIgniteEvent(World world, BlockPos pos, Entity igniter) {
+    public static BlockIgniteEvent callBlockIgniteEvent(Level world, BlockPos pos, Entity igniter) {
         org.bukkit.World bukkitWorld = world.getWorld();
         org.bukkit.entity.Entity bukkitIgniter = igniter.getBukkitEntity();
         IgniteCause cause;
@@ -1396,8 +1384,8 @@ public class CraftEventFactory {
                 cause = IgniteCause.FLINT_AND_STEEL;
         }
 
-        if (igniter instanceof IProjectile) {
-            Entity shooter = ((IProjectile) igniter).getOwner();
+        if (igniter instanceof net.minecraft.world.entity.projectile.Projectile) {
+            Entity shooter = ((net.minecraft.world.entity.projectile.Projectile) igniter).getOwner();
             if (shooter != null) {
                 bukkitIgniter = shooter.getBukkitEntity();
             }
@@ -1408,7 +1396,7 @@ public class CraftEventFactory {
         return event;
     }
 
-    public static BlockIgniteEvent callBlockIgniteEvent(World world, BlockPos blockposition, Explosion explosion) {
+    public static BlockIgniteEvent callBlockIgniteEvent(Level world, BlockPos blockposition, Explosion explosion) {
         org.bukkit.entity.Entity igniter = explosion.source == null ? null : explosion.source.getBukkitEntity();
 
         BlockIgniteEvent event = new BlockIgniteEvent(CraftBlock.at(world, blockposition), IgniteCause.EXPLOSION, igniter);
@@ -1416,7 +1404,7 @@ public class CraftEventFactory {
         return event;
     }
 
-    public static BlockIgniteEvent callBlockIgniteEvent(World world, BlockPos pos, IgniteCause cause, Entity igniter) {
+    public static BlockIgniteEvent callBlockIgniteEvent(Level world, BlockPos pos, IgniteCause cause, Entity igniter) {
         BlockIgniteEvent event = new BlockIgniteEvent(world.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ()), cause, igniter.getBukkitEntity());
         world.getCraftServer().getPluginManager().callEvent(event);
         return event;
@@ -1486,7 +1474,7 @@ public class CraftEventFactory {
         return !event.isCancelled();
     }
 
-    public static Cancellable handleStatisticsIncrease(net.minecraft.world.entity.player.Player entityHuman, net.minecraft.stats.Statistic<?> statistic, int current, int newValue) {
+    public static Cancellable handleStatisticsIncrease(net.minecraft.world.entity.player.Player entityHuman, net.minecraft.stats.Stat<?> statistic, int current, int newValue) {
         Player player = ((ServerPlayer) entityHuman).getBukkitEntity();
         Event event;
         if (true) {
@@ -1523,7 +1511,7 @@ public class CraftEventFactory {
             if (stat.getType() == Type.UNTYPED) {
                 event = new PlayerStatisticIncrementEvent(player, stat, current, newValue);
             } else if (stat.getType() == Type.ENTITY) {
-                EntityType entityType = CraftStatistic.getEntityTypeFromStatistic((net.minecraft.stats.Statistic<EntityTypes<?>>) statistic);
+                EntityType entityType = CraftStatistic.getEntityTypeFromStatistic((net.minecraft.stats.Stat<net.minecraft.world.entity.EntityType<?>>) statistic);
                 event = new PlayerStatisticIncrementEvent(player, stat, current, newValue, entityType);
             } else {
                 Material material = CraftStatistic.getMaterialFromStatistic(statistic);
@@ -1534,7 +1522,7 @@ public class CraftEventFactory {
         return (Cancellable) event;
     }
 
-    public static FireworkExplodeEvent callFireworkExplodeEvent(EntityFireworks firework) {
+    public static FireworkExplodeEvent callFireworkExplodeEvent(FireworkRocketEntity firework) {
         FireworkExplodeEvent event = new FireworkExplodeEvent((Firework) firework.getBukkitEntity());
         firework.level().getCraftServer().getPluginManager().callEvent(event);
         return event;
@@ -1591,19 +1579,19 @@ public class CraftEventFactory {
         return event;
     }
 
-    public static EntityToggleGlideEvent callToggleGlideEvent(EntityLiving entity, boolean gliding) {
+    public static EntityToggleGlideEvent callToggleGlideEvent(net.minecraft.world.entity.LivingEntity entity, boolean gliding) {
         EntityToggleGlideEvent event = new EntityToggleGlideEvent((LivingEntity) entity.getBukkitEntity(), gliding);
         entity.level().getCraftServer().getPluginManager().callEvent(event);
         return event;
     }
 
-    public static EntityToggleSwimEvent callToggleSwimEvent(EntityLiving entity, boolean swimming) {
+    public static EntityToggleSwimEvent callToggleSwimEvent(net.minecraft.world.entity.LivingEntity entity, boolean swimming) {
         EntityToggleSwimEvent event = new EntityToggleSwimEvent((LivingEntity) entity.getBukkitEntity(), swimming);
         entity.level().getCraftServer().getPluginManager().callEvent(event);
         return event;
     }
 
-    public static AreaEffectCloudApplyEvent callAreaEffectCloudApplyEvent(EntityAreaEffectCloud cloud, List<LivingEntity> entities) {
+    public static AreaEffectCloudApplyEvent callAreaEffectCloudApplyEvent(net.minecraft.world.entity.AreaEffectCloud cloud, List<LivingEntity> entities) {
         AreaEffectCloudApplyEvent event = new AreaEffectCloudApplyEvent((AreaEffectCloud) cloud.getBukkitEntity(), entities);
         cloud.level().getCraftServer().getPluginManager().callEvent(event);
         return event;
@@ -1616,7 +1604,7 @@ public class CraftEventFactory {
         return event;
     }
 
-    public static EntityBreedEvent callEntityBreedEvent(EntityLiving child, EntityLiving mother, EntityLiving father, EntityLiving breeder, ItemStack bredWith, int experience) {
+    public static EntityBreedEvent callEntityBreedEvent(net.minecraft.world.entity.LivingEntity child, net.minecraft.world.entity.LivingEntity mother, net.minecraft.world.entity.LivingEntity father, net.minecraft.world.entity.LivingEntity breeder, ItemStack bredWith, int experience) {
         org.bukkit.entity.LivingEntity breederEntity = (LivingEntity) (breeder == null ? null : breeder.getBukkitEntity());
         CraftItemStack bredWithStack = bredWith == null ? null : CraftItemStack.asCraftMirror(bredWith).clone();
 
@@ -1629,25 +1617,25 @@ public class CraftEventFactory {
         org.bukkit.block.Block block = CraftBlock.at(world, blockposition);
         BlockPhysicsEvent event = new BlockPhysicsEvent(block, block.getBlockData());
         // Suppress during worldgen
-        if (world instanceof World) {
-            ((World) world).getServer().server.getPluginManager().callEvent(event);
+        if (world instanceof Level) {
+            ((Level) world).getServer().server.getPluginManager().callEvent(event);
         }
         return event;
     }
 
-    public static boolean handleBlockFormEvent(World world, BlockPos pos, IBlockData block) {
+    public static boolean handleBlockFormEvent(Level world, BlockPos pos, net.minecraft.world.level.block.state.BlockState block) {
         return handleBlockFormEvent(world, pos, block, 3);
     }
 
-    public static EntityPotionEffectEvent callEntityPotionEffectChangeEvent(EntityLiving entity, @Nullable MobEffect oldEffect, @Nullable MobEffect newEffect, EntityPotionEffectEvent.Cause cause) {
+    public static EntityPotionEffectEvent callEntityPotionEffectChangeEvent(net.minecraft.world.entity.LivingEntity entity, @Nullable MobEffectInstance oldEffect, @Nullable MobEffectInstance newEffect, EntityPotionEffectEvent.Cause cause) {
         return callEntityPotionEffectChangeEvent(entity, oldEffect, newEffect, cause, true);
     }
 
-    public static EntityPotionEffectEvent callEntityPotionEffectChangeEvent(EntityLiving entity, @Nullable MobEffect oldEffect, @Nullable MobEffect newEffect, EntityPotionEffectEvent.Cause cause, EntityPotionEffectEvent.Action action) {
+    public static EntityPotionEffectEvent callEntityPotionEffectChangeEvent(net.minecraft.world.entity.LivingEntity entity, @Nullable MobEffectInstance oldEffect, @Nullable MobEffectInstance newEffect, EntityPotionEffectEvent.Cause cause, EntityPotionEffectEvent.Action action) {
         return callEntityPotionEffectChangeEvent(entity, oldEffect, newEffect, cause, action, true);
     }
 
-    public static EntityPotionEffectEvent callEntityPotionEffectChangeEvent(EntityLiving entity, @Nullable MobEffect oldEffect, @Nullable MobEffect newEffect, EntityPotionEffectEvent.Cause cause, boolean willOverride) {
+    public static EntityPotionEffectEvent callEntityPotionEffectChangeEvent(net.minecraft.world.entity.LivingEntity entity, @Nullable MobEffectInstance oldEffect, @Nullable MobEffectInstance newEffect, EntityPotionEffectEvent.Cause cause, boolean willOverride) {
         EntityPotionEffectEvent.Action action = EntityPotionEffectEvent.Action.CHANGED;
         if (oldEffect == null) {
             action = EntityPotionEffectEvent.Action.ADDED;
@@ -1658,7 +1646,7 @@ public class CraftEventFactory {
         return callEntityPotionEffectChangeEvent(entity, oldEffect, newEffect, cause, action, willOverride);
     }
 
-    public static EntityPotionEffectEvent callEntityPotionEffectChangeEvent(EntityLiving entity, @Nullable MobEffect oldEffect, @Nullable MobEffect newEffect, EntityPotionEffectEvent.Cause cause, EntityPotionEffectEvent.Action action, boolean willOverride) {
+    public static EntityPotionEffectEvent callEntityPotionEffectChangeEvent(net.minecraft.world.entity.LivingEntity entity, @Nullable MobEffectInstance oldEffect, @Nullable MobEffectInstance newEffect, EntityPotionEffectEvent.Cause cause, EntityPotionEffectEvent.Action action, boolean willOverride) {
         PotionEffect bukkitOldEffect = (oldEffect == null) ? null : CraftPotionUtil.toBukkit(oldEffect);
         PotionEffect bukkitNewEffect = (newEffect == null) ? null : CraftPotionUtil.toBukkit(newEffect);
 
@@ -1670,15 +1658,15 @@ public class CraftEventFactory {
         return event;
     }
 
-    public static boolean handleBlockFormEvent(World world, BlockPos pos, IBlockData block, @Nullable Entity entity) {
+    public static boolean handleBlockFormEvent(Level world, BlockPos pos, net.minecraft.world.level.block.state.BlockState block, @Nullable Entity entity) {
         return handleBlockFormEvent(world, pos, block, 3, entity);
     }
 
-    public static boolean handleBlockFormEvent(World world, BlockPos pos, IBlockData block, int flag) {
+    public static boolean handleBlockFormEvent(Level world, BlockPos pos, net.minecraft.world.level.block.state.BlockState block, int flag) {
         return handleBlockFormEvent(world, pos, block, flag, null);
     }
 
-    public static boolean handleBlockFormEvent(World world, BlockPos pos, IBlockData block, int flag, @Nullable Entity entity) {
+    public static boolean handleBlockFormEvent(Level world, BlockPos pos, net.minecraft.world.level.block.state.BlockState block, int flag, @Nullable Entity entity) {
         CraftBlockState blockState = CraftBlockStates.getBlockState(world, pos, flag);
         blockState.setData(block);
 
@@ -1736,19 +1724,19 @@ public class CraftEventFactory {
         Bukkit.getPluginManager().callEvent(event);
     }
 
-    public static void callRaidSpawnWaveEvent(Raid raid, EntityRaider leader, List<EntityRaider> raiders) {
+    public static void callRaidSpawnWaveEvent(Raid raid, net.minecraft.world.entity.raid.Raider leader, List<net.minecraft.world.entity.raid.Raider> raiders) {
         Raider craftLeader = (CraftRaider) leader.getBukkitEntity();
         List<Raider> craftRaiders = new ArrayList<>();
-        for (EntityRaider entityRaider : raiders) {
+        for (net.minecraft.world.entity.raid.Raider entityRaider : raiders) {
             craftRaiders.add((Raider) entityRaider.getBukkitEntity());
         }
         RaidSpawnWaveEvent event = new RaidSpawnWaveEvent(new CraftRaid(raid), raid.getLevel().getWorld(), craftLeader, craftRaiders);
         Bukkit.getPluginManager().callEvent(event);
     }
 
-    public static LootGenerateEvent callLootGenerateEvent(IInventory inventory, LootTable lootTable, LootTableInfo lootInfo, List<ItemStack> loot, boolean plugin) {
+    public static LootGenerateEvent callLootGenerateEvent(Container inventory, LootTable lootTable, LootContext lootInfo, List<ItemStack> loot, boolean plugin) {
         CraftWorld world = lootInfo.getLevel().getWorld();
-        Entity entity = lootInfo.getParamOrNull(LootContextParameters.THIS_ENTITY);
+        Entity entity = lootInfo.getParamOrNull(LootContextParams.THIS_ENTITY);
         List<org.bukkit.inventory.ItemStack> bukkitLoot = loot.stream().map(CraftItemStack::asCraftMirror).collect(Collectors.toCollection(ArrayList::new));
 
         LootGenerateEvent event = new LootGenerateEvent(world, (entity != null ? entity.getBukkitEntity() : null), inventory.getOwner(), lootTable.craftLootTable, CraftLootTable.convertContext(lootInfo), bukkitLoot, plugin);
@@ -1756,13 +1744,13 @@ public class CraftEventFactory {
         return event;
     }
 
-    public static boolean callStriderTemperatureChangeEvent(EntityStrider strider, boolean shivering) {
+    public static boolean callStriderTemperatureChangeEvent(net.minecraft.world.entity.monster.Strider strider, boolean shivering) {
         StriderTemperatureChangeEvent event = new StriderTemperatureChangeEvent((Strider) strider.getBukkitEntity(), shivering);
         Bukkit.getPluginManager().callEvent(event);
         return !event.isCancelled();
     }
 
-    public static boolean handleEntitySpellCastEvent(EntityIllagerWizard caster, EntityIllagerWizard.Spell spell) {
+    public static boolean handleEntitySpellCastEvent(SpellcasterIllager caster, SpellcasterIllager.IllagerSpell spell) {
         EntitySpellCastEvent event = new EntitySpellCastEvent((Spellcaster) caster.getBukkitEntity(), CraftSpellcaster.toBukkitSpell(spell));
         Bukkit.getPluginManager().callEvent(event);
         return !event.isCancelled();
@@ -1771,7 +1759,7 @@ public class CraftEventFactory {
     /**
      * ArrowBodyCountChangeEvent
      */
-    public static ArrowBodyCountChangeEvent callArrowBodyCountChangeEvent(EntityLiving entity, int oldAmount, int newAmount, boolean isReset) {
+    public static ArrowBodyCountChangeEvent callArrowBodyCountChangeEvent(net.minecraft.world.entity.LivingEntity entity, int oldAmount, int newAmount, boolean isReset) {
         org.bukkit.entity.LivingEntity bukkitEntity = (LivingEntity) entity.getBukkitEntity();
 
         ArrowBodyCountChangeEvent event = new ArrowBodyCountChangeEvent(bukkitEntity, oldAmount, newAmount, isReset);
@@ -1787,25 +1775,25 @@ public class CraftEventFactory {
         return event;
     }
 
-    public static PiglinBarterEvent callPiglinBarterEvent(EntityPiglin piglin, List<ItemStack> outcome, ItemStack input) {
+    public static PiglinBarterEvent callPiglinBarterEvent(net.minecraft.world.entity.monster.piglin.Piglin piglin, List<ItemStack> outcome, ItemStack input) {
         PiglinBarterEvent event = new PiglinBarterEvent((Piglin) piglin.getBukkitEntity(), CraftItemStack.asBukkitCopy(input), outcome.stream().map(CraftItemStack::asBukkitCopy).collect(Collectors.toList()));
         Bukkit.getPluginManager().callEvent(event);
         return event;
     }
 
-    public static void callEntitiesLoadEvent(World world, ChunkCoordIntPair coords, List<Entity> entities) {
+    public static void callEntitiesLoadEvent(Level world, ChunkPos coords, List<Entity> entities) {
         List<org.bukkit.entity.Entity> bukkitEntities = Collections.unmodifiableList(entities.stream().map(Entity::getBukkitEntity).collect(Collectors.toList()));
         EntitiesLoadEvent event = new EntitiesLoadEvent(new CraftChunk((ServerLevel) world, coords.x, coords.z), bukkitEntities);
         Bukkit.getPluginManager().callEvent(event);
     }
 
-    public static void callEntitiesUnloadEvent(World world, ChunkCoordIntPair coords, List<Entity> entities) {
+    public static void callEntitiesUnloadEvent(Level world, ChunkPos coords, List<Entity> entities) {
         List<org.bukkit.entity.Entity> bukkitEntities = Collections.unmodifiableList(entities.stream().map(Entity::getBukkitEntity).collect(Collectors.toList()));
         EntitiesUnloadEvent event = new EntitiesUnloadEvent(new CraftChunk((ServerLevel) world, coords.x, coords.z), bukkitEntities);
         Bukkit.getPluginManager().callEvent(event);
     }
 
-    public static boolean callTNTPrimeEvent(World world, BlockPos pos, TNTPrimeEvent.PrimeCause cause, Entity causingEntity, BlockPos causePosition) {
+    public static boolean callTNTPrimeEvent(Level world, BlockPos pos, TNTPrimeEvent.PrimeCause cause, Entity causingEntity, BlockPos causePosition) {
         org.bukkit.entity.Entity bukkitEntity = (causingEntity == null) ? null : causingEntity.getBukkitEntity();
         org.bukkit.block.Block bukkitBlock = (causePosition == null) ? null : CraftBlock.at(world, causePosition);
 
@@ -1843,13 +1831,13 @@ public class CraftEventFactory {
         return !event.isCancelled();
     }
 
-    public static EntityExplodeEvent callEntityExplodeEvent(Entity entity, List<Block> blocks, float yield, Explosion.Effect effect) {
+    public static EntityExplodeEvent callEntityExplodeEvent(Entity entity, List<Block> blocks, float yield, Explosion.BlockInteraction effect) {
         EntityExplodeEvent event = new EntityExplodeEvent(entity.getBukkitEntity(), entity.getBukkitEntity().getLocation(), blocks, yield, CraftExplosionResult.toBukkit(effect));
         Bukkit.getPluginManager().callEvent(event);
         return event;
     }
 
-    public static BlockExplodeEvent callBlockExplodeEvent(Block block, BlockState state, List<Block> blocks, float yield, Explosion.Effect effect) {
+    public static BlockExplodeEvent callBlockExplodeEvent(Block block, BlockState state, List<Block> blocks, float yield, Explosion.BlockInteraction effect) {
         BlockExplodeEvent event = new BlockExplodeEvent(block, state, blocks, yield, CraftExplosionResult.toBukkit(effect));
         Bukkit.getPluginManager().callEvent(event);
         return event;
@@ -1867,7 +1855,7 @@ public class CraftEventFactory {
         return event;
     }
 
-    public static EntityKnockbackEvent callEntityKnockbackEvent(CraftLivingEntity entity, Entity attacker, EntityKnockbackEvent.KnockbackCause cause, double force, Vec3D raw, double x, double y, double z) {
+    public static EntityKnockbackEvent callEntityKnockbackEvent(CraftLivingEntity entity, Entity attacker, EntityKnockbackEvent.KnockbackCause cause, double force, Vec3 raw, double x, double y, double z) {
         Vector bukkitRaw = new Vector(-raw.x, raw.y, -raw.z); // Due to how the knockback calculation works, we need to invert x and z.
 
         EntityKnockbackEvent event;

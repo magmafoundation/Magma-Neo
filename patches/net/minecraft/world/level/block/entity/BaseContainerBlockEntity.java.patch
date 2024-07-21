@@ -1,0 +1,15 @@
+--- a/net/minecraft/world/level/block/entity/BaseContainerBlockEntity.java
++++ b/net/minecraft/world/level/block/entity/BaseContainerBlockEntity.java
+@@ -166,4 +_,12 @@
+         p_330762_.remove("Lock");
+         p_330762_.remove("Items");
+     }
++
++    // CraftBukkit start
++    @Override
++    public org.bukkit.Location getLocation() {
++        if (level == null) return null;
++        return new org.bukkit.Location(level.getWorld(), worldPosition.getX(), worldPosition.getY(), worldPosition.getZ());
++    }
++    // CraftBukkit end
+ }

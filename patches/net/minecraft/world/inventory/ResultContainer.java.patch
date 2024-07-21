@@ -1,0 +1,42 @@
+--- a/net/minecraft/world/inventory/ResultContainer.java
++++ b/net/minecraft/world/inventory/ResultContainer.java
+@@ -13,6 +_,39 @@
+     @Nullable
+     private RecipeHolder<?> recipeUsed;
+ 
++    // CraftBukkit start
++    private int maxStack = MAX_STACK;
++
++    public java.util.List<ItemStack> getContents() {
++        return this.itemStacks;
++    }
++
++    public org.bukkit.inventory.InventoryHolder getOwner() {
++        return null; // Result slots don't get an owner
++    }
++
++    // Don't need a transaction; the InventoryCrafting keeps track of it for us
++    public void onOpen(org.bukkit.craftbukkit.entity.CraftHumanEntity who) {}
++    public void onClose(org.bukkit.craftbukkit.entity.CraftHumanEntity who) {}
++    public java.util.List<org.bukkit.entity.HumanEntity> getViewers() {
++        return new java.util.ArrayList<org.bukkit.entity.HumanEntity>();
++    }
++
++    @Override
++    public int getMaxStackSize() {
++        return maxStack;
++    }
++
++    public void setMaxStackSize(int size) {
++        maxStack = size;
++    }
++
++    @Override
++    public org.bukkit.Location getLocation() {
++        return null;
++    }
++    // CraftBukkit end
++
+     @Override
+     public int getContainerSize() {
+         return 1;

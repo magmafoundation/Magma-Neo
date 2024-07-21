@@ -3,7 +3,7 @@ package org.bukkit.craftbukkit.inventory;
 import com.google.common.base.Preconditions;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.world.item.crafting.RecipeItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.RecipeChoice;
@@ -13,15 +13,15 @@ import org.bukkit.inventory.recipe.CraftingBookCategory;
 public interface CraftRecipe extends Recipe {
     void addToCraftingManager();
 
-    default RecipeItemStack toNMS(RecipeChoice bukkit, boolean requireNotEmpty) {
-        RecipeItemStack stack;
+    default Ingredient toNMS(RecipeChoice bukkit, boolean requireNotEmpty) {
+        Ingredient stack;
 
         if (bukkit == null) {
-            stack = RecipeItemStack.EMPTY;
+            stack = Ingredient.EMPTY;
         } else if (bukkit instanceof RecipeChoice.MaterialChoice) {
-            stack = new RecipeItemStack(((RecipeChoice.MaterialChoice) bukkit).getChoices().stream().map((mat) -> new net.minecraft.world.item.crafting.RecipeItemStack.StackProvider(CraftItemStack.asNMSCopy(new ItemStack(mat)))));
+            stack = new Ingredient(((RecipeChoice.MaterialChoice) bukkit).getChoices().stream().map((mat) -> new net.minecraft.world.item.crafting.Ingredient.ItemValue(CraftItemStack.asNMSCopy(new ItemStack(mat)))));
         } else if (bukkit instanceof RecipeChoice.ExactChoice) {
-            stack = new RecipeItemStack(((RecipeChoice.ExactChoice) bukkit).getChoices().stream().map((mat) -> new net.minecraft.world.item.crafting.RecipeItemStack.StackProvider(CraftItemStack.asNMSCopy(mat))));
+            stack = new Ingredient(((RecipeChoice.ExactChoice) bukkit).getChoices().stream().map((mat) -> new net.minecraft.world.item.crafting.Ingredient.ItemValue(CraftItemStack.asNMSCopy(mat))));
             stack.exact = true;
         } else {
             throw new IllegalArgumentException("Unknown recipe stack instance " + bukkit);
@@ -35,7 +35,7 @@ public interface CraftRecipe extends Recipe {
         return stack;
     }
 
-    public static RecipeChoice toBukkit(RecipeItemStack list) {
+    public static RecipeChoice toBukkit(Ingredient list) {
         list.getItems();
 
         if (list.itemStacks.length == 0) {

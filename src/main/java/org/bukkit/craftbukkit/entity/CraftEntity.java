@@ -583,7 +583,7 @@ public abstract class CraftEntity implements org.bukkit.entity.Entity {
         ImmutableSet.Builder<Player> players = ImmutableSet.builder();
 
         ServerLevel world = ((CraftWorld) getWorld()).getHandle();
-        ChunkMap.EntityTracker entityTracker = world.getChunkSource().chunkMap.entityMap.get(getEntityId());
+        ChunkMap.TrackedEntity entityTracker = world.getChunkSource().chunkMap.entityMap.get(getEntityId());
 
         if (entityTracker != null) {
             for (ServerPlayerConnection connection : entityTracker.seenBy) {
@@ -846,7 +846,7 @@ public abstract class CraftEntity implements org.bukkit.entity.Entity {
         }
 
         ServerLevel world = ((CraftWorld) getWorld()).getHandle();
-        ChunkMap.EntityTracker entityTracker = world.getChunkSource().chunkMap.entityMap.get(getEntityId());
+        ChunkMap.TrackedEntity entityTracker = world.getChunkSource().chunkMap.entityMap.get(getEntityId());
 
         if (entityTracker == null) {
             return;
@@ -861,7 +861,7 @@ public abstract class CraftEntity implements org.bukkit.entity.Entity {
         }
 
         ServerLevel world = ((CraftWorld) getWorld()).getHandle();
-        ChunkMap.EntityTracker entityTracker = world.getChunkSource().chunkMap.entityMap.get(getEntityId());
+        ChunkMap.TrackedEntity entityTracker = world.getChunkSource().chunkMap.entityMap.get(getEntityId());
 
         if (entityTracker == null) {
             return;

@@ -109,24 +109,24 @@ class CraftMetaFirework extends CraftMetaItem implements FireworkMeta {
         return new FireworkExplosion(getNBT(effect.getType()), colors, fadeColors, effect.hasTrail(), effect.hasFlicker());
     }
 
-    static FireworkExplosion.a getNBT(Type type) {
+    static FireworkExplosion.Shape getNBT(Type type) {
         switch (type) {
             case BALL:
-                return FireworkExplosion.a.SMALL_BALL;
+                return FireworkExplosion.Shape.SMALL_BALL;
             case BALL_LARGE:
-                return FireworkExplosion.a.LARGE_BALL;
+                return FireworkExplosion.Shape.LARGE_BALL;
             case STAR:
-                return FireworkExplosion.a.STAR;
+                return FireworkExplosion.Shape.STAR;
             case CREEPER:
-                return FireworkExplosion.a.CREEPER;
+                return FireworkExplosion.Shape.CREEPER;
             case BURST:
-                return FireworkExplosion.a.BURST;
+                return FireworkExplosion.Shape.BURST;
             default:
                 throw new IllegalArgumentException("Unknown effect type " + type);
         }
     }
 
-    static Type getEffectType(FireworkExplosion.a nbt) {
+    static Type getEffectType(FireworkExplosion.Shape nbt) {
         switch (nbt) {
             case SMALL_BALL:
                 return Type.BALL;

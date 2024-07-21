@@ -13,10 +13,10 @@ import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.component.PatchedDataComponentMap;
 import net.minecraft.core.component.TypedDataComponent;
-import net.minecraft.nbt.NBTBase;
-import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.component.CustomData;
-import net.minecraft.world.level.block.entity.TileEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import org.bukkit.Material;
 import org.bukkit.block.BlockState;
 import org.bukkit.configuration.serialization.DelegateDeserialization;
@@ -51,7 +51,7 @@ public class CraftMetaBlockState extends CraftMetaItem implements BlockStateMeta
 
     final Material material;
     private CraftBlockEntityState<?> blockEntityTag;
-    private NBTTagCompound internalTag;
+    private CompoundTag internalTag;
 
     CraftMetaBlockState(CraftMetaItem meta, Material material) {
         super(meta);
@@ -124,7 +124,7 @@ public class CraftMetaBlockState extends CraftMetaItem implements BlockStateMeta
     }
 
     @Override
-    void deserializeInternal(NBTTagCompound tag, Object context) {
+    void deserializeInternal(CompoundTag tag, Object context) {
         super.deserializeInternal(tag, context);
 
         if (tag.contains(BLOCK_ENTITY_TAG.NBT, CraftMagicNumbers.NBT.TAG_COMPOUND)) {
@@ -133,7 +133,7 @@ public class CraftMetaBlockState extends CraftMetaItem implements BlockStateMeta
     }
 
     @Override
-    void serializeInternal(final Map<String, NBTBase> internalTags) {
+    void serializeInternal(final Map<String, Tag> internalTags) {
         if (blockEntityTag != null) {
             internalTags.put(BLOCK_ENTITY_TAG.NBT, blockEntityTag.getSnapshotNBT());
         }
@@ -198,7 +198,7 @@ public class CraftMetaBlockState extends CraftMetaItem implements BlockStateMeta
         return (blockEntityTag != null) ? blockEntityTag.copy() : getBlockState(material, null);
     }
 
-    private static CraftBlockEntityState<?> getBlockState(Material material, NBTTagCompound blockEntityTag) {
+    private static CraftBlockEntityState<?> getBlockState(Material material, CompoundTag blockEntityTag) {
         BlockPos pos = BlockPos.ZERO;
         Material stateMaterial = (material != Material.SHIELD) ? material : shieldToBannerHack(); // Only actually used for jigsaws
         if (blockEntityTag != null) {
@@ -210,7 +210,7 @@ public class CraftMetaBlockState extends CraftMetaItem implements BlockStateMeta
                 blockEntityTag.putString("id", "minecraft:shulker_box");
             }
 
-            pos = TileEntity.getPosFromTag(blockEntityTag);
+            pos = BlockEntity.getPosFromTag(blockEntityTag);
         }
 
         // This is expected to always return a CraftBlockEntityState for the passed material:

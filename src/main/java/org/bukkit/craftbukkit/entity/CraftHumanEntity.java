@@ -486,7 +486,7 @@ public class CraftHumanEntity extends CraftLivingEntity implements HumanEntity {
         Preconditions.checkArgument(material != null, "Material cannot be null");
         Preconditions.checkArgument(material.isItem(), "Material %s is not an item", material);
 
-        ItemCooldowns.Info cooldown = getHandle().getCooldowns().cooldowns.get(CraftItemType.bukkitToMinecraft(material));
+        ItemCooldowns.CooldownInstance cooldown = getHandle().getCooldowns().cooldowns.get(CraftItemType.bukkitToMinecraft(material));
         return (cooldown == null) ? 0 : Math.max(0, cooldown.endTime - getHandle().getCooldowns().tickCount);
     }
 

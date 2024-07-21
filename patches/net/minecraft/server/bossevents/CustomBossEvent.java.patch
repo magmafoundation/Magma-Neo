@@ -1,0 +1,19 @@
+--- a/net/minecraft/server/bossevents/CustomBossEvent.java
++++ b/net/minecraft/server/bossevents/CustomBossEvent.java
+@@ -24,6 +_,16 @@
+     private final Set<UUID> players = Sets.newHashSet();
+     private int value;
+     private int max = 100;
++    // CraftBukkit start
++    private org.bukkit.boss.KeyedBossBar bossBar;
++
++    public org.bukkit.boss.KeyedBossBar getBukkitEntity() {
++        if (bossBar == null) {
++            bossBar = new org.bukkit.craftbukkit.boss.CraftKeyedBossbar(this);
++        }
++        return bossBar;
++    }
++    // CraftBukkit end
+ 
+     public CustomBossEvent(ResourceLocation p_136261_, Component p_136262_) {
+         super(p_136262_, BossEvent.BossBarColor.WHITE, BossEvent.BossBarOverlay.PROGRESS);

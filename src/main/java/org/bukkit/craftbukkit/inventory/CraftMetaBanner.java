@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.world.item.EnumColor;
 import net.minecraft.world.level.block.entity.BannerPatternLayers;
 import org.bukkit.DyeColor;
 import org.bukkit.block.banner.Pattern;
@@ -38,9 +37,9 @@ public class CraftMetaBanner extends CraftMetaItem implements BannerMeta {
         super(tag);
 
         getOrEmpty(tag, PATTERNS).ifPresent((entityTag) -> {
-            List<BannerPatternLayers.b> patterns = entityTag.layers();
+            List<BannerPatternLayers.Layer> patterns = entityTag.layers();
             for (int i = 0; i < Math.min(patterns.size(), 20); i++) {
-                BannerPatternLayers.b p = patterns.get(i);
+                BannerPatternLayers.Layer p = patterns.get(i);
                 DyeColor color = DyeColor.getByWoolData((byte) p.color().getId());
                 PatternType pattern = CraftPatternType.minecraftHolderToBukkit(p.pattern());
 
@@ -69,10 +68,10 @@ public class CraftMetaBanner extends CraftMetaItem implements BannerMeta {
     void applyToItem(CraftMetaItem.Applicator tag) {
         super.applyToItem(tag);
 
-        List<BannerPatternLayers.b> newPatterns = new ArrayList<>();
+        List<BannerPatternLayers.Layer> newPatterns = new ArrayList<>();
 
         for (Pattern p : patterns) {
-            newPatterns.add(new BannerPatternLayers.b(CraftPatternType.bukkitToMinecraftHolder(p.getPattern()), EnumColor.byId(p.getColor().getWoolData())));
+            newPatterns.add(new BannerPatternLayers.Layer(CraftPatternType.bukkitToMinecraftHolder(p.getPattern()), net.minecraft.world.item.DyeColor.byId(p.getColor().getWoolData())));
         }
 
         tag.put(PATTERNS, new BannerPatternLayers(newPatterns));

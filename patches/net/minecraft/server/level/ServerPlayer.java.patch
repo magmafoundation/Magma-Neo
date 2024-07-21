@@ -11,6 +11,28 @@
              ServerPlayer.this.connection.send(new ClientboundContainerSetDataPacket(p_143455_.containerId, p_143456_, p_143457_));
          }
      };
+@@ -277,6 +_,21 @@
+     private int containerCounter;
+     public boolean wonGame;
+ 
++    // CraftBukkit start
++    public org.bukkit.craftbukkit.entity.CraftPlayer.TransferCookieConnection transferCookieConnection;
++    public String displayName;
++    public Component listName;
++    public org.bukkit.Location compassTarget;
++    public int newExp = 0;
++    public int newLevel = 0;
++    public int newTotalExp = 0;
++    public boolean keepLevel = false;
++    public double maxHealthCache;
++    public boolean joining = true;
++    public boolean sentListPacket = false;
++    public String kickLeaveMessage = null; // SPIGOT-3034: Forward leave message to PlayerQuitEvent
++    // CraftBukkit end
++
+     public ServerPlayer(MinecraftServer p_254143_, ServerLevel p_254435_, GameProfile p_253651_, ClientInformation p_301997_) {
+         super(p_254435_, p_254435_.getSharedSpawnPos(), p_254435_.getSharedSpawnAngle(), p_253651_);
+         this.textFilter = p_254143_.createTextFilterForPlayer(this);
 @@ -606,6 +_,11 @@
                  this.connection.send(new ClientboundSetExperiencePacket(this.experienceProgress, this.totalExperience, this.experienceLevel));
              }
@@ -117,7 +139,15 @@
          return this.isReachableBedBlock(p_9117_) || this.isReachableBedBlock(p_9117_.relative(p_9118_.getOpposite()));
      }
  
-@@ -1074,11 +_,19 @@
+@@ -1068,17 +_,26 @@
+         this.connection.send(new ClientboundOpenSignEditorPacket(p_277909_.getBlockPos(), p_277495_));
+     }
+ 
+-    public void nextContainerCounter() {
++    public int nextContainerCounter() { // CraftBukkit - void -> int
+         this.containerCounter = this.containerCounter % 100 + 1;
++        return this.containerCounter; // CraftBukkit
+     }
  
      @Override
      public OptionalInt openMenu(@Nullable MenuProvider p_9033_) {
@@ -332,3 +362,14 @@
          public static ServerPlayer.RespawnPosAngle of(Vec3 p_348670_, BlockPos p_348504_) {
              return new ServerPlayer.RespawnPosAngle(p_348670_, calculateLookAtYaw(p_348670_, p_348504_));
          }
+@@ -1968,4 +_,10 @@
+             return (float)Mth.wrapDegrees(Mth.atan2(vec3.z, vec3.x) * 180.0F / (float)Math.PI - 90.0);
+         }
+     }
++
++    @Override
++    public org.bukkit.craftbukkit.entity.CraftPlayer getBukkitEntity() {
++        return (org.bukkit.craftbukkit.entity.CraftPlayer) super.getBukkitEntity();
++    }
++    // CraftBukkit end
+ }

@@ -66,7 +66,6 @@ import net.minecraft.server.commands.ReloadCommand;
 import net.minecraft.server.dedicated.DedicatedPlayerList;
 import net.minecraft.server.dedicated.DedicatedServer;
 import net.minecraft.server.dedicated.DedicatedServerProperties;
-import net.minecraft.server.dedicated.DedicatedServerSettings;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
@@ -110,7 +109,6 @@ import net.minecraft.world.level.saveddata.maps.MapId;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 import net.minecraft.world.level.storage.LevelDataAndDimensions;
 import net.minecraft.world.level.storage.LevelStorageSource;
-import net.minecraft.world.level.storage.LevelSummary;
 import net.minecraft.world.level.storage.PlayerDataStorage;
 import net.minecraft.world.level.storage.PrimaryLevelData;
 import net.minecraft.world.level.validation.ContentValidationException;
@@ -214,7 +212,6 @@ import org.bukkit.entity.SpawnCategory;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerChatTabCompleteEvent;
 import org.bukkit.event.server.BroadcastMessageEvent;
-import org.bukkit.event.server.ServerLoadEvent;
 import org.bukkit.event.server.TabCompleteEvent;
 import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.event.world.WorldUnloadEvent;
@@ -255,7 +252,6 @@ import org.bukkit.plugin.java.JavaPluginLoader;
 import org.bukkit.plugin.messaging.Messenger;
 import org.bukkit.plugin.messaging.StandardMessenger;
 import org.bukkit.profile.PlayerProfile;
-import org.bukkit.scheduler.BukkitWorker;
 import org.bukkit.scoreboard.Criteria;
 import org.bukkit.structure.StructureManager;
 import org.bukkit.util.StringUtil;
@@ -910,81 +906,7 @@ public final class CraftServer implements Server {
 
     @Override
     public void reload() {
-        reloadCount++;
-        configuration = YamlConfiguration.loadConfiguration(getConfigFile());
-        commandsConfiguration = YamlConfiguration.loadConfiguration(getCommandsConfigFile());
-
-        console.settings = new DedicatedServerSettings(console.options);
-        DedicatedServerProperties config = console.settings.getProperties();
-
-        console.setPvpAllowed(config.pvp);
-        console.setFlightAllowed(config.allowFlight);
-        console.setMotd(config.motd);
-        overrideSpawnLimits();
-        warningState = WarningState.value(configuration.getString("settings.deprecated-verbose"));
-        TicketType.PLUGIN.timeout = configuration.getInt("chunk-gc.period-in-ticks");
-        minimumAPI = ApiVersion.getOrCreateVersion(configuration.getString("settings.minimum-api"));
-        printSaveWarning = false;
-        console.autosavePeriod = configuration.getInt("ticks-per.autosave");
-        loadIcon();
-        loadCompatibilities();
-
-        try {
-            playerList.getIpBans().load();
-        } catch (IOException ex) {
-            logger.log(Level.WARNING, "Failed to load banned-ips.json, " + ex.getMessage());
-        }
-        try {
-            playerList.getBans().load();
-        } catch (IOException ex) {
-            logger.log(Level.WARNING, "Failed to load banned-players.json, " + ex.getMessage());
-        }
-
-        for (ServerLevel world : console.getAllLevels()) {
-            world.serverLevelData.setDifficulty(config.difficulty);
-            world.setSpawnSettings(config.spawnMonsters, config.spawnAnimals);
-
-            for (SpawnCategory spawnCategory : SpawnCategory.values()) {
-                if (CraftSpawnCategory.isValidForLimits(spawnCategory)) {
-                    long ticksPerCategorySpawn = this.getTicksPerSpawns(spawnCategory);
-                    if (ticksPerCategorySpawn < 0) {
-                        world.ticksPerSpawnCategory.put(spawnCategory, CraftSpawnCategory.getDefaultTicksPerSpawn(spawnCategory));
-                    } else {
-                        world.ticksPerSpawnCategory.put(spawnCategory, ticksPerCategorySpawn);
-                    }
-                }
-            }
-        }
-
-        pluginManager.clearPlugins();
-        commandMap.clearCommands();
-        reloadData();
-        overrideAllCommandBlockCommands = commandsConfiguration.getStringList("command-block-overrides").contains("*");
-        ignoreVanillaPermissions = commandsConfiguration.getBoolean("ignore-vanilla-permissions");
-
-        int pollCount = 0;
-
-        // Wait for at most 2.5 seconds for plugins to close their threads
-        while (pollCount < 50 && getScheduler().getActiveWorkers().size() > 0) {
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {}
-            pollCount++;
-        }
-
-        List<BukkitWorker> overdueWorkers = getScheduler().getActiveWorkers();
-        for (BukkitWorker worker : overdueWorkers) {
-            Plugin plugin = worker.getOwner();
-            getLogger().log(Level.SEVERE, String.format(
-                    "Nag author(s): '%s' of '%s' about the following: %s",
-                    plugin.getDescription().getAuthors(),
-                    plugin.getDescription().getFullName(),
-                    "This plugin is not properly shutting down its async tasks when it is being reloaded.  This may cause conflicts with the newly loaded version of the plugin"));
-        }
-        loadPlugins();
-        enablePlugins(PluginLoadOrder.STARTUP);
-        enablePlugins(PluginLoadOrder.POSTWORLD);
-        getPluginManager().callEvent(new ServerLoadEvent(ServerLoadEvent.LoadType.RELOAD));
+        // Magma : Remove reload
     }
 
     @Override
@@ -1199,7 +1121,7 @@ public final class CraftServer implements Server {
         List<CustomSpawner> list = ImmutableList.of(new PhantomSpawner(), new PatrolSpawner(), new CatSpawner(), new VillageSiege(), new WanderingTraderSpawner(worlddata));
         LevelStem worlddimension = iregistry.get(actualDimension);
 
-        LevelSummary worldInfo = new CraftWorldInfo(worlddata, worldSession, creator.environment(), worlddimension.type().value());
+        org.bukkit.generator.WorldInfo worldInfo = new CraftWorldInfo(worlddata, worldSession, creator.environment(), worlddimension.type().value());
         if (biomeProvider == null && generator != null) {
             biomeProvider = generator.getDefaultBiomeProvider(worldInfo);
         }
@@ -1219,7 +1141,8 @@ public final class CraftServer implements Server {
             worlddata.getGameRules().getRule(GameRules.RULE_SPAWN_CHUNK_RADIUS).set(0, null);
         }
         ServerLevel internal = (ServerLevel) new ServerLevel(console, console.executor, worldSession, worlddata, worldKey, worlddimension, getServer().progressListenerFactory.create(worlddata.getGameRules().getInt(GameRules.RULE_SPAWN_CHUNK_RADIUS)),
-                worlddata.isDebugWorld(), j, creator.environment() == Environment.NORMAL ? list : ImmutableList.of(), true, console.overworld().getRandomSequences(), creator.environment(), generator, biomeProvider);
+                worlddata.isDebugWorld(), j, creator.environment() == Environment.NORMAL ? list : ImmutableList.of(), true, console.overworld().getRandomSequences());
+        internal.setCBWorldInfo(generator, biomeProvider, creator.environment()); // Magma
 
         if (!(worlds.containsKey(name.toLowerCase(Locale.ROOT)))) {
             return null;
@@ -1416,12 +1339,12 @@ public final class CraftServer implements Server {
             }
 
             @Override
-            public boolean stillValid(Player entityhuman) {
+            public boolean stillValid(net.minecraft.world.entity.player.Player entityhuman) {
                 return false;
             }
 
             @Override
-            public net.minecraft.world.item.ItemStack quickMoveStack(Player entityhuman, int i) {
+            public net.minecraft.world.item.ItemStack quickMoveStack(net.minecraft.world.entity.player.Player entityhuman, int i) {
                 return net.minecraft.world.item.ItemStack.EMPTY;
             }
         };

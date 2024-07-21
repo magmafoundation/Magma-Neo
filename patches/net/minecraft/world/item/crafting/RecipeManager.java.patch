@@ -25,3 +25,36 @@
              } catch (IllegalArgumentException | JsonParseException jsonparseexception) {
                  LOGGER.error("Parsing error loading recipe {}", resourcelocation, jsonparseexception);
              }
+@@ -167,9 +_,29 @@
+             builder1.put(recipeholder.id(), recipeholder);
+         }
+ 
+-        this.byType = builder.build();
+-        this.byName = builder1.build();
+-    }
++        // CraftBukkit start - mutable
++        this.byType = com.google.common.collect.LinkedHashMultimap.create(builder.build());
++        this.byName = com.google.common.collect.Maps.newHashMap(builder1.build());
++        // CraftBukkit end
++    }
++
++    // CraftBukkit start
++    public boolean removeRecipe(ResourceLocation mcKey) {
++        java.util.Iterator<RecipeHolder<?>> iter = byType.values().iterator();
++        while (iter.hasNext()) {
++            RecipeHolder<?> recipe = iter.next();
++            if (recipe.id().equals(mcKey)) {
++                iter.remove();
++            }
++        }
++        return byName.remove(mcKey) != null;
++    }
++
++    public void clearRecipes() {
++        this.byType = com.google.common.collect.LinkedHashMultimap.create();
++        this.byName = com.google.common.collect.Maps.newHashMap();
++    }
++    // CraftBukkit end
+ 
+     public static <I extends RecipeInput, T extends Recipe<I>> RecipeManager.CachedCheck<I, T> createCheck(final RecipeType<T> p_220268_) {
+         return new RecipeManager.CachedCheck<I, T>() {

@@ -5,12 +5,12 @@ import com.mojang.authlib.GameProfile;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import net.minecraft.SystemUtils;
+import net.minecraft.Util;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.nbt.DynamicOpsNBT;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.resources.MinecraftKey;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.component.ResolvableProfile;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
@@ -32,11 +32,11 @@ class CraftMetaSkull extends CraftMetaItem implements SkullMeta {
 
     @ItemMetaKey.Specific(ItemMetaKey.Specific.To.NBT)
     static final ItemMetaKey BLOCK_ENTITY_TAG = new ItemMetaKey("BlockEntityTag");
-    static final ItemMetaKeyType<MinecraftKey> NOTE_BLOCK_SOUND = new ItemMetaKeyType<>(DataComponents.NOTE_BLOCK_SOUND, "note_block_sound");
+    static final ItemMetaKeyType<ResourceLocation> NOTE_BLOCK_SOUND = new ItemMetaKeyType<>(DataComponents.NOTE_BLOCK_SOUND, "note_block_sound");
     static final int MAX_OWNER_LENGTH = 16;
 
     private GameProfile profile;
-    private MinecraftKey noteBlockSound;
+    private ResourceLocation noteBlockSound;
 
     CraftMetaSkull(CraftMetaItem meta) {
         super(meta);
@@ -80,24 +80,24 @@ class CraftMetaSkull extends CraftMetaItem implements SkullMeta {
     }
 
     @Override
-    void deserializeInternal(NBTTagCompound tag, Object context) {
+    void deserializeInternal(CompoundTag tag, Object context) {
         super.deserializeInternal(tag, context);
 
         if (tag.contains(SKULL_PROFILE.NBT, CraftMagicNumbers.NBT.TAG_COMPOUND)) {
-            NBTTagCompound skullTag = tag.getCompound(SKULL_PROFILE.NBT);
+            CompoundTag skullTag = tag.getCompound(SKULL_PROFILE.NBT);
             // convert type of stored Id from String to UUID for backwards compatibility
             if (skullTag.contains("Id", CraftMagicNumbers.NBT.TAG_STRING)) {
                 UUID uuid = UUID.fromString(skullTag.getString("Id"));
                 skullTag.putUUID("Id", uuid);
             }
 
-            this.setProfile(ResolvableProfile.CODEC.parse(DynamicOpsNBT.INSTANCE, skullTag).result().get().gameProfile());
+            this.setProfile(ResolvableProfile.CODEC.parse(NbtOps.INSTANCE, skullTag).result().get().gameProfile());
         }
 
         if (tag.contains(BLOCK_ENTITY_TAG.NBT, CraftMagicNumbers.NBT.TAG_COMPOUND)) {
-            NBTTagCompound nbtTagCompound = tag.getCompound(BLOCK_ENTITY_TAG.NBT).copy();
+            CompoundTag nbtTagCompound = tag.getCompound(BLOCK_ENTITY_TAG.NBT).copy();
             if (nbtTagCompound.contains(NOTE_BLOCK_SOUND.NBT, 8)) {
-                this.noteBlockSound = MinecraftKey.tryParse(nbtTagCompound.getString(NOTE_BLOCK_SOUND.NBT));
+                this.noteBlockSound = ResourceLocation.tryParse(nbtTagCompound.getString(NOTE_BLOCK_SOUND.NBT));
             }
         }
     }
@@ -155,7 +155,7 @@ class CraftMetaSkull extends CraftMetaItem implements SkullMeta {
     @Override
     public OfflinePlayer getOwningPlayer() {
         if (hasOwner()) {
-            if (!profile.getId().equals(SystemUtils.NIL_UUID)) {
+            if (!profile.getId().equals(Util.NIL_UUID)) {
                 return Bukkit.getOfflinePlayer(profile.getId());
             }
 
@@ -176,7 +176,7 @@ class CraftMetaSkull extends CraftMetaItem implements SkullMeta {
         if (name == null) {
             setProfile(null);
         } else {
-            setProfile(new GameProfile(SystemUtils.NIL_UUID, name));
+            setProfile(new GameProfile(Util.NIL_UUID, name));
         }
 
         return true;

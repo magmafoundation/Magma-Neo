@@ -1,0 +1,50 @@
+--- a/net/minecraft/world/inventory/ChestMenu.java
++++ b/net/minecraft/world/inventory/ChestMenu.java
+@@ -11,6 +_,28 @@
+     private final Container container;
+     private final int containerRows;
+ 
++    // CraftBukkit start
++    private org.bukkit.craftbukkit.inventory.CraftInventoryView bukkitEntity = null;
++    private Inventory player;
++
++    @Override
++    public org.bukkit.craftbukkit.inventory.CraftInventoryView getBukkitView() {
++        if (bukkitEntity != null) {
++            return bukkitEntity;
++        }
++        org.bukkit.craftbukkit.inventory.CraftInventory inventory;
++        if (this.container instanceof Inventory) {
++            inventory = new org.bukkit.craftbukkit.inventory.CraftInventoryPlayer((Inventory) this.container);
++        } else if (this.container instanceof net.minecraft.world.CompoundContainer) {
++            inventory = new org.bukkit.craftbukkit.inventory.CraftInventoryDoubleChest((net.minecraft.world.CompoundContainer) this.container);
++        } else {
++            inventory = new org.bukkit.craftbukkit.inventory.CraftInventory(this.container);
++        }
++        bukkitEntity = new org.bukkit.craftbukkit.inventory.CraftInventoryView(this.player.player.getBukkitEntity(), inventory, this);
++        return bukkitEntity;
++    }
++    // CraftBukkit end
++
+     private ChestMenu(MenuType<?> p_39224_, int p_39225_, Inventory p_39226_, int p_39227_) {
+         this(p_39224_, p_39225_, p_39226_, new SimpleContainer(9 * p_39227_), p_39227_);
+     }
+@@ -55,6 +_,10 @@
+         p_39232_.startOpen(p_39231_.player);
+         int i = (this.containerRows - 4) * 18;
+ 
++        // CraftBukkit start - Save player
++        this.player = p_39231_;
++        // CraftBukkit end
++
+         for (int j = 0; j < this.containerRows; j++) {
+             for (int k = 0; k < 9; k++) {
+                 this.addSlot(new Slot(p_39232_, k + j * 9, 8 + k * 18, 18 + j * 18));
+@@ -74,6 +_,7 @@
+ 
+     @Override
+     public boolean stillValid(Player p_39242_) {
++        if (!this.checkReachable) return true; // CraftBukkit
+         return this.container.stillValid(p_39242_);
+     }
+ 

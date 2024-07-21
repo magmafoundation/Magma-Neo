@@ -1,0 +1,14 @@
+--- a/net/minecraft/world/level/entity/EntityAccess.java
++++ b/net/minecraft/world/level/entity/EntityAccess.java
+@@ -25,5 +_,11 @@
+ 
+     boolean shouldBeSaved();
+ 
++    // CraftBukkit start - add Bukkit remove cause
++    default void setRemoved(Entity.RemovalReason entity_removalreason, org.bukkit.event.entity.EntityRemoveEvent.Cause cause) {
++        setRemoved(entity_removalreason);
++    }
++    // CraftBukkit end
++
+     boolean isAlwaysTicking();
+ }

@@ -4,8 +4,8 @@ import com.google.common.collect.ImmutableMap.Builder;
 import java.util.Map;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.nbt.NBTBase;
-import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.component.CustomData;
 import org.bukkit.Material;
 import org.bukkit.configuration.serialization.DelegateDeserialization;
@@ -13,7 +13,7 @@ import org.bukkit.configuration.serialization.DelegateDeserialization;
 @DelegateDeserialization(SerializableMeta.class)
 public class CraftMetaArmorStand extends CraftMetaItem {
     static final ItemMetaKeyType<CustomData> ENTITY_TAG = new ItemMetaKeyType<>(DataComponents.ENTITY_DATA, "entity-tag");
-    NBTTagCompound entityTag;
+    CompoundTag entityTag;
 
     CraftMetaArmorStand(CraftMetaItem meta) {
         super(meta);
@@ -39,7 +39,7 @@ public class CraftMetaArmorStand extends CraftMetaItem {
     }
 
     @Override
-    void deserializeInternal(NBTTagCompound tag, Object context) {
+    void deserializeInternal(CompoundTag tag, Object context) {
         super.deserializeInternal(tag, context);
 
         if (tag.contains(ENTITY_TAG.NBT)) {
@@ -48,7 +48,7 @@ public class CraftMetaArmorStand extends CraftMetaItem {
     }
 
     @Override
-    void serializeInternal(Map<String, NBTBase> internalTags) {
+    void serializeInternal(Map<String, Tag> internalTags) {
         if (entityTag != null && !entityTag.isEmpty()) {
             internalTags.put(ENTITY_TAG.NBT, entityTag);
         }

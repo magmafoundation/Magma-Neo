@@ -9,6 +9,23 @@
      private static final List<ChunkStatus> CHUNK_STATUSES = ChunkStatus.getStatusList();
      public final DistanceManager distanceManager;
      public final ServerLevel level;
+@@ -106,6 +_,16 @@
+         this.clearCache();
+     }
+ 
++    // CraftBukkit start - properly implement isChunkLoaded
++    public boolean isChunkLoaded(int chunkX, int chunkZ) {
++        ChunkHolder chunk = this.chunkMap.getUpdatingChunkIfPresent(ChunkPos.asLong(chunkX, chunkZ));
++        if (chunk == null) {
++            return false;
++        }
++        return chunk.getFullChunkNow() != null;
++    }
++    // CraftBukkit end
++
+     public ThreadedLevelLightEngine getLightEngine() {
+         return this.lightEngine;
+     }
 @@ -150,6 +_,10 @@
                  }
              }
@@ -28,6 +45,39 @@
                  ChunkAccess chunkaccess1 = chunkholder.getChunkIfPresent(ChunkStatus.FULL);
                  if (chunkaccess1 != null) {
                      this.storeInCache(i, chunkaccess1, ChunkStatus.FULL);
+@@ -298,11 +_,31 @@
+ 
+     @Override
+     public void close() throws IOException {
+-        this.save(true);
++        // CraftBukkit start
++        close(true);
++    }
++
++    public void close(boolean save) throws IOException {
++        if (save) {
++            this.save(true);
++        }
++        // CraftBukkit end
+         this.lightEngine.close();
+         this.chunkMap.close();
+     }
+ 
++    // CraftBukkit start - modelled on below
++    public void purgeUnload() {
++        this.level.getProfiler().push("purge");
++        this.distanceManager.purgeStaleTickets();
++        this.runDistanceManagerUpdates();
++        this.level.getProfiler().popPush("unload");
++        this.chunkMap.tick(() -> true);
++        this.level.getProfiler().pop();
++        this.clearCache();
++    }
++    // CraftBukkit end
++
+     @Override
+     public void tick(BooleanSupplier p_201913_, boolean p_201914_) {
+         this.level.getProfiler().push("purge");
 @@ -356,7 +_,7 @@
                  for (ServerChunkCache.ChunkAndHolder serverchunkcache$chunkandholder : list) {
                      LevelChunk levelchunk1 = serverchunkcache$chunkandholder.chunk;

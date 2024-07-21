@@ -65,7 +65,7 @@
              add(map1, Items.LAVA_BUCKET, 20000);
              add(map1, Blocks.COAL_BLOCK, 16000);
              add(map1, Items.BLAZE_ROD, 2400);
-@@ -185,8 +_,6 @@
+@@ -185,10 +_,42 @@
              add(map1, Blocks.AZALEA, 100);
              add(map1, Blocks.FLOWERING_AZALEA, 100);
              add(map1, Blocks.MANGROVE_ROOTS, 300);
@@ -73,7 +73,43 @@
 -            return map1;
          }
      }
++
++    // CraftBukkit start - add fields and methods
++    private int maxStack = MAX_STACK;
++    public List<org.bukkit.entity.HumanEntity> transaction = new java.util.ArrayList<org.bukkit.entity.HumanEntity>();
++
++    public List<ItemStack> getContents() {
++        return this.items;
++    }
++
++    public void onOpen(org.bukkit.craftbukkit.entity.CraftHumanEntity who) {
++        transaction.add(who);
++    }
++
++    public void onClose(org.bukkit.craftbukkit.entity.CraftHumanEntity who) {
++        transaction.remove(who);
++    }
++
++    public List<org.bukkit.entity.HumanEntity> getViewers() {
++        return transaction;
++    }
++
++    @Override
++    public int getMaxStackSize() {
++        return maxStack;
++    }
++
++    public void setMaxStackSize(int size) {
++        maxStack = size;
++    }
++
++    public Object2IntOpenHashMap<ResourceLocation> getRecipesUsed() {
++        return this.recipesUsed; // PAIL private -> public
++    }
++    // CraftBukkit end
  
+     private static boolean isNeverAFurnaceFuel(Item p_58398_) {
+         return p_58398_.builtInRegistryHolder().is(ItemTags.NON_FLAMMABLE_WOOD);
 @@ -226,9 +_,9 @@
          super.loadAdditional(p_155025_, p_323468_);
          this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);

@@ -1,0 +1,38 @@
+--- a/net/minecraft/world/inventory/CraftingMenu.java
++++ b/net/minecraft/world/inventory/CraftingMenu.java
+@@ -30,6 +_,9 @@
+     private final ContainerLevelAccess access;
+     private final Player player;
+     private boolean placingRecipe;
++    // CraftBukkit start
++    private org.bukkit.craftbukkit.inventory.CraftInventoryView bukkitEntity = null;
++    // CraftBukkit end
+ 
+     public CraftingMenu(int p_39353_, Inventory p_39354_) {
+         this(p_39353_, p_39354_, ContainerLevelAccess.NULL);
+@@ -132,6 +_,7 @@
+ 
+     @Override
+     public boolean stillValid(Player p_39368_) {
++        if (!this.checkReachable) return true; // CraftBukkit
+         return stillValid(this.access, p_39368_, Blocks.CRAFTING_TABLE);
+     }
+ 
+@@ -216,4 +_,17 @@
+     public boolean shouldMoveToInventory(int p_150553_) {
+         return p_150553_ != this.getResultSlotIndex();
+     }
++
++    // CraftBukkit start
++    @Override
++    public org.bukkit.craftbukkit.inventory.CraftInventoryView getBukkitView() {
++        if (bukkitEntity != null) {
++            return bukkitEntity;
++        }
++
++        org.bukkit.craftbukkit.inventory.CraftInventoryCrafting inventory = new org.bukkit.craftbukkit.inventory.CraftInventoryCrafting(this.craftSlots, this.resultSlots);
++        bukkitEntity = new org.bukkit.craftbukkit.inventory.CraftInventoryView(this.player.getBukkitEntity(), inventory, this);
++        return bukkitEntity;
++    }
++    // CraftBukkit end
+ }

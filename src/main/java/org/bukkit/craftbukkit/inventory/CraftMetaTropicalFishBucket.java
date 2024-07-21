@@ -4,8 +4,8 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.nbt.NBTBase;
-import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.component.CustomData;
 import org.bukkit.DyeColor;
 import org.bukkit.configuration.serialization.DelegateDeserialization;
@@ -21,8 +21,8 @@ class CraftMetaTropicalFishBucket extends CraftMetaItem implements TropicalFishB
     static final ItemMetaKeyType<CustomData> BUCKET_ENTITY_TAG = new ItemMetaKeyType<>(DataComponents.BUCKET_ENTITY_DATA, "bucket-entity-tag");
 
     private Integer variant;
-    private NBTTagCompound entityTag;
-    private NBTTagCompound bucketEntityTag;
+    private CompoundTag entityTag;
+    private CompoundTag bucketEntityTag;
 
     CraftMetaTropicalFishBucket(CraftMetaItem meta) {
         super(meta);
@@ -66,7 +66,7 @@ class CraftMetaTropicalFishBucket extends CraftMetaItem implements TropicalFishB
     }
 
     @Override
-    void deserializeInternal(NBTTagCompound tag, Object context) {
+    void deserializeInternal(CompoundTag tag, Object context) {
         super.deserializeInternal(tag, context);
 
         if (tag.contains(ENTITY_TAG.NBT)) {
@@ -78,7 +78,7 @@ class CraftMetaTropicalFishBucket extends CraftMetaItem implements TropicalFishB
     }
 
     @Override
-    void serializeInternal(Map<String, NBTBase> internalTags) {
+    void serializeInternal(Map<String, Tag> internalTags) {
         if (entityTag != null && !entityTag.isEmpty()) {
             internalTags.put(ENTITY_TAG.NBT, entityTag);
         }
@@ -95,10 +95,10 @@ class CraftMetaTropicalFishBucket extends CraftMetaItem implements TropicalFishB
             tag.put(ENTITY_TAG, CustomData.of(entityTag));
         }
 
-        NBTTagCompound bucketEntityTag = (this.bucketEntityTag != null) ? this.bucketEntityTag.copy() : null;
+        CompoundTag bucketEntityTag = (this.bucketEntityTag != null) ? this.bucketEntityTag.copy() : null;
         if (hasVariant()) {
             if (bucketEntityTag == null) {
-                bucketEntityTag = new NBTTagCompound();
+                bucketEntityTag = new CompoundTag();
             }
             bucketEntityTag.putInt(VARIANT.NBT, variant);
         }

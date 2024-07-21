@@ -1,5 +1,17 @@
 --- a/net/minecraft/world/inventory/AnvilMenu.java
 +++ b/net/minecraft/world/inventory/AnvilMenu.java
+@@ -44,6 +_,11 @@
+     private static final int ADDITIONAL_SLOT_X_PLACEMENT = 76;
+     private static final int RESULT_SLOT_X_PLACEMENT = 134;
+     private static final int SLOT_Y_PLACEMENT = 47;
++    // CraftBukkit start
++    public static final int DEFAULT_DENIED_COST = -1;
++    public int maximumRepairCost = 40;
++    private org.bukkit.craftbukkit.inventory.CraftInventoryView bukkitEntity;
++    // CraftBukkit end
+ 
+     public AnvilMenu(int p_39005_, Inventory p_39006_) {
+         this(p_39005_, p_39006_, ContainerLevelAccess.NULL);
 @@ -79,6 +_,8 @@
              p_150474_.giveExperienceLevels(-this.cost.get());
          }
@@ -38,16 +50,29 @@
  
              int k2 = (int)Mth.clamp(j + (long)i, 0L, 2147483647L);
              this.cost.set(k2);
-@@ -297,5 +_,12 @@
- 
+@@ -298,4 +_,25 @@
      public int getCost() {
          return this.cost.get();
-+    }
+     }
 +
 +    /**
 +     * Neo: Sets the cost. Will be clamped to an integer.
 +     */
 +    public void setMaximumCost(long value) {
 +        this.cost.set((int)Mth.clamp(value, 0L, Integer.MAX_VALUE));
-     }
++    }
++
++    // CraftBukkit start
++    @Override
++    public org.bukkit.craftbukkit.inventory.CraftInventoryView getBukkitView() {
++        if (bukkitEntity != null) {
++            return bukkitEntity;
++        }
++
++        org.bukkit.craftbukkit.inventory.CraftInventory inventory = new org.bukkit.craftbukkit.inventory.CraftInventoryAnvil(
++                access.getLocation(), this.inputSlots, this.resultSlots, this);
++        bukkitEntity = new org.bukkit.craftbukkit.inventory.CraftInventoryView(this.player.getBukkitEntity(), inventory, this);
++        return bukkitEntity;
++    }
++    // CraftBukkit end
  }

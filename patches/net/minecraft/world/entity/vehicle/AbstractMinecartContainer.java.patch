@@ -1,5 +1,73 @@
 --- a/net/minecraft/world/entity/vehicle/AbstractMinecartContainer.java
 +++ b/net/minecraft/world/entity/vehicle/AbstractMinecartContainer.java
+@@ -24,6 +_,47 @@
+     private ResourceKey<LootTable> lootTable;
+     private long lootTableSeed;
+ 
++    // CraftBukkit start
++    public java.util.List<org.bukkit.entity.HumanEntity> transaction = new java.util.ArrayList<org.bukkit.entity.HumanEntity>();
++    private int maxStack = MAX_STACK;
++
++    public java.util.List<net.minecraft.world.item.ItemStack> getContents() {
++        return this.itemStacks;
++    }
++
++    public void onOpen(org.bukkit.craftbukkit.entity.CraftHumanEntity who) {
++        transaction.add(who);
++    }
++
++    public void onClose(org.bukkit.craftbukkit.entity.CraftHumanEntity who) {
++        transaction.remove(who);
++    }
++
++    public java.util.List<org.bukkit.entity.HumanEntity> getViewers() {
++        return transaction;
++    }
++
++    public org.bukkit.inventory.InventoryHolder getOwner() {
++        org.bukkit.entity.Entity cart = getBukkitEntity();
++        if(cart instanceof org.bukkit.inventory.InventoryHolder) return (org.bukkit.inventory.InventoryHolder) cart;
++        return null;
++    }
++
++    @Override
++    public int getMaxStackSize() {
++        return maxStack;
++    }
++
++    public void setMaxStackSize(int size) {
++        maxStack = size;
++    }
++
++    @Override
++    public org.bukkit.Location getLocation() {
++        return getBukkitEntity().getLocation();
++    }
++    // CraftBukkit end
++
+     protected AbstractMinecartContainer(EntityType<?> p_38213_, Level p_38214_) {
+         super(p_38213_, p_38214_);
+     }
+@@ -74,11 +_,18 @@
+ 
+     @Override
+     public void remove(Entity.RemovalReason p_150255_) {
++        // CraftBukkit start - add Bukkit remove cause
++        this.remove(p_150255_, null);
++    }
++
++    @Override
++    public void remove(Entity.RemovalReason p_150255_, org.bukkit.event.entity.EntityRemoveEvent.Cause cause) {
++        // CraftBukkit end
+         if (!this.level().isClientSide && p_150255_.shouldDestroy()) {
+             Containers.dropContents(this.level(), this, this);
+         }
+ 
+-        super.remove(p_150255_);
++        super.remove(p_150255_, cause); // CraftBukkit - add Bukkit remove cause
+     }
+ 
+     @Override
 @@ -95,6 +_,8 @@
  
      @Override

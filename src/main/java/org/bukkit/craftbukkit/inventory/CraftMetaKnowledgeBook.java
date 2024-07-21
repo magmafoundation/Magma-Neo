@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.resources.MinecraftKey;
+import net.minecraft.resources.ResourceLocation;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.serialization.DelegateDeserialization;
 import org.bukkit.craftbukkit.util.CraftNamespacedKey;
@@ -15,7 +15,7 @@ import org.bukkit.inventory.meta.KnowledgeBookMeta;
 
 @DelegateDeserialization(SerializableMeta.class)
 public class CraftMetaKnowledgeBook extends CraftMetaItem implements KnowledgeBookMeta {
-    static final ItemMetaKeyType<List<MinecraftKey>> BOOK_RECIPES = new ItemMetaKeyType<>(DataComponents.RECIPES, "Recipes");
+    static final ItemMetaKeyType<List<ResourceLocation>> BOOK_RECIPES = new ItemMetaKeyType<>(DataComponents.RECIPES, "Recipes");
     static final int MAX_RECIPES = Short.MAX_VALUE;
 
     protected List<NamespacedKey> recipes = new ArrayList<NamespacedKey>();
@@ -34,7 +34,7 @@ public class CraftMetaKnowledgeBook extends CraftMetaItem implements KnowledgeBo
 
         getOrEmpty(tag, BOOK_RECIPES).ifPresent((pages) -> {
             for (int i = 0; i < pages.size(); i++) {
-                MinecraftKey recipe = pages.get(i);
+                ResourceLocation recipe = pages.get(i);
 
                 addRecipe(CraftNamespacedKey.fromMinecraft(recipe));
             }
@@ -59,7 +59,7 @@ public class CraftMetaKnowledgeBook extends CraftMetaItem implements KnowledgeBo
         super.applyToItem(itemData);
 
         if (hasRecipes()) {
-            List<MinecraftKey> list = new ArrayList<>();
+            List<ResourceLocation> list = new ArrayList<>();
             for (NamespacedKey recipe : this.recipes) {
                 list.add(CraftNamespacedKey.toMinecraft(recipe));
             }

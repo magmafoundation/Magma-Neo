@@ -42,7 +42,7 @@ public class CraftBarrel extends CraftLootable<BarrelBlockEntity> implements Bar
 
             if (!open) {
                 getTileEntity().updateBlockState(blockData, true);
-                if (getWorldHandle() instanceof net.minecraft.world.level.World) {
+                if (getWorldHandle() instanceof net.minecraft.world.level.Level) {
                     getTileEntity().playSound(blockData, SoundEvents.BARREL_OPEN);
                 }
             }

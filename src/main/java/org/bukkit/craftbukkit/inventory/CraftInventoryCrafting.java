@@ -3,27 +3,27 @@ package org.bukkit.craftbukkit.inventory;
 import com.google.common.base.Preconditions;
 import java.util.Arrays;
 import java.util.List;
-import net.minecraft.world.IInventory;
-import net.minecraft.world.inventory.InventoryCrafting;
+import net.minecraft.world.Container;
+import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import org.bukkit.inventory.CraftingInventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 
 public class CraftInventoryCrafting extends CraftInventory implements CraftingInventory {
-    private final IInventory resultInventory;
+    private final Container resultInventory;
 
-    public CraftInventoryCrafting(InventoryCrafting inventory, IInventory resultInventory) {
+    public CraftInventoryCrafting(CraftingContainer inventory, Container resultInventory) {
         super(inventory);
         this.resultInventory = resultInventory;
     }
 
-    public IInventory getResultInventory() {
+    public Container getResultInventory() {
         return resultInventory;
     }
 
-    public InventoryCrafting getMatrixInventory() {
-        return (InventoryCrafting) inventory;
+    public CraftingContainer getMatrixInventory() {
+        return (CraftingContainer) inventory;
     }
 
     @Override

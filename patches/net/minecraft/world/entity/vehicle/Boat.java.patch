@@ -9,6 +9,21 @@
      private static final EntityDataAccessor<Integer> DATA_ID_TYPE = SynchedEntityData.defineId(Boat.class, EntityDataSerializers.INT);
      private static final EntityDataAccessor<Boolean> DATA_ID_PADDLE_LEFT = SynchedEntityData.defineId(Boat.class, EntityDataSerializers.BOOLEAN);
      private static final EntityDataAccessor<Boolean> DATA_ID_PADDLE_RIGHT = SynchedEntityData.defineId(Boat.class, EntityDataSerializers.BOOLEAN);
+@@ -90,6 +_,14 @@
+     @Nullable
+     private Leashable.LeashData leashData;
+ 
++    // CraftBukkit start
++    // PAIL: Some of these haven't worked since a few updates, and since 1.9 they are less and less applicable.
++    public double maxSpeed = 0.4D;
++    public double occupiedDeceleration = 0.2D;
++    public double unoccupiedDeceleration = -1;
++    public boolean landBoats = false;
++    // CraftBukkit end
++
+     public Boat(EntityType<? extends Boat> p_38290_, Level p_38291_) {
+         super(p_38290_, p_38291_);
+         this.blocksBuilding = true;
 @@ -498,7 +_,7 @@
                  for (int i2 = i1; i2 < j1; i2++) {
                      blockpos$mutableblockpos.set(l1, k1, i2);
@@ -45,6 +60,20 @@
                          && d0 < (double)((float)blockpos$mutableblockpos.getY() + fluidstate.getHeight(this.level(), blockpos$mutableblockpos))) {
                          if (!fluidstate.isSource()) {
                              return Boat.Status.UNDER_FLOWING_WATER;
+@@ -805,6 +_,13 @@
+ 
+     @Override
+     public void remove(Entity.RemovalReason p_352927_) {
++        // CraftBukkit start - add Bukkit remove cause
++        this.remove(p_352927_, null);
++    }
++
++    @Override
++    public void remove(Entity.RemovalReason p_352927_, org.bukkit.event.entity.EntityRemoveEvent.Cause cause) {
++        // CraftBukkit end
+         if (!this.level().isClientSide && p_352927_.shouldDestroy() && this.isLeashed()) {
+             this.dropLeash(true, true);
+         }
 @@ -839,7 +_,7 @@
                  }
  

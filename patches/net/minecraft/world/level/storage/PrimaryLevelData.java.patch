@@ -1,10 +1,24 @@
 --- a/net/minecraft/world/level/storage/PrimaryLevelData.java
 +++ b/net/minecraft/world/level/storage/PrimaryLevelData.java
-@@ -74,6 +_,7 @@
+@@ -74,6 +_,21 @@
      private boolean wasModded;
      private final Set<String> removedFeatureFlags;
      private final TimerQueue<MinecraftServer> scheduledEvents;
 +    private boolean confirmedExperimentalWarning = false;
++
++    // CraftBukkit start - Add world and pdc
++    public net.minecraft.core.Registry<net.minecraft.world.level.dimension.LevelStem> customDimensions;
++    private net.minecraft.server.level.ServerLevel world;
++    protected Tag pdc;
++    public void setWorld(net.minecraft.server.level.ServerLevel world) {
++        if (this.world != null) {
++            return;
++        }
++        this.world = world;
++        world.getWorld().readBukkitValues(pdc);
++        pdc = null;
++    }
++    // CraftBukkit end
  
      private PrimaryLevelData(
          @Nullable CompoundTag p_277888_,
@@ -26,11 +40,65 @@
      }
  
      private static ListTag stringCollectionToTag(Set<String> p_277880_) {
-@@ -570,6 +_,15 @@
+@@ -350,6 +_,20 @@
+ 
      @Override
+     public void setThundering(boolean p_78562_) {
++        // CraftBukkit start
++        if (this.thundering == p_78562_) {
++            return;
++        }
++
++        org.bukkit.World world = org.bukkit.Bukkit.getWorld(getLevelName());
++        if (world != null) {
++            org.bukkit.event.weather.ThunderChangeEvent thunder = new org.bukkit.event.weather.ThunderChangeEvent(world, p_78562_);
++            org.bukkit.Bukkit.getServer().getPluginManager().callEvent(thunder);
++            if (thunder.isCancelled()) {
++                return;
++            }
++        }
++        // CraftBukkit end
+         this.thundering = p_78562_;
+     }
+ 
+@@ -370,6 +_,20 @@
+ 
+     @Override
+     public void setRaining(boolean p_78576_) {
++        // CraftBukkit start
++        if (this.raining == p_78576_) {
++            return;
++        }
++
++        org.bukkit.World world = org.bukkit.Bukkit.getWorld(getLevelName());
++        if (world != null) {
++            org.bukkit.event.weather.WeatherChangeEvent weather = new org.bukkit.event.weather.WeatherChangeEvent(world, p_78576_);
++            org.bukkit.Bukkit.getServer().getPluginManager().callEvent(weather);
++            if (weather.isCancelled()) {
++                return;
++            }
++        }
++        // CraftBukkit end
+         this.raining = p_78576_;
+     }
+ 
+@@ -436,6 +_,12 @@
+     @Override
+     public void setDifficulty(Difficulty p_78521_) {
+         this.settings = this.settings.withDifficulty(p_78521_);
++        // CraftBukkit start
++        net.minecraft.network.protocol.game.ClientboundChangeDifficultyPacket packet = new net.minecraft.network.protocol.game.ClientboundChangeDifficultyPacket(this.getDifficulty(), this.isDifficultyLocked());
++        for (net.minecraft.server.level.ServerPlayer player : (java.util.List<net.minecraft.server.level.ServerPlayer>) (java.util.List) world.players()) {
++            player.connection.send(packet);
++        }
++        // CraftBukkit end
+     }
+ 
+     @Override
+@@ -571,6 +_,23 @@
      public LevelSettings getLevelSettings() {
          return this.settings.copy();
-+    }
+     }
 +
 +    public boolean hasConfirmedExperimentalWarning() {
 +        return this.confirmedExperimentalWarning;
@@ -39,6 +107,15 @@
 +    public PrimaryLevelData withConfirmedWarning(boolean confirmedWarning) { // Builder-like to not patch ctor
 +        this.confirmedExperimentalWarning = confirmedWarning;
 +        return this;
-     }
++    }
++
++    // CraftBukkit start - Check if the name stored in NBT is the correct one
++    public void checkName(String name) {
++        if (!this.settings.levelName.equals(name)) {
++            this.settings.levelName = name;
++        }
++    }
++    // CraftBukkit end
  
      @Deprecated
+     public static enum SpecialWorldProperty {

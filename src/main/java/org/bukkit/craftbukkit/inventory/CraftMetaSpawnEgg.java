@@ -5,8 +5,8 @@ import com.google.common.collect.ImmutableMap.Builder;
 import java.util.Map;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.nbt.NBTBase;
-import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.component.CustomData;
 import org.bukkit.configuration.serialization.DelegateDeserialization;
 import org.bukkit.craftbukkit.entity.CraftEntitySnapshot;
@@ -20,7 +20,7 @@ public class CraftMetaSpawnEgg extends CraftMetaItem implements SpawnEggMeta {
     @ItemMetaKey.Specific(ItemMetaKey.Specific.To.NBT)
     static final ItemMetaKey ENTITY_ID = new ItemMetaKey("id");
 
-    private NBTTagCompound entityTag;
+    private CompoundTag entityTag;
 
     CraftMetaSpawnEgg(CraftMetaItem meta) {
         super(meta);
@@ -45,7 +45,7 @@ public class CraftMetaSpawnEgg extends CraftMetaItem implements SpawnEggMeta {
     }
 
     @Override
-    void deserializeInternal(NBTTagCompound tag, Object context) {
+    void deserializeInternal(CompoundTag tag, Object context) {
         super.deserializeInternal(tag, context);
 
         if (tag.contains(ENTITY_TAG.NBT)) {
@@ -54,13 +54,13 @@ public class CraftMetaSpawnEgg extends CraftMetaItem implements SpawnEggMeta {
             // Tag still has some other data, lets try our luck with a conversion
             if (!entityTag.isEmpty()) {
                 // SPIGOT-4128: This is hopeless until we start versioning stacks. RIP data.
-                // entityTag = (NBTTagCompound) MinecraftServer.getServer().dataConverterManager.update(DataConverterTypes.ENTITY, new Dynamic(DynamicOpsNBT.a, entityTag), -1, CraftMagicNumbers.DATA_VERSION).getValue();
+                // entityTag = (CompoundTag) MinecraftServer.getServer().dataConverterManager.update(DataConverterTypes.ENTITY, new Dynamic(DynamicOpsNBT.a, entityTag), -1, CraftMagicNumbers.DATA_VERSION).getValue();
             }
         }
     }
 
     @Override
-    void serializeInternal(Map<String, NBTBase> internalTags) {
+    void serializeInternal(Map<String, Tag> internalTags) {
         if (entityTag != null && !entityTag.isEmpty()) {
             internalTags.put(ENTITY_TAG.NBT, entityTag);
         }

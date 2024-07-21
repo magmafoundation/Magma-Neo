@@ -437,7 +437,7 @@ public class CraftLivingEntity extends CraftEntity implements LivingEntity {
     public <T extends Projectile> T launchProjectile(Class<? extends T> projectile, Vector velocity) {
         Preconditions.checkState(!getHandle().generation, "Cannot launch projectile during world generation");
 
-        net.minecraft.world.level.World world = ((CraftWorld) getWorld()).getHandle();
+        net.minecraft.world.level.Level world = ((CraftWorld) getWorld()).getHandle();
         net.minecraft.world.entity.Entity launch = null;
 
         if (Snowball.class.isAssignableFrom(projectile)) {

@@ -1,0 +1,142 @@
+--- a/net/minecraft/world/level/block/entity/LecternBlockEntity.java
++++ b/net/minecraft/world/level/block/entity/LecternBlockEntity.java
+@@ -28,12 +_,56 @@
+ import net.minecraft.world.phys.Vec2;
+ import net.minecraft.world.phys.Vec3;
+ 
+-public class LecternBlockEntity extends BlockEntity implements Clearable, MenuProvider {
++public class LecternBlockEntity extends BlockEntity implements Clearable, MenuProvider, CommandSource { // CraftBukkit - CommandSource
+     public static final int DATA_PAGE = 0;
+     public static final int NUM_DATA = 1;
+     public static final int SLOT_BOOK = 0;
+     public static final int NUM_SLOTS = 1;
+-    public final Container bookAccess = new Container() {
++    // CraftBukkit start - add fields and methods
++    public final Container bookAccess = new LecternInventory();
++    public class LecternInventory implements Container {
++
++        public java.util.List<org.bukkit.entity.HumanEntity> transaction = new java.util.ArrayList<>();
++        private int maxStack = 1;
++
++        @Override
++        public java.util.List<net.minecraft.world.item.ItemStack> getContents() {
++            return java.util.Arrays.asList(book);
++        }
++
++        @Override
++        public void onOpen(org.bukkit.craftbukkit.entity.CraftHumanEntity who) {
++            transaction.add(who);
++        }
++
++        @Override
++        public void onClose(org.bukkit.craftbukkit.entity.CraftHumanEntity who) {
++            transaction.remove(who);
++        }
++
++        @Override
++        public java.util.List<org.bukkit.entity.HumanEntity> getViewers() {
++            return transaction;
++        }
++        @Override
++        public void setMaxStackSize(int i) {
++            maxStack = i;
++        }
++        @Override
++        public org.bukkit.Location getLocation() {
++            if (level == null) return null;
++            return org.bukkit.craftbukkit.util.CraftLocation.toBukkit(worldPosition, level.getWorld());
++        }
++        @Override
++        public org.bukkit.inventory.InventoryHolder getOwner() {
++            return (org.bukkit.block.Lectern) LecternBlockEntity.this.getOwner();
++        }
++
++        public LecternBlockEntity getLectern() {
++            return LecternBlockEntity.this;
++        }
++        // CraftBukkit end
++
+         @Override
+         public int getContainerSize() {
+             return 1;
+@@ -77,11 +_,19 @@
+ 
+         @Override
+         public void setItem(int p_59585_, ItemStack p_59586_) {
++            // CraftBukkit start
++            if (p_59585_ == 0) {
++                LecternBlockEntity.this.setBook(p_59586_);
++                if (LecternBlockEntity.this.getLevel() != null) {
++                    LecternBlock.resetBookState(null, LecternBlockEntity.this.getLevel(), LecternBlockEntity.this.getBlockPos(), LecternBlockEntity.this.getBlockState(), LecternBlockEntity.this.hasBook());
++                }
++            }
++            // CraftBukkit end
+         }
+ 
+         @Override
+         public int getMaxStackSize() {
+-            return 1;
++            return maxStack; // CraftBukkit
+         }
+ 
+         @Override
+@@ -159,7 +_,7 @@
+         if (i != this.page) {
+             this.page = i;
+             this.setChanged();
+-            LecternBlock.signalPageChange(this.getLevel(), this.getBlockPos(), this.getBlockState());
++            if (this.level != null) LecternBlock.signalPageChange(this.getLevel(), this.getBlockPos(), this.getBlockState());  // CraftBukkit
+         }
+     }
+ 
+@@ -180,6 +_,32 @@
+         return p_59555_;
+     }
+ 
++    // CraftBukkit start
++    @Override
++    public void sendSystemMessage(Component ichatbasecomponent) {
++    }
++
++    @Override
++    public org.bukkit.command.CommandSender getBukkitSender(CommandSourceStack wrapper) {
++        return wrapper.getEntity() != null ? wrapper.getEntity().getBukkitSender(wrapper) : new org.bukkit.craftbukkit.command.CraftBlockCommandSender(wrapper, this);
++    }
++
++    @Override
++    public boolean acceptsSuccess() {
++        return false;
++    }
++
++    @Override
++    public boolean acceptsFailure() {
++        return false;
++    }
++
++    @Override
++    public boolean shouldInformAdmins() {
++        return false;
++    }
++    // CraftBukkit end
++
+     private CommandSourceStack createCommandSourceStack(@Nullable Player p_59535_) {
+         String s;
+         Component component;
+@@ -192,7 +_,7 @@
+         }
+ 
+         Vec3 vec3 = Vec3.atCenterOf(this.worldPosition);
+-        return new CommandSourceStack(CommandSource.NULL, vec3, Vec2.ZERO, (ServerLevel)this.level, 2, s, component, this.level.getServer(), p_59535_);
++        return new CommandSourceStack(this, vec3, Vec2.ZERO, (ServerLevel)this.level, 2, s, component, this.level.getServer(), p_59535_); // CraftBukkit - this
+     }
+ 
+     @Override
+@@ -229,7 +_,7 @@
+ 
+     @Override
+     public AbstractContainerMenu createMenu(int p_59562_, Inventory p_59563_, Player p_59564_) {
+-        return new LecternMenu(p_59562_, this.bookAccess, this.dataAccess);
++        return new LecternMenu(p_59562_, this.bookAccess, this.dataAccess, p_59563_); // CraftBukkit
+     }
+ 
+     @Override

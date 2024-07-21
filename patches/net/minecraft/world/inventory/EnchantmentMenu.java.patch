@@ -1,5 +1,30 @@
 --- a/net/minecraft/world/inventory/EnchantmentMenu.java
 +++ b/net/minecraft/world/inventory/EnchantmentMenu.java
+@@ -39,6 +_,13 @@
+             super.setChanged();
+             EnchantmentMenu.this.slotsChanged(this);
+         }
++
++        // CraftBukkit start
++        @Override
++        public org.bukkit.Location getLocation() {
++            return enchantSlots.getLocation();
++        }
++        // CraftBukkit end
+     };
+     private final ContainerLevelAccess access;
+     private final RandomSource random = RandomSource.create();
+@@ -46,6 +_,10 @@
+     public final int[] costs = new int[3];
+     public final int[] enchantClue = new int[]{-1, -1, -1};
+     public final int[] levelClue = new int[]{-1, -1, -1};
++    // CraftBukkit start
++    private org.bukkit.craftbukkit.inventory.CraftInventoryView bukkitEntity = null;
++    private org.bukkit.entity.Player player;
++    // CraftBukkit end
+ 
+     public EnchantmentMenu(int p_39454_, Inventory p_39455_) {
+         this(p_39454_, p_39455_, ContainerLevelAccess.NULL);
 @@ -63,7 +_,7 @@
          this.addSlot(new Slot(this.enchantSlots, 1, 35, 47) {
              @Override
@@ -37,6 +62,14 @@
                      }
  
                      for (int l = 0; l < 3; l++) {
+@@ -231,6 +_,7 @@
+ 
+     @Override
+     public boolean stillValid(Player p_39463_) {
++        if (!this.checkReachable) return true; // CraftBukkit
+         return stillValid(this.access, p_39463_, Blocks.ENCHANTING_TABLE);
+     }
+ 
 @@ -249,7 +_,7 @@
                  if (!this.moveItemStackTo(itemstack1, 2, 38, true)) {
                      return ItemStack.EMPTY;
@@ -46,3 +79,21 @@
                  if (!this.moveItemStackTo(itemstack1, 1, 2, true)) {
                      return ItemStack.EMPTY;
                  }
+@@ -278,4 +_,17 @@
+ 
+         return itemstack;
+     }
++
++    // CraftBukkit start
++    @Override
++    public org.bukkit.craftbukkit.inventory.CraftInventoryView getBukkitView() {
++        if (bukkitEntity != null) {
++            return bukkitEntity;
++        }
++
++        org.bukkit.craftbukkit.inventory.CraftInventoryEnchanting inventory = new org.bukkit.craftbukkit.inventory.CraftInventoryEnchanting(this.enchantSlots);
++        bukkitEntity = new org.bukkit.craftbukkit.inventory.CraftInventoryView(this.player, inventory, this);
++        return bukkitEntity;
++    }
++    // CraftBukkit end
+ }

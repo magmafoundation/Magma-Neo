@@ -9,7 +9,7 @@
      private static final Logger LOGGER = LogUtils.getLogger();
      private static final String TAG_ACTIVE_EFFECTS = "active_effects";
      private static final ResourceLocation SPEED_MODIFIER_POWDER_SNOW_ID = ResourceLocation.withDefaultNamespace("powder_snow");
-@@ -254,6 +_,14 @@
+@@ -254,11 +_,34 @@
      private boolean skipDropExperience;
      private final Reference2ObjectMap<Enchantment, Set<EnchantmentLocationBasedEffect>> activeLocationDependentEnchantments = new Reference2ObjectArrayMap<>();
      protected float appliedScale = 1.0F;
@@ -21,9 +21,29 @@
 +    **/
 +    @Nullable
 +    protected java.util.Stack<net.neoforged.neoforge.common.damagesource.DamageContainer> damageContainers = new java.util.Stack<>();
++
++    // CraftBukkit start
++    public int expToDrop;
++    public java.util.ArrayList<org.bukkit.inventory.ItemStack> drops = new java.util.ArrayList<org.bukkit.inventory.ItemStack>();
++    public final org.bukkit.craftbukkit.attribute.CraftAttributeMap craftAttributes;
++    public boolean collides = true;
++    public Set<java.util.UUID> collidableExemptions = new java.util.HashSet<>();
++    public boolean bukkitPickUpLoot;
++
++    @Override
++    public float getBukkitYaw() {
++        return getYHeadRot();
++    }
++    // CraftBukkit end
  
      protected LivingEntity(EntityType<? extends LivingEntity> p_20966_, Level p_20967_) {
          super(p_20966_, p_20967_);
+         this.attributes = new AttributeMap(DefaultAttributes.getSupplier(p_20966_));
+         this.setHealth(this.getMaxHealth());
++        this.craftAttributes = new org.bukkit.craftbukkit.attribute.CraftAttributeMap(attributes); // CraftBukkit
+         this.blocksBuilding = true;
+         this.rotA = (float)((Math.random() + 1.0) * 0.01F);
+         this.reapplyPosition();
 @@ -320,7 +_,9 @@
              .add(Attributes.EXPLOSION_KNOCKBACK_RESISTANCE)
              .add(Attributes.WATER_MOVEMENT_EFFICIENCY)
@@ -72,6 +92,34 @@
              this.extinguishFire();
          }
  
+@@ -764,6 +_,27 @@
+         }
+     }
+ 
++    // CraftBukkit start
++    private boolean isTickingEffects = false;
++    private List<ProcessableEffect> effectsToProcess = Lists.newArrayList();
++
++    private static class ProcessableEffect {
++
++        private Holder<MobEffect> type;
++        private MobEffectInstance effect;
++        private final org.bukkit.event.entity.EntityPotionEffectEvent.Cause cause;
++
++        private ProcessableEffect(MobEffectInstance effect, org.bukkit.event.entity.EntityPotionEffectEvent.Cause cause) {
++            this.effect = effect;
++            this.cause = cause;
++        }
++        private ProcessableEffect(Holder<MobEffect> type, org.bukkit.event.entity.EntityPotionEffectEvent.Cause cause) {
++            this.type = type;
++            this.cause = cause;
++        }
++    }
++    // CraftBukkit end
++
+     protected void tickEffects() {
+         Iterator<Holder<MobEffect>> iterator = this.activeEffects.keySet().iterator();
+ 
 @@ -772,7 +_,7 @@
                  Holder<MobEffect> holder = iterator.next();
                  MobEffectInstance mobeffectinstance = this.activeEffects.get(holder);
@@ -112,11 +160,31 @@
                  iterator.remove();
              }
  
-@@ -929,11 +_,12 @@
+@@ -924,16 +_,31 @@
+         return this.activeEffects.get(p_316375_);
+     }
+ 
++    // CraftBukkit start
++    public boolean addEffect(MobEffectInstance mobeffect, org.bukkit.event.entity.EntityPotionEffectEvent.Cause cause) {
++        return this.addEffect(mobeffect, (Entity) null, cause);
++    }
++
+     public final boolean addEffect(MobEffectInstance p_21165_) {
+-        return this.addEffect(p_21165_, null);
++        return this.addEffect(p_21165_, null, org.bukkit.event.entity.EntityPotionEffectEvent.Cause.UNKNOWN);
      }
  
      public boolean addEffect(MobEffectInstance p_147208_, @Nullable Entity p_147209_) {
 -        if (!this.canBeAffected(p_147208_)) {
++        return this.addEffect(p_147208_, p_147209_, org.bukkit.event.entity.EntityPotionEffectEvent.Cause.UNKNOWN);
++    }
++
++    public boolean addEffect(MobEffectInstance p_147208_, @Nullable Entity p_147209_, org.bukkit.event.entity.EntityPotionEffectEvent.Cause cause) {
++        if (isTickingEffects) {
++            effectsToProcess.add(new ProcessableEffect(p_147208_, cause));
++            return true;
++        }
++        // CraftBukkit end
 +        if (!net.neoforged.neoforge.common.CommonHooks.canMobEffectBeApplied(this, p_147208_)) {
              return false;
          } else {
@@ -150,14 +218,52 @@
              MobEffectInstance mobeffectinstance = this.activeEffects.put(p_147216_.getEffect(), p_147216_);
              if (mobeffectinstance == null) {
                  this.onEffectAdded(p_147216_, p_147217_);
-@@ -983,6 +_,7 @@
+@@ -977,13 +_,41 @@
+         return this.getType().is(EntityTypeTags.INVERTED_HEALING_AND_HARM);
      }
  
++    // CraftBukkit start
+     @Nullable
+     public MobEffectInstance removeEffectNoUpdate(Holder<MobEffect> p_316233_) {
+-        return this.activeEffects.remove(p_316233_);
+-    }
+-
++        return removeEffectNoUpdate(p_316233_, org.bukkit.event.entity.EntityPotionEffectEvent.Cause.UNKNOWN);
++    }
++
++    @Nullable
++    public MobEffectInstance removeEffectNoUpdate(Holder<MobEffect> holder, org.bukkit.event.entity.EntityPotionEffectEvent.Cause cause) {
++        if (isTickingEffects) {
++            effectsToProcess.add(new ProcessableEffect(holder, cause));
++            return null;
++        }
++
++        MobEffectInstance effect = this.activeEffects.get(holder);
++        if (effect == null) {
++            return null;
++        }
++
++        org.bukkit.event.entity.EntityPotionEffectEvent event = org.bukkit.craftbukkit.event.CraftEventFactory.callEntityPotionEffectChangeEvent(this, effect, null, cause);
++        if (event.isCancelled()) {
++            return null;
++        }
++
++        return this.activeEffects.remove(holder);
++    }
++
++    // CraftBukkit start
      public boolean removeEffect(Holder<MobEffect> p_316570_) {
+-        MobEffectInstance mobeffectinstance = this.removeEffectNoUpdate(p_316570_);
++        return removeEffect(p_316570_, org.bukkit.event.entity.EntityPotionEffectEvent.Cause.UNKNOWN);
++    }
++
++    public boolean removeEffect(Holder<MobEffect> p_316570_, org.bukkit.event.entity.EntityPotionEffectEvent.Cause cause) {
++        MobEffectInstance mobeffectinstance = this.removeEffectNoUpdate(p_316570_, cause);
++        // CraftBukkit end
 +        if (net.neoforged.neoforge.event.EventHooks.onEffectRemoved(this, p_316570_, null)) return false;
-         MobEffectInstance mobeffectinstance = this.removeEffectNoUpdate(p_316570_);
          if (mobeffectinstance != null) {
              this.onEffectRemoved(mobeffectinstance);
+             return true;
 @@ -1061,6 +_,8 @@
      }
  
@@ -334,6 +440,35 @@
          p_147241_ *= 1.0 - this.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE);
          if (!(p_147241_ <= 0.0)) {
              this.hasImpulse = true;
+@@ -1511,6 +_,28 @@
+         return p_21202_.getEatingSound();
+     }
+ 
++    // CraftBukkit start - Add delegate methods
++    public SoundEvent getHurtSound0(DamageSource damagesource) {
++        return getHurtSound(damagesource);
++    }
++
++    public SoundEvent getDeathSound0() {
++        return getDeathSound();
++    }
++
++    public SoundEvent getFallDamageSound0(int fallHeight) {
++        return getFallDamageSound(fallHeight);
++    }
++
++    public SoundEvent getDrinkingSound0(ItemStack itemstack) {
++        return getDrinkingSound(itemstack);
++    }
++
++    public SoundEvent getEatingSound0(ItemStack itemstack) {
++        return getEatingSound(itemstack);
++    }
++    // CraftBukkit end
++
+     public Optional<BlockPos> getLastClimbablePos() {
+         return this.lastClimbablePos;
+     }
 @@ -1521,15 +_,9 @@
          } else {
              BlockPos blockpos = this.blockPosition();

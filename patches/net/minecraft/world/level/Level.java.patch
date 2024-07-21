@@ -56,6 +56,24 @@
  
      protected Level(
          WritableLevelData p_270739_,
+@@ -126,6 +_,17 @@
+         long p_270248_,
+         int p_270466_
+     ) {
++        // CraftBukkit start
++        this.world = new org.bukkit.craftbukkit.CraftWorld((net.minecraft.server.level.ServerLevel)this, generator, biomeProvider, environment);
++
++        // CraftBukkit Ticks things
++        for (org.bukkit.entity.SpawnCategory spawnCategory : org.bukkit.entity.SpawnCategory.values()) {
++            if (org.bukkit.craftbukkit.util.CraftSpawnCategory.isValidForLimits(spawnCategory)) {
++                this.ticksPerSpawnCategory.put(spawnCategory, (long) this.getCraftServer().getTicksPerSpawns(spawnCategory));
++            }
++        }
++        // CraftBukkit end
++
+         this.profiler = p_270692_;
+         this.levelData = p_270739_;
+         this.dimensionTypeRegistration = p_270240_;
 @@ -216,11 +_,40 @@
          } else {
              LevelChunk levelchunk = this.getChunkAt(p_46605_);

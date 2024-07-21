@@ -103,6 +103,36 @@
      }
  
      public boolean isColliding(BlockPos p_20040_, BlockState p_20041_) {
+@@ -330,7 +_,13 @@
+     }
+ 
+     public final void discard() {
+-        this.remove(Entity.RemovalReason.DISCARDED);
++        // CraftBukkit start - add Bukkit remove cause
++        this.discard(null);
++    }
++
++    public final void discard(org.bukkit.event.entity.EntityRemoveEvent.Cause cause) {
++        this.remove(Entity.RemovalReason.DISCARDED, cause);
++        // CraftBukkit end
+     }
+ 
+     protected abstract void defineSynchedData(SynchedEntityData.Builder p_326003_);
+@@ -350,7 +_,13 @@
+     }
+ 
+     public void remove(Entity.RemovalReason p_146834_) {
+-        this.setRemoved(p_146834_);
++        // CraftBukkit start - add Bukkit remove cause
++        this.setRemoved(p_146834_, null);
++    }
++
++    public void remove(Entity.RemovalReason p_146834_, org.bukkit.event.entity.EntityRemoveEvent.Cause cause) {
++        this.setRemoved(p_146834_, cause);
++        // CraftBukkit end
+     }
+ 
+     public void onClientRemoval() {
 @@ -467,7 +_,7 @@
  
          if (this.isInLava()) {
@@ -152,6 +182,27 @@
                      ? blockpos.atY(Mth.floor(this.position.y - (double)p_216987_))
                      : blockpos;
              }
+@@ -1005,6 +_,20 @@
+         return SoundEvents.GENERIC_SPLASH;
+     }
+ 
++    // CraftBukkit start - Add delegate methods
++    public SoundEvent getSwimSound0() {
++        return getSwimSound();
++    }
++
++    public SoundEvent getSwimSplashSound0() {
++        return getSwimSplashSound();
++    }
++
++    public SoundEvent getSwimHighSpeedSplashSound0() {
++        return getSwimHighSpeedSplashSound();
++    }
++    // CraftBukkit end
++
+     protected void checkInsideBlocks() {
+         AABB aabb = this.getBoundingBox();
+         BlockPos blockpos = BlockPos.containing(aabb.minX + 1.0E-7, aabb.minY + 1.0E-7, aabb.minZ + 1.0E-7);
 @@ -1076,19 +_,19 @@
          return !blockstate.is(BlockTags.INSIDE_STEP_SOUND_BLOCKS) && !blockstate.is(BlockTags.COMBINATION_STEP_SOUND_BLOCKS) ? p_278049_ : blockpos;
      }
@@ -261,6 +312,107 @@
      }
  
      public void moveRelative(float p_19921_, Vec3 p_19922_) {
+@@ -1628,15 +_,21 @@
+     }
+ 
+     public boolean saveAsPassenger(CompoundTag p_20087_) {
++        // CraftBukkit start - allow excluding certain data when saving
++        return saveAsPassenger(p_20087_, true);
++    }
++
++    public boolean saveAsPassenger(CompoundTag p_20087_, boolean includeAll) {
++        // CraftBukkit end
+         if (this.removalReason != null && !this.removalReason.shouldSave()) {
+             return false;
+         } else {
+             String s = this.getEncodeId();
+-            if (s == null) {
++            if (!this.persist || s == null) { // CraftBukkit - persist flag
+                 return false;
+             } else {
+                 p_20087_.putString("id", s);
+-                this.saveWithoutId(p_20087_);
++                this.saveWithoutId(p_20087_, includeAll); // CraftBukkit - pass on includeAll
+                 return true;
+             }
+         }
+@@ -1647,15 +_,37 @@
+     }
+ 
+     public CompoundTag saveWithoutId(CompoundTag p_20241_) {
++        // CraftBukkit start - allow excluding certain data when saving
++        return saveWithoutId(p_20241_, true);
++    }
++
++    public CompoundTag saveWithoutId(CompoundTag p_20241_, boolean includeAll) {
++        // CraftBukkit end
+         try {
+-            if (this.vehicle != null) {
+-                p_20241_.put("Pos", this.newDoubleList(this.vehicle.getX(), this.getY(), this.vehicle.getZ()));
+-            } else {
+-                p_20241_.put("Pos", this.newDoubleList(this.getX(), this.getY(), this.getZ()));
++            // CraftBukkit start - selectively save position
++            if (includeAll) {
++                if (this.vehicle != null) {
++                    p_20241_.put("Pos", this.newDoubleList(this.vehicle.getX(), this.getY(), this.vehicle.getZ()));
++                } else {
++                    p_20241_.put("Pos", this.newDoubleList(this.getX(), this.getY(), this.getZ()));
++                }
+             }
++            // CraftBukkit end
+ 
+             Vec3 vec3 = this.getDeltaMovement();
+             p_20241_.put("Motion", this.newDoubleList(vec3.x, vec3.y, vec3.z));
++
++            // CraftBukkit start - Checking for NaN pitch/yaw and resetting to zero
++            // TODO: make sure this is the best way to address this.
++            if (Float.isNaN(this.yRot)) {
++                this.yRot = 0;
++            }
++
++            if (Float.isNaN(this.xRot)) {
++                this.xRot = 0;
++            }
++            // CraftBukkit end
++
+             p_20241_.put("Rotation", this.newFloatList(this.getYRot(), this.getXRot()));
+             p_20241_.putFloat("FallDistance", this.fallDistance);
+             p_20241_.putShort("Fire", (short)this.remainingFireTicks);
+@@ -1663,7 +_,33 @@
+             p_20241_.putBoolean("OnGround", this.onGround());
+             p_20241_.putBoolean("Invulnerable", this.invulnerable);
+             p_20241_.putInt("PortalCooldown", this.portalCooldown);
+-            p_20241_.putUUID("UUID", this.getUUID());
++            // CraftBukkit start - selectively save uuid and world
++            if (includeAll) {
++                p_20241_.putUUID("UUID", this.getUUID());
++                // PAIL: Check above UUID reads 1.8 properly, ie: UUIDMost / UUIDLeast
++                p_20241_.putLong("WorldUUIDLeast", ((net.minecraft.server.level.ServerLevel) this.level).getWorld().getUID().getLeastSignificantBits());
++                p_20241_.putLong("WorldUUIDMost", ((net.minecraft.server.level.ServerLevel) this.level).getWorld().getUID().getMostSignificantBits());
++            }
++
++            p_20241_.putInt("Bukkit.updateLevel", CURRENT_LEVEL);
++
++            if (!this.persist) {
++                p_20241_.putBoolean("Bukkit.persist", this.persist);
++            }
++
++            if (!this.visibleByDefault) {
++                p_20241_.putBoolean("Bukkit.visibleByDefault", this.visibleByDefault);
++            }
++
++            if (this.persistentInvisibility) {
++                p_20241_.putBoolean("Bukkit.invisible", this.persistentInvisibility);
++            }
++
++            // SPIGOT-6907: re-implement LivingEntity#setMaximumAir()
++            if (maxAirTicks != getDefaultMaxAirSupply()) {
++                p_20241_.putInt("Bukkit.MaxAirSupply", getMaxAirSupply());
++            }
++            // CraftBukkit end
+             Component component = this.getCustomName();
+             if (component != null) {
+                 p_20241_.putString("CustomName", Component.Serializer.toJson(component, this.registryAccess()));
 @@ -1704,6 +_,10 @@
                  p_20241_.put("Tags", listtag);
              }
@@ -516,6 +668,21 @@
      }
  
      public void checkDespawn() {
+@@ -3412,6 +_,14 @@
+ 
+     @Override
+     public final void setRemoved(Entity.RemovalReason p_146876_) {
++        // CraftBukkit start - add Bukkit remove cause
++        setRemoved(p_146876_, null);
++    }
++
++    @Override
++    public final void setRemoved(Entity.RemovalReason p_146876_, org.bukkit.event.entity.EntityRemoveEvent.Cause cause) {
++        org.bukkit.craftbukkit.event.CraftEventFactory.callEntityRemoveEvent(this, cause);
++        // CraftBukkit end
+         if (this.removalReason == null) {
+             this.removalReason = p_146876_;
+         }
 @@ -3449,6 +_,126 @@
  
      public boolean mayInteract(Level p_146843_, BlockPos p_146844_) {

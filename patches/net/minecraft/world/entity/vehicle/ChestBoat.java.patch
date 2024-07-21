@@ -1,0 +1,74 @@
+--- a/net/minecraft/world/entity/vehicle/ChestBoat.java
++++ b/net/minecraft/world/entity/vehicle/ChestBoat.java
+@@ -73,11 +_,18 @@
+ 
+     @Override
+     public void remove(Entity.RemovalReason p_219894_) {
++        // CraftBukkit start - add Bukkit remove cause
++        this.remove(p_219894_, null);
++    }
++
++    @Override
++    public void remove(Entity.RemovalReason p_219894_, org.bukkit.event.entity.EntityRemoveEvent.Cause cause) {
++        // CraftBukkit end
+         if (!this.level().isClientSide && p_219894_.shouldDestroy()) {
+             Containers.dropContents(this.level(), this, this);
+         }
+ 
+-        super.remove(p_219894_);
++        super.remove(p_219894_, cause); // CraftBukkit - add Bukkit remove cause
+     }
+ 
+     @Override
+@@ -220,4 +_,51 @@
+     public void stopOpen(Player p_270286_) {
+         this.level().gameEvent(GameEvent.CONTAINER_CLOSE, this.position(), GameEvent.Context.of(p_270286_));
+     }
++
++    // CraftBukkit start
++    public java.util.List<org.bukkit.entity.HumanEntity> transaction = new java.util.ArrayList<org.bukkit.entity.HumanEntity>();
++    private int maxStack = MAX_STACK;
++
++    @Override
++    public java.util.List<net.minecraft.world.item.ItemStack> getContents() {
++        return this.itemStacks;
++    }
++
++    @Override
++    public void onOpen(org.bukkit.craftbukkit.entity.CraftHumanEntity who) {
++        transaction.add(who);
++    }
++
++    @Override
++    public void onClose(org.bukkit.craftbukkit.entity.CraftHumanEntity who) {
++        transaction.remove(who);
++    }
++
++    @Override
++    public java.util.List<org.bukkit.entity.HumanEntity> getViewers() {
++        return transaction;
++    }
++
++    @Override
++    public org.bukkit.inventory.InventoryHolder getOwner() {
++        org.bukkit.entity.Entity entity = getBukkitEntity();
++        if (entity instanceof org.bukkit.inventory.InventoryHolder) return (org.bukkit.inventory.InventoryHolder) entity;
++        return null;
++    }
++
++    @Override
++    public int getMaxStackSize() {
++        return maxStack;
++    }
++
++    @Override
++    public void setMaxStackSize(int size) {
++        maxStack = size;
++    }
++
++    @Override
++    public org.bukkit.Location getLocation() {
++        return getBukkitEntity().getLocation();
++    }
++    // CraftBukkit end
+ }

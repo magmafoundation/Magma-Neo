@@ -1,6 +1,15 @@
 --- a/net/minecraft/server/level/ServerLevel.java
 +++ b/net/minecraft/server/level/ServerLevel.java
-@@ -199,7 +_,7 @@
+@@ -178,7 +_,7 @@
+     final List<ServerPlayer> players = Lists.newArrayList();
+     private final ServerChunkCache chunkSource;
+     private final MinecraftServer server;
+-    public final ServerLevelData serverLevelData;
++    public final net.minecraft.world.level.storage.PrimaryLevelData serverLevelData; // CraftBukkit - type
+     private int lastSpawnChunkRadius;
+     final EntityTickList entityTickList = new EntityTickList();
+     public final PersistentEntitySectionManager<Entity> entityManager;
+@@ -199,12 +_,25 @@
      private final List<CustomSpawner> customSpawners;
      @Nullable
      private EndDragonFight dragonFight;
@@ -9,6 +18,41 @@
      private final StructureManager structureManager;
      private final StructureCheck structureCheck;
      private final boolean tickTime;
+     private final RandomSequences randomSequences;
+ 
++    // CraftBukkit start
++    public final LevelStorageSource.LevelStorageAccess convertable;
++    public final UUID uuid;
++
++    public LevelChunk getChunkIfLoaded(int x, int z) {
++        return this.chunkSource.getChunk(x, z, false);
++    }
++
++    @Override
++    public ResourceKey<LevelStem> getTypeKey() {
++        return convertable.dimensionType;
++    }
++
+     public ServerLevel(
+         MinecraftServer p_214999_,
+         Executor p_215000_,
+@@ -230,10 +_,15 @@
+             p_215007_,
+             p_214999_.getMaxChainedNeighborUpdates()
+         );
++        // CraftBukkit start
++        this.pvpMode = p_214999_.isPvpAllowed();
++        convertable = p_215001_;
++        uuid = org.bukkit.craftbukkit.util.WorldUUID.getUUID(p_215001_.levelDirectory.path().toFile());
++        // CraftBukkit end
+         this.tickTime = p_215009_;
+         this.server = p_214999_;
+         this.customSpawners = p_215008_;
+-        this.serverLevelData = p_215002_;
++        this.serverLevelData = (net.minecraft.world.level.storage.PrimaryLevelData) p_215002_;
+         ChunkGenerator chunkgenerator = p_215004_.generator();
+         boolean flag = p_214999_.forceSynchronousWrites();
+         DataFixer datafixer = p_214999_.getFixerUpper();
 @@ -298,6 +_,8 @@
          this.randomSequences = Objects.requireNonNullElseGet(
              p_288977_, () -> this.getDataStorage().computeIfAbsent(RandomSequences.factory(i), "random_sequences")
@@ -100,6 +144,21 @@
          }
      }
  
+@@ -876,7 +_,13 @@
+     }
+ 
+     public boolean addWithUUID(Entity p_8848_) {
+-        return this.addEntity(p_8848_);
++        // CraftBukkit start
++        return this.addWithUUID(p_8848_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT);
++    }
++
++    public boolean addWithUUID(Entity p_8848_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason reason) {
++        return this.addEntity(p_8848_, reason);
++        // CraftBukkit end
+     }
+ 
+     public void addDuringTeleport(Entity p_143335_) {
 @@ -896,6 +_,7 @@
      }
  
@@ -108,7 +167,7 @@
          Entity entity = this.getEntities().get(p_8854_.getUUID());
          if (entity != null) {
              LOGGER.warn("Force-added player with duplicate UUID {}", p_8854_.getUUID());
-@@ -903,7 +_,8 @@
+@@ -903,15 +_,28 @@
              this.removePlayerImmediately((ServerPlayer)entity, Entity.RemovalReason.DISCARDED);
          }
  
@@ -117,12 +176,21 @@
 +        p_8854_.onAddedToLevel();
      }
  
-     private boolean addEntity(Entity p_8873_) {
-@@ -911,7 +_,12 @@
-             LOGGER.warn("Tried to add entity {} but it was marked as removed already", EntityType.getKey(p_8873_.getType()));
+-    private boolean addEntity(Entity p_8873_) {
++    // CraftBukkit start
++    private boolean addEntity(Entity p_8873_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason spawnReason) {
+         if (p_8873_.isRemoved()) {
+-            LOGGER.warn("Tried to add entity {} but it was marked as removed already", EntityType.getKey(p_8873_.getType()));
++            // LOGGER.warn("Tried to add entity {} but it was marked as removed already", EntityType.getKey(p_8873_.getType())); // CraftBukkit
              return false;
          } else {
 -            return this.entityManager.addNewEntity(p_8873_);
++            // SPIGOT-6415: Don't call spawn event when reason is null. For example when an entity teleports to a new world.
++            if (spawnReason != null && !org.bukkit.craftbukkit.event.CraftEventFactory.doEntityAddEventCalling(this, p_8873_, spawnReason)) {
++                return false;
++            }
++            // CraftBukkit end
++
 +            if (this.entityManager.addNewEntity(p_8873_)) {
 +                p_8873_.onAddedToLevel();
 +                return true;
