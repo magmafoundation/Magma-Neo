@@ -28,6 +28,15 @@
                                          }
                                      },
                                      Component.translatable("dataPack.validation.failed"),
+@@ -483,7 +_,7 @@
+         String s = this.uiState.getTargetFolder();
+ 
+         try {
+-            LevelStorageSource.LevelStorageAccess levelstoragesource$levelstorageaccess = this.minecraft.getLevelSource().createAccess(s);
++            LevelStorageSource.LevelStorageAccess levelstoragesource$levelstorageaccess = this.minecraft.getLevelSource().createAccess(s, null); // Magma - not needed
+             if (this.tempDataPackDir == null) {
+                 return Optional.of(levelstoragesource$levelstorageaccess);
+             }
 @@ -547,6 +_,7 @@
          if (path != null) {
              if (this.tempDataPackRepository == null) {

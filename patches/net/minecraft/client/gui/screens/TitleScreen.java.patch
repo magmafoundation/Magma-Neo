@@ -16,6 +16,24 @@
          }
  
          SpriteIconButton spriteiconbutton = this.addRenderableWidget(
+@@ -219,7 +_,7 @@
+                     p_307045_ -> {
+                         LevelStorageSource levelstoragesource = this.minecraft.getLevelSource();
+ 
+-                        try (LevelStorageSource.LevelStorageAccess levelstoragesource$levelstorageaccess = levelstoragesource.createAccess("Demo_World")) {
++                        try (LevelStorageSource.LevelStorageAccess levelstoragesource$levelstorageaccess = levelstoragesource.createAccess("Demo_World", net.minecraft.world.level.dimension.LevelStem.OVERWORLD)) { // Magma
+                             if (levelstoragesource$levelstorageaccess.hasWorldData()) {
+                                 this.minecraft
+                                     .setScreen(
+@@ -247,7 +_,7 @@
+     private boolean checkDemoWorldPresence() {
+         try {
+             boolean flag;
+-            try (LevelStorageSource.LevelStorageAccess levelstoragesource$levelstorageaccess = this.minecraft.getLevelSource().createAccess("Demo_World")) {
++            try (LevelStorageSource.LevelStorageAccess levelstoragesource$levelstorageaccess = this.minecraft.getLevelSource().createAccess("Demo_World", net.minecraft.world.level.dimension.LevelStem.OVERWORLD)) { // Magma
+                 flag = levelstoragesource$levelstorageaccess.hasWorldData();
+             }
+ 
 @@ -285,6 +_,7 @@
          if ((i & -67108864) != 0) {
              super.render(p_282860_, p_281753_, p_283539_, p_282628_);
@@ -39,3 +57,12 @@
              if (this.realmsNotificationsEnabled() && f >= 1.0F) {
                  RenderSystem.enableDepthTest();
                  this.realmsNotificationsScreen.render(p_282860_, p_281753_, p_283539_, p_282628_);
+@@ -349,7 +_,7 @@
+ 
+     private void confirmDemo(boolean p_96778_) {
+         if (p_96778_) {
+-            try (LevelStorageSource.LevelStorageAccess levelstoragesource$levelstorageaccess = this.minecraft.getLevelSource().createAccess("Demo_World")) {
++            try (LevelStorageSource.LevelStorageAccess levelstoragesource$levelstorageaccess = this.minecraft.getLevelSource().createAccess("Demo_World", net.minecraft.world.level.dimension.LevelStem.OVERWORLD)) { // Magma
+                 levelstoragesource$levelstorageaccess.deleteLevel();
+             } catch (IOException ioexception) {
+                 SystemToast.onWorldDeleteFailure(this.minecraft, "Demo_World");

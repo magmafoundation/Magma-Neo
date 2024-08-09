@@ -109,7 +109,7 @@ public class EphemeralTestServerProvider implements ParameterResolver, Extension
             try {
                 final var tempDir = Files.createTempDirectory("test-mc-server-");
                 LevelStorageSource storage = LevelStorageSource.createDefault(tempDir.resolve("world"));
-                LevelStorageSource.LevelStorageAccess storageAccess = storage.validateAndCreateAccess("main");
+                LevelStorageSource.LevelStorageAccess storageAccess = storage.validateAndCreateAccess("main", net.minecraft.world.level.dimension.LevelStem.OVERWORLD);
                 PackRepository packrepository = ServerPacksSource.createPackRepository(storageAccess);
                 final MinecraftServer server = MinecraftServer.spin(
                         thread -> JUnitServer.create(thread, tempDir, storageAccess, packrepository));
@@ -296,6 +296,11 @@ public class EphemeralTestServerProvider implements ParameterResolver, Extension
         @Override
         public boolean shouldInformAdmins() {
             return false;
+        }
+
+        @Override
+        public org.bukkit.command.CommandSender getBukkitSender(net.minecraft.commands.CommandSourceStack wrapper) {
+            return null;
         }
 
         @Override

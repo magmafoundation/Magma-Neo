@@ -24,6 +24,33 @@
                              this.minecraft.setScreen(this.screen);
                          },
                          Component.translatable("selectWorld.deleteQuestion"),
+@@ -525,7 +_,7 @@
+             LevelStorageSource levelstoragesource = this.minecraft.getLevelSource();
+             String s = this.summary.getLevelId();
+ 
+-            try (LevelStorageSource.LevelStorageAccess levelstoragesource$levelstorageaccess = levelstoragesource.createAccess(s)) {
++            try (LevelStorageSource.LevelStorageAccess levelstoragesource$levelstorageaccess = levelstoragesource.createAccess(s, net.minecraft.world.level.dimension.LevelStem.OVERWORLD)) { // Magma
+                 levelstoragesource$levelstorageaccess.deleteLevel();
+             } catch (IOException ioexception) {
+                 SystemToast.onWorldDeleteFailure(this.minecraft, s);
+@@ -541,7 +_,7 @@
+ 
+             LevelStorageSource.LevelStorageAccess levelstoragesource$levelstorageaccess;
+             try {
+-                levelstoragesource$levelstorageaccess = this.minecraft.getLevelSource().validateAndCreateAccess(s);
++                levelstoragesource$levelstorageaccess = this.minecraft.getLevelSource().validateAndCreateAccess(s, net.minecraft.world.level.dimension.LevelStem.OVERWORLD); // Magma
+             } catch (IOException ioexception1) {
+                 SystemToast.onWorldAccessFailure(this.minecraft, s);
+                 WorldSelectionList.LOGGER.error("Failed to access level {}", s, ioexception1);
+@@ -579,7 +_,7 @@
+ 
+             try (LevelStorageSource.LevelStorageAccess levelstoragesource$levelstorageaccess = this.minecraft
+                     .getLevelSource()
+-                    .validateAndCreateAccess(this.summary.getLevelId())) {
++                    .validateAndCreateAccess(this.summary.getLevelId(), net.minecraft.world.level.dimension.LevelStem.OVERWORLD)) { // Magma
+                 Pair<LevelSettings, WorldCreationContext> pair = this.minecraft.createWorldOpenFlows().recreateWorldData(levelstoragesource$levelstorageaccess);
+                 LevelSettings levelsettings = pair.getFirst();
+                 WorldCreationContext worldcreationcontext = pair.getSecond();
 @@ -647,6 +_,19 @@
  
          public String getLevelName() {

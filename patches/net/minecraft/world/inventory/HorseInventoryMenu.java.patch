@@ -1,0 +1,25 @@
+--- a/net/minecraft/world/inventory/HorseInventoryMenu.java
++++ b/net/minecraft/world/inventory/HorseInventoryMenu.java
+@@ -15,8 +_,22 @@
+     private static final int SLOT_BODY_ARMOR = 1;
+     private static final int SLOT_HORSE_INVENTORY_START = 2;
+ 
++    // CraftBukkit start
++    org.bukkit.craftbukkit.inventory.CraftInventoryView bukkitEntity;
++    Inventory player;
++
++    @Override
++    public org.bukkit.inventory.InventoryView getBukkitView() {
++        if (bukkitEntity != null) {
++            return bukkitEntity;
++        }
++        return bukkitEntity = new org.bukkit.craftbukkit.inventory.CraftInventoryView(player.player.getBukkitEntity(), horseContainer.getOwner().getInventory(), this);
++    }
++
+     public HorseInventoryMenu(int p_39656_, Inventory p_39657_, Container p_39658_, final AbstractHorse p_39659_, int p_352384_) {
+         super(null, p_39656_);
++        player = p_39657_;
++        // CraftBukkit end
+         this.horseContainer = p_39658_;
+         this.armorContainer = p_39659_.getBodyArmorAccess();
+         this.horse = p_39659_;

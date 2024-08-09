@@ -112,7 +112,7 @@ public abstract class CraftParticle<D> implements Keyed {
         private static final BiFunction<NamespacedKey, net.minecraft.core.particles.ParticleType<?>, CraftParticle<?>> VOID_FUNCTION = (name, particle) -> new CraftParticle<>(name, particle, Void.class) {
             @Override
             public ParticleOptions createParticleParam(Void data) {
-                return (ParticleType) getHandle();
+                return (net.minecraft.core.particles.SimpleParticleType) getHandle();
             }
         };
 

@@ -154,7 +154,7 @@
 +        // Remove labels that were removed during the event
 +        for (String orig : bukkit) {
 +            if (!event.getCommands().contains(orig)) {
-+                rootcommandnode.removeCommand(orig);
++                // rootcommandnode.removeCommand(orig); Magma: todo create a patched version of brigadier that supports this
 +            }
 +        }
 +        // CraftBukkit end

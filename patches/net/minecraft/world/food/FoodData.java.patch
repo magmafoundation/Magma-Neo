@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/food/FoodData.java
 +++ b/net/minecraft/world/food/FoodData.java
-@@ -12,6 +_,12 @@
+@@ -12,6 +_,20 @@
      public float exhaustionLevel;
      private int tickTimer;
      private int lastFoodLevel = 20;
@@ -9,6 +9,14 @@
 +    public int saturatedRegenRate = 10;
 +    public int unsaturatedRegenRate = 80;
 +    public int starvationRate = 80;
++    // CraftBukkit end
++
++    // CraftBukkit start - added EntityHuman constructor
++    public FoodData(Player entityhuman) {
++        org.apache.commons.lang3.Validate.notNull(entityhuman);
++        this.entityhuman = entityhuman;
++        this.saturationLevel = 5.0F;
++    }
 +    // CraftBukkit end
  
      public FoodData() {

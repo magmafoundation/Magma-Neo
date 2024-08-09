@@ -16,7 +16,7 @@
          }
      }
  
-@@ -406,7 +_,7 @@
+@@ -406,33 +_,45 @@
      @Override
      public boolean killedEntity(ServerLevel p_219160_, LivingEntity p_219161_) {
          boolean flag = super.killedEntity(p_219160_, p_219161_);
@@ -25,11 +25,52 @@
              if (p_219160_.getDifficulty() != Difficulty.HARD && this.random.nextBoolean()) {
                  return flag;
              }
-@@ -423,6 +_,7 @@
+-
+-            ZombieVillager zombievillager = villager.convertTo(EntityType.ZOMBIE_VILLAGER, false);
++            // CraftBukkit start
++            flag = zombifyVillager(p_219160_, villager, this.blockPosition(), p_219161_, this.isSilent(), org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.INFECTION) == null;
++        }
++        return flag;
++    }
++
++    public static ZombieVillager zombifyVillager(ServerLevel p_219160_, Villager villager, net.minecraft.core.BlockPos blockPosition, LivingEntity p_219161_, boolean silent, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason spawnReason) {
++
++        {
++            ZombieVillager zombievillager = (ZombieVillager) villager.convertTo(EntityType.ZOMBIE_VILLAGER, false, org.bukkit.event.entity.EntityTransformEvent.TransformReason.INFECTION, spawnReason);
++            // CraftBukkit end
+             if (zombievillager != null) {
+                 zombievillager.finalizeSpawn(
+-                    p_219160_,
+-                    p_219160_.getCurrentDifficultyAt(zombievillager.blockPosition()),
+-                    MobSpawnType.CONVERSION,
+-                    new Zombie.ZombieGroupData(false, true)
++                        p_219160_,
++                        p_219160_.getCurrentDifficultyAt(zombievillager.blockPosition()),
++                        MobSpawnType.CONVERSION,
++                        new Zombie.ZombieGroupData(false, true)
+                 );
+                 zombievillager.setVillagerData(villager.getVillagerData());
                  zombievillager.setGossips(villager.getGossips().store(NbtOps.INSTANCE));
                  zombievillager.setTradeOffers(villager.getOffers().copy());
                  zombievillager.setVillagerXp(villager.getVillagerXp());
+-                if (!this.isSilent()) {
+-                    p_219160_.levelEvent(null, 1026, this.blockPosition(), 0);
 +                net.neoforged.neoforge.event.EventHooks.onLivingConvert(p_219161_, zombievillager);
-                 if (!this.isSilent()) {
-                     p_219160_.levelEvent(null, 1026, this.blockPosition(), 0);
++                // CraftBukkit start
++                if (!silent) {
++                    p_219160_.levelEvent((Player) null, 1026, blockPosition, 0);
                  }
+ 
+-                flag = false;
++                // flag = false;
+             }
++
++            return zombievillager;
+         }
+-
+-        return flag;
+     }
++    // CraftBukkit end
+ 
+     @Override
+     public EntityDimensions getDefaultDimensions(Pose p_316771_) {

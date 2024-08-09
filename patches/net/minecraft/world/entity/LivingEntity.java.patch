@@ -10,7 +10,7 @@
      private static final String TAG_ACTIVE_EFFECTS = "active_effects";
      private static final ResourceLocation SPEED_MODIFIER_POWDER_SNOW_ID = ResourceLocation.withDefaultNamespace("powder_snow");
 @@ -254,11 +_,34 @@
-     private boolean skipDropExperience;
+     public boolean skipDropExperience;
      private final Reference2ObjectMap<Enchantment, Set<EnchantmentLocationBasedEffect>> activeLocationDependentEnchantments = new Reference2ObjectArrayMap<>();
      protected float appliedScale = 1.0F;
 +    /**
@@ -149,14 +149,34 @@
          return d0;
      }
  
-@@ -899,7 +_,9 @@
+@@ -891,7 +_,13 @@
+         this.entityData.set(DATA_EFFECT_PARTICLES, List.of());
+     }
+ 
++    // CraftBukkit start
+     public boolean removeAllEffects() {
++        return removeAllEffects(org.bukkit.event.entity.EntityPotionEffectEvent.Cause.UNKNOWN);
++    }
++
++    public boolean removeAllEffects(org.bukkit.event.entity.EntityPotionEffectEvent.Cause cause) {
++        // CraftBukkit end
+         if (this.level().isClientSide) {
+             return false;
+         } else {
+@@ -899,7 +_,15 @@
  
              boolean flag;
              for (flag = false; iterator.hasNext(); flag = true) {
 -                this.onEffectRemoved(iterator.next());
 +                MobEffectInstance effect = iterator.next();
 +                if(net.neoforged.neoforge.event.EventHooks.onEffectRemoved(this, effect, null)) continue;
++                // CraftBukkit start
++                org.bukkit.event.entity.EntityPotionEffectEvent event = org.bukkit.craftbukkit.event.CraftEventFactory.callEntityPotionEffectChangeEvent(this, effect, null, cause, org.bukkit.event.entity.EntityPotionEffectEvent.Action.CLEARED);
++                if (event.isCancelled()) {
++                    continue;
++                }
 +                this.onEffectRemoved(effect);
++                // CraftBukkit end
                  iterator.remove();
              }
  
@@ -407,7 +427,7 @@
          boolean flag = this.lastHurtByPlayerTime > 0;
          if (this.shouldDropLoot() && p_348524_.getGameRules().getBoolean(GameRules.RULE_DOMOBLOOT)) {
              this.dropFromLootTable(p_21192_, flag);
-@@ -1387,6 +_,10 @@
+@@ -1387,20 +_,35 @@
  
          this.dropEquipment();
          this.dropExperience(p_21192_.getEntity());
@@ -418,16 +438,34 @@
      }
  
      protected void dropEquipment() {
-@@ -1399,7 +_,8 @@
+     }
+ 
+-    protected void dropExperience(@Nullable Entity p_345346_) {
++    public int getExpReward(@Nullable Entity p_345346_) { // CraftBukkit
+         if (this.level() instanceof ServerLevel serverlevel
+             && !this.wasExperienceConsumed()
+             && (
                  this.isAlwaysExperienceDropper()
                      || this.lastHurtByPlayerTime > 0 && this.shouldDropExperience() && this.level().getGameRules().getBoolean(GameRules.RULE_DOMOBLOOT)
              )) {
 -            ExperienceOrb.award(serverlevel, this.position(), this.getExperienceReward(serverlevel, p_345346_));
+-        }
 +            int reward = net.neoforged.neoforge.event.EventHooks.getExperienceDrop(this, this.lastHurtByPlayer, this.getExperienceReward(serverlevel, p_345346_));
 +            ExperienceOrb.award((ServerLevel) this.level(), this.position(), reward);
-         }
++        }
++        return 0; // CraftBukkit
++    }
++
++    protected void dropExperience(@Nullable Entity entity) {
++        // CraftBukkit start - Update getExpReward() above if the removed if() changes!
++        if (!(this instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon)) { // CraftBukkit - SPIGOT-2420: Special case ender dragon will drop the xp over time
++            ExperienceOrb.award((ServerLevel) this.level(), this.position(), this.expToDrop);
++            this.expToDrop = 0;
++        }
++        // CraftBukkit end
      }
  
+     protected void dropCustomDeathLoot(ServerLevel p_348639_, DamageSource p_21018_, boolean p_21020_) {
 @@ -1440,6 +_,11 @@
      }
  
@@ -570,6 +608,27 @@
          }
      }
  
+@@ -1723,8 +_,18 @@
+     }
+ 
+     public final void setArrowCount(int p_21318_) {
+-        this.entityData.set(DATA_ARROW_COUNT_ID, p_21318_);
+-    }
++        // CraftBukkit start
++        setArrowCount(p_21318_, false);
++    }
++
++    public final void setArrowCount(int i, boolean flag) {
++        org.bukkit.event.entity.ArrowBodyCountChangeEvent event = org.bukkit.craftbukkit.event.CraftEventFactory.callArrowBodyCountChangeEvent(this, getArrowCount(), i, flag);
++        if (event.isCancelled()) {
++            return;
++        }
++        this.entityData.set(LivingEntity.DATA_ARROW_COUNT_ID, event.getNewAmount());
++    }
++    // CraftBukkit end
+ 
+     public final int getStingerCount() {
+         return this.entityData.get(DATA_STINGER_COUNT_ID);
 @@ -1747,6 +_,8 @@
      }
  
@@ -592,6 +651,19 @@
      }
  
      @Override
+@@ -1956,6 +_,12 @@
+ 
+     public abstract ItemStack getItemBySlot(EquipmentSlot p_21127_);
+ 
++    // CraftBukkit start
++    public void setItemSlot(EquipmentSlot enumitemslot, ItemStack itemstack, boolean silent) {
++        this.setItemSlot(enumitemslot, itemstack);
++    }
++    // CraftBukkit end
++
+     public abstract void setItemSlot(EquipmentSlot p_21036_, ItemStack p_21037_);
+ 
+     public Iterable<ItemStack> getHandSlots() {
 @@ -2064,15 +_,18 @@
              }
  

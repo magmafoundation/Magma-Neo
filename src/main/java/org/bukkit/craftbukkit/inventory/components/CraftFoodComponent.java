@@ -135,7 +135,10 @@ public final class CraftFoodComponent implements FoodComponent {
     public FoodEffect addEffect(PotionEffect effect, float probability) {
         List<FoodProperties.PossibleEffect> effects = new ArrayList<>(handle.effects());
 
-        FoodProperties.PossibleEffect newEffect = new net.minecraft.world.food.FoodProperties.PossibleEffect(CraftPotionUtil.fromBukkit(effect), probability);
+        // Magma start - Use supplier method instead
+        FoodProperties.Builder builder = new FoodProperties.Builder();
+        FoodProperties.PossibleEffect newEffect = builder.effect(() -> CraftPotionUtil.fromBukkit(effect), probability).build().effects().getFirst();
+        // Magma end
         effects.add(newEffect);
 
         handle = new FoodProperties(handle.nutrition(), handle.saturation(), handle.canAlwaysEat(), handle.eatSeconds(), handle.usingConvertsTo(), effects);
@@ -179,7 +182,10 @@ public final class CraftFoodComponent implements FoodComponent {
         }
 
         public CraftFoodEffect(FoodEffect bukkit) {
-            this.handle = new net.minecraft.world.food.FoodProperties.PossibleEffect(CraftPotionUtil.fromBukkit(bukkit.getEffect()), bukkit.getProbability());
+            // Magma start - Use supplier method instead
+            FoodProperties.Builder builder = new FoodProperties.Builder();
+            this.handle = builder.effect(() -> CraftPotionUtil.fromBukkit(bukkit.getEffect()), bukkit.getProbability()).build().effects().getFirst();
+            // Magma end
         }
 
         public CraftFoodEffect(Map<String, Object> map) {
@@ -190,7 +196,10 @@ public final class CraftFoodComponent implements FoodComponent {
                 probability = 1.0f;
             }
 
-            this.handle = new net.minecraft.world.food.FoodProperties.PossibleEffect(CraftPotionUtil.fromBukkit(effect), probability);
+            // Magma start - Use supplier method instead
+            FoodProperties.Builder builder = new FoodProperties.Builder();
+            this.handle = builder.effect(() -> CraftPotionUtil.fromBukkit(effect), probability).build().effects().getFirst();
+            // Magma end
         }
 
         @Override
@@ -212,7 +221,10 @@ public final class CraftFoodComponent implements FoodComponent {
 
         @Override
         public void setEffect(PotionEffect effect) {
-            handle = new net.minecraft.world.food.FoodProperties.PossibleEffect(CraftPotionUtil.fromBukkit(effect), handle.probability());
+            // Magma start - Use supplier method instead
+            FoodProperties.Builder builder = new FoodProperties.Builder();
+            handle = builder.effect(() -> CraftPotionUtil.fromBukkit(effect), handle.probability()).build().effects().getFirst();
+            // Magma end
         }
 
         @Override
@@ -223,7 +235,10 @@ public final class CraftFoodComponent implements FoodComponent {
         @Override
         public void setProbability(float probability) {
             Preconditions.checkArgument(0 <= probability && probability <= 1, "Probability cannot be outside range [0,1]");
-            handle = new net.minecraft.world.food.FoodProperties.PossibleEffect(handle.effect(), probability);
+            // Magma start - Use supplier method instead
+            FoodProperties.Builder builder = new FoodProperties.Builder();
+            handle = builder.effect(() -> handle.effect(), probability).build().effects().getFirst();
+            // Magma end
         }
 
         @Override

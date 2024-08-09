@@ -1,17 +1,36 @@
 --- a/net/minecraft/world/level/dimension/end/EndDragonFight.java
 +++ b/net/minecraft/world/level/dimension/end/EndDragonFight.java
-@@ -544,6 +_,14 @@
+@@ -510,7 +_,7 @@
          }
      }
  
+-    public void respawnDragon(List<EndCrystal> p_64092_) {
++    public boolean respawnDragon(List<EndCrystal> p_64092_) { // CraftBukkit - return boolean
+         if (this.dragonKilled && this.respawnStage == null) {
+             for (BlockPattern.BlockPatternMatch blockpattern$blockpatternmatch = this.findExitPortal();
+                 blockpattern$blockpatternmatch != null;
+@@ -532,7 +_,9 @@
+             this.respawnTime = 0;
+             this.spawnExitPortal(false);
+             this.respawnCrystals = p_64092_;
++            return true; // CraftBukkit - return value
+         }
++        return false; // CraftBukkit - return value
+     }
+ 
+     public void resetSpikeCrystals() {
+@@ -542,6 +_,14 @@
+                 endcrystal.setBeamTarget(null);
+             }
+         }
++    }
++
 +    public void addPlayer(ServerPlayer player) {
 +        this.dragonEvent.addPlayer(player);
 +    }
 +
 +    public void removePlayer(ServerPlayer player) {
 +        this.dragonEvent.removePlayer(player);
-+    }
-+
+     }
+ 
      @Nullable
-     public UUID getDragonUUID() {
-         return this.dragonUUID;

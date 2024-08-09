@@ -25,6 +25,26 @@
              } catch (IllegalArgumentException | JsonParseException jsonparseexception) {
                  LOGGER.error("Parsing error loading recipe {}", resourcelocation, jsonparseexception);
              }
+@@ -70,6 +_,19 @@
+         LOGGER.info("Loaded {} recipes", this.byType.size());
+     }
+ 
++    // CraftBukkit start
++    public void addRecipe(RecipeHolder<?> irecipe) {
++        Collection<RecipeHolder<?>> map = this.byType.get(irecipe.value().getType()); // CraftBukkit
++
++        if (byName.containsKey(irecipe.id())) {
++            throw new IllegalStateException("Duplicate recipe ignored with ID " + irecipe.id());
++        } else {
++            map.add(irecipe);
++            byName.put(irecipe.id(), irecipe);
++        }
++    }
++    // CraftBukkit end
++
+     public boolean hadErrorsLoading() {
+         return this.hasErrors;
+     }
 @@ -167,9 +_,29 @@
              builder1.put(recipeholder.id(), recipeholder);
          }

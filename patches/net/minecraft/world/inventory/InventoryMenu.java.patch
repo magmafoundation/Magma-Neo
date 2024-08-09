@@ -1,0 +1,31 @@
+--- a/net/minecraft/world/inventory/InventoryMenu.java
++++ b/net/minecraft/world/inventory/InventoryMenu.java
+@@ -48,6 +_,10 @@
+     private final ResultContainer resultSlots = new ResultContainer();
+     public final boolean active;
+     private final Player owner;
++    // CraftBukkit start
++    private org.bukkit.craftbukkit.inventory.CraftInventoryView bukkitEntity = null;
++    private Inventory player;
++    // CraftBukkit end
+ 
+     public InventoryMenu(Inventory p_39706_, boolean p_39707_, final Player p_39708_) {
+         super(null, 0);
+@@ -230,4 +_,17 @@
+     public boolean shouldMoveToInventory(int p_150591_) {
+         return p_150591_ != this.getResultSlotIndex();
+     }
++
++    // CraftBukkit start
++    @Override
++    public org.bukkit.craftbukkit.inventory.CraftInventoryView getBukkitView() {
++        if (bukkitEntity != null) {
++            return bukkitEntity;
++        }
++
++        org.bukkit.craftbukkit.inventory.CraftInventoryCrafting inventory = new org.bukkit.craftbukkit.inventory.CraftInventoryCrafting(this.craftSlots, this.resultSlots);
++        bukkitEntity = new org.bukkit.craftbukkit.inventory.CraftInventoryView(this.player.player.getBukkitEntity(), inventory, this);
++        return bukkitEntity;
++    }
++    // CraftBukkit end
+ }

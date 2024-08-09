@@ -1,7 +1,7 @@
 --- a/net/minecraft/world/inventory/CraftingMenu.java
 +++ b/net/minecraft/world/inventory/CraftingMenu.java
 @@ -30,6 +_,9 @@
-     private final ContainerLevelAccess access;
+     public final ContainerLevelAccess access;
      private final Player player;
      private boolean placingRecipe;
 +    // CraftBukkit start

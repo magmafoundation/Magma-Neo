@@ -9,6 +9,24 @@
      static final Logger LOGGER = LogUtils.getLogger();
      private static final TickingBlockEntity NULL_TICKER = new TickingBlockEntity() {
          @Override
+@@ -74,7 +_,7 @@
+     };
+     private final Map<BlockPos, LevelChunk.RebindableTickingBlockEntityWrapper> tickersInLevel = Maps.newHashMap();
+     private boolean loaded;
+-    public final Level level;
++    public final ServerLevel level; // CraftBukkit - type
+     @Nullable
+     private Supplier<FullChunkStatus> fullStatus;
+     @Nullable
+@@ -99,7 +_,7 @@
+         @Nullable BlendingData p_196862_
+     ) {
+         super(p_196855_, p_196856_, p_196854_, p_196854_.registryAccess().registryOrThrow(Registries.BIOME), p_196859_, p_196860_, p_196862_);
+-        this.level = p_196854_;
++        this.level = (ServerLevel) p_196854_;
+         this.gameEventListenerRegistrySections = new Int2ObjectOpenHashMap<>();
+ 
+         for (Heightmap.Types heightmap$types : Heightmap.Types.values()) {
 @@ -139,6 +_,7 @@
          this.setAllStarts(p_196851_.getAllStarts());
          this.setAllReferences(p_196851_.getAllReferences());

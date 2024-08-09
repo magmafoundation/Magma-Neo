@@ -1,8 +1,8 @@
 --- a/net/minecraft/world/entity/vehicle/AbstractMinecartContainer.java
 +++ b/net/minecraft/world/entity/vehicle/AbstractMinecartContainer.java
 @@ -24,6 +_,47 @@
-     private ResourceKey<LootTable> lootTable;
-     private long lootTableSeed;
+     public ResourceKey<LootTable> lootTable;
+     public long lootTableSeed;
  
 +    // CraftBukkit start
 +    public java.util.List<org.bukkit.entity.HumanEntity> transaction = new java.util.ArrayList<org.bukkit.entity.HumanEntity>();

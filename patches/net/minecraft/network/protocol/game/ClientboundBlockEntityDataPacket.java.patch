@@ -1,0 +1,15 @@
+--- a/net/minecraft/network/protocol/game/ClientboundBlockEntityDataPacket.java
++++ b/net/minecraft/network/protocol/game/ClientboundBlockEntityDataPacket.java
+@@ -36,6 +_,12 @@
+         return create(p_195641_, BlockEntity::getUpdateTag);
+     }
+ 
++    // Magma - todo (this class is not being transformed by the access transformer for some reason)
++    public static ClientboundBlockEntityDataPacket create(BlockPos p_195635_, BlockEntityType<?> p_195636_, CompoundTag p_195637_) {
++        return new ClientboundBlockEntityDataPacket(p_195635_, p_195636_, p_195637_);
++    }
++    // Magma end
++
+     private ClientboundBlockEntityDataPacket(BlockPos p_195637_, BlockEntityType<?> p_195638_, CompoundTag p_195639_) {
+         this.pos = p_195637_;
+         this.type = p_195638_;

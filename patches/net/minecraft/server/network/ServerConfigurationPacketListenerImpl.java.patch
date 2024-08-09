@@ -1,6 +1,19 @@
 --- a/net/minecraft/server/network/ServerConfigurationPacketListenerImpl.java
 +++ b/net/minecraft/server/network/ServerConfigurationPacketListenerImpl.java
-@@ -72,6 +_,15 @@
+@@ -49,8 +_,10 @@
+     @Nullable
+     private SynchronizeRegistriesTask synchronizeRegistriesTask;
+ 
+-    public ServerConfigurationPacketListenerImpl(MinecraftServer p_294645_, Connection p_295787_, CommonListenerCookie p_302003_) {
+-        super(p_294645_, p_295787_, p_302003_);
++    // CraftBukkit start
++    public ServerConfigurationPacketListenerImpl(MinecraftServer p_294645_, Connection p_295787_, CommonListenerCookie p_302003_, ServerPlayer player) {
++        super(p_294645_, p_295787_, p_302003_, player);
++        // CraftBukkit end
+         this.gameProfile = p_302003_.gameProfile();
+         this.clientInformation = p_302003_.clientInformation();
+     }
+@@ -72,8 +_,23 @@
      }
  
      public void startConfiguration() {
@@ -15,7 +28,15 @@
 +    private void runConfiguration() {
          this.send(new ClientboundCustomPayloadPacket(new BrandPayload(this.server.getServerModName())));
          ServerLinks serverlinks = this.server.serverLinks();
++        // CraftBukkit start
++        org.bukkit.craftbukkit.CraftServerLinks wrapper = new org.bukkit.craftbukkit.CraftServerLinks(serverlinks);
++        org.bukkit.event.player.PlayerLinksSendEvent event = new org.bukkit.event.player.PlayerLinksSendEvent(player.getBukkitEntity(), wrapper);
++        player.getBukkitEntity().getServer().getPluginManager().callEvent(event);
++        serverlinks = wrapper.getServerLinks();
++        // CraftBukkit end
          if (!serverlinks.isEmpty()) {
+             this.send(new ClientboundServerLinksPacket(serverlinks.untrust()));
+         }
 @@ -81,6 +_,8 @@
          LayeredRegistryAccess<RegistryLayer> layeredregistryaccess = this.server.registries();
          List<KnownPack> list = this.server.getResourceManager().listPacks().flatMap(p_325637_ -> p_325637_.location().knownPackInfo().stream()).toList();
@@ -74,11 +95,20 @@
  
          try {
              PlayerList playerlist = this.server.getPlayerList();
-@@ -141,7 +_,7 @@
+@@ -134,14 +_,14 @@
+                 return;
              }
  
-             ServerPlayer serverplayer = playerlist.getPlayerForLogin(this.gameProfile, this.clientInformation);
+-            Component component = playerlist.canPlayerLogin(this.connection.getRemoteAddress(), this.gameProfile);
++            Component component = null; // CraftBukkit - login checks already completed
+             if (component != null) {
+                 this.disconnect(component);
+                 return;
+             }
+ 
+-            ServerPlayer serverplayer = playerlist.getPlayerForLogin(this.gameProfile, this.clientInformation);
 -            playerlist.placeNewPlayer(this.connection, serverplayer, this.createCookie(this.clientInformation));
++            ServerPlayer serverplayer = playerlist.getPlayerForLogin(this.gameProfile, this.clientInformation, this.player); // CraftBukkit
 +            playerlist.placeNewPlayer(this.connection, serverplayer, this.createCookie(this.clientInformation, this.connectionType));
          } catch (Exception exception) {
              LOGGER.error("Couldn't place player in world", (Throwable)exception);

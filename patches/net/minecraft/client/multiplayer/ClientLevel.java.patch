@@ -17,8 +17,16 @@
  
      public void handleBlockChangedAck(int p_233652_) {
          this.blockStatePredictionHandler.endPredictionsUpTo(p_233652_, this);
-@@ -157,10 +_,15 @@
+@@ -155,12 +_,23 @@
+     }
+ 
      @Override
++    public ResourceKey<net.minecraft.world.level.dimension.LevelStem> getTypeKey() {
++
++        return null;
++    }
++
++    @Override
      public boolean setBlock(BlockPos p_233643_, BlockState p_233644_, int p_233645_, int p_233646_) {
          if (this.blockStatePredictionHandler.isPredicting()) {
 +            // Neo: Record and store a snapshot in the prediction so that BE data can be restored if the break is denied.
@@ -92,6 +100,19 @@
          if (p_263514_ == this.minecraft.player) {
              this.minecraft.getSoundManager().play(new EntityBoundSoundInstance(p_263518_.value(), p_263487_, p_263538_, p_263524_, p_263536_, p_263509_));
          }
+@@ -897,6 +_,12 @@
+     public void gameEvent(Holder<GameEvent> p_316478_, Vec3 p_233640_, GameEvent.Context p_233641_) {
+     }
+ 
++    @Override
++    public net.minecraft.server.level.ServerLevel getMinecraftWorld() {
++
++        return null;
++    }
++
+     protected Map<MapId, MapItemSavedData> getAllMapData() {
+         return ImmutableMap.copyOf(this.mapData);
+     }
 @@ -1033,6 +_,7 @@
          }
  

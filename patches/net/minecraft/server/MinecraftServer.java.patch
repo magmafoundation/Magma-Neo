@@ -5,9 +5,9 @@
      private static final AtomicReference<RuntimeException> fatalException = new AtomicReference<>();
  
 +    // CraftBukkit start
-+    public WorldLoader.DataLoadContext worldLoader;
++    public static WorldLoader.DataLoadContext worldLoader;
 +    public org.bukkit.craftbukkit.CraftServer server;
-+    public joptsimple.OptionSet options;
++    public static joptsimple.OptionSet options;
 +    public org.bukkit.command.ConsoleCommandSender console;
 +    public jline.console.ConsoleReader reader;
 +    public static int currentTick = (int) (System.currentTimeMillis() / 50);
@@ -24,6 +24,40 @@
          thread.setUncaughtExceptionHandler((p_177909_, p_177910_) -> LOGGER.error("Uncaught exception in server thread", p_177910_));
          if (Runtime.getRuntime().availableProcessors() > 4) {
              thread.setPriority(8);
+@@ -317,6 +_,33 @@
+             this.executor = Util.backgroundExecutor();
+             this.potionBrewing = PotionBrewing.bootstrap(this.worldData.enabledFeatures());
+         }
++        // CraftBukkit start
++        this.options = options;
++        this.worldLoader = worldLoader;
++        this.vanillaCommandDispatcher = p_236726_.dataPackResources().commands; // CraftBukkit
++        // Try to see if we're actually running in a terminal, disable jline if not
++        if (System.console() == null && System.getProperty("jline.terminal") == null) {
++            System.setProperty("jline.terminal", "jline.UnsupportedTerminal");
++            org.bukkit.craftbukkit.Main.useJline = false;
++        }
++
++        try {
++            reader = new jline.console.ConsoleReader(System.in, System.out);
++            reader.setExpandEvents(false); // Avoid parsing exceptions for uncommonly used event designators
++        } catch (Throwable e) {
++            try {
++                // Try again with jline disabled for Windows users without C++ 2008 Redistributable
++                System.setProperty("jline.terminal", "jline.UnsupportedTerminal");
++                System.setProperty("user.language", "en");
++                org.bukkit.craftbukkit.Main.useJline = false;
++                reader = new jline.console.ConsoleReader(System.in, System.out);
++                reader.setExpandEvents(false);
++            } catch (IOException ex) {
++                LOGGER.warn((String) null, ex);
++            }
++        }
++        Runtime.getRuntime().addShutdownHook(new org.bukkit.craftbukkit.util.ServerShutdownThread(this));
++        // CraftBukkit end
+     }
+ 
+     private void readScoreboard(DimensionDataStorage p_129842_) {
 @@ -325,18 +_,13 @@
  
      protected abstract boolean initServer() throws IOException;

@@ -1669,7 +1669,7 @@ public class CraftWorld extends CraftRegionAccessor implements World {
         if (!(entity instanceof CraftEntity craftEntity) || entity.getWorld() != this || sound == null || category == null) return;
 
         ClientboundSoundEntityPacket packet = new ClientboundSoundEntityPacket(CraftSound.bukkitToMinecraftHolder(sound), net.minecraft.sounds.SoundSource.valueOf(category.name()), craftEntity.getHandle(), volume, pitch, seed);
-        ChunkMap.EntityTracker entityTracker = getHandle().getChunkSource().chunkMap.entityMap.get(entity.getEntityId());
+        ChunkMap.TrackedEntity entityTracker = getHandle().getChunkSource().chunkMap.entityMap.get(entity.getEntityId());
         if (entityTracker != null) {
             entityTracker.broadcastAndSend(packet);
         }
@@ -1680,7 +1680,7 @@ public class CraftWorld extends CraftRegionAccessor implements World {
         if (!(entity instanceof CraftEntity craftEntity) || entity.getWorld() != this || sound == null || category == null) return;
 
         ClientboundSoundEntityPacket packet = new ClientboundSoundEntityPacket(Holder.direct(SoundEvent.createVariableRangeEvent(ResourceLocation.parse(sound))), net.minecraft.sounds.SoundSource.valueOf(category.name()), craftEntity.getHandle(), volume, pitch, seed);
-        ChunkMap.EntityTracker entityTracker = getHandle().getChunkSource().chunkMap.entityMap.get(entity.getEntityId());
+        ChunkMap.TrackedEntity entityTracker = getHandle().getChunkSource().chunkMap.entityMap.get(entity.getEntityId());
         if (entityTracker != null) {
             entityTracker.broadcastAndSend(packet);
         }
@@ -1873,14 +1873,15 @@ public class CraftWorld extends CraftRegionAccessor implements World {
 
     @Override
     public <T> void spawnParticle(Particle particle, double x, double y, double z, int count, double offsetX, double offsetY, double offsetZ, double extra, T data, boolean force) {
-        getHandle().sendParticles(
-                null, // Sender
-                CraftParticle.createParticleParam(particle, data), // Particle
-                x, y, z, // Position
-                count,  // Count
-                offsetX, offsetY, offsetZ, // Random offset
-                extra, // Speed?
-                force);
+//        getHandle().sendParticles(
+//                null, // Sender
+//                CraftParticle.createParticleParam(particle, data), // Particle
+//                x, y, z, // Position
+//                count,  // Count
+//                offsetX, offsetY, offsetZ, // Random offset
+//                extra, // Speed?
+//                force);
+        // Magma - todo
     }
 
     @Deprecated

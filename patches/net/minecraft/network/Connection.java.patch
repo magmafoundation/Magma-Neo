@@ -1,11 +1,12 @@
 --- a/net/minecraft/network/Connection.java
 +++ b/net/minecraft/network/Connection.java
-@@ -107,6 +_,8 @@
+@@ -107,6 +_,9 @@
      private volatile DisconnectionDetails delayedDisconnect;
      @Nullable
      BandwidthDebugMonitor bandwidthDebugMonitor;
 +    @Nullable
 +    private ProtocolInfo<?> inboundProtocol;
++    public String hostname = ""; // CraftBukkit - add field
  
      public Connection(PacketFlow p_129482_) {
          this.receiving = p_129482_;
@@ -68,6 +69,15 @@
          }
      }
  
+@@ -441,7 +_,7 @@
+         }
+ 
+         if (this.isConnected()) {
+-            this.channel.close().awaitUninterruptibly();
++            this.channel.close(); // We can't wait as this may be called from an event loop.
+             this.disconnectionDetails = p_350867_;
+         }
+     }
 @@ -470,6 +_,7 @@
      }
  

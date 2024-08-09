@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/entity/animal/horse/AbstractHorse.java
 +++ b/net/minecraft/world/entity/animal/horse/AbstractHorse.java
-@@ -145,6 +_,51 @@
+@@ -145,7 +_,53 @@
          public boolean stillValid(Player p_324170_) {
              return p_324170_.getVehicle() == AbstractHorse.this || p_324170_.canInteractWithEntity(AbstractHorse.this, 4.0);
          }
@@ -50,8 +50,10 @@
 +        }
 +        // CraftBukkit end
      };
++    public int maxDomestication = 100; // CraftBukkit - store max domestication value
  
      protected AbstractHorse(EntityType<? extends AbstractHorse> p_30531_, Level p_30532_) {
+         super(p_30531_, p_30532_);
 @@ -396,9 +_,9 @@
      protected void playStepSound(BlockPos p_30584_, BlockState p_30585_) {
          if (!p_30585_.liquid()) {

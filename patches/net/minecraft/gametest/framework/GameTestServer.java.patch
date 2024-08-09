@@ -17,3 +17,16 @@
          return true;
      }
  
+@@ -296,6 +_,12 @@
+     @Override
+     public boolean shouldInformAdmins() {
+         return false;
++    }
++
++    @Override
++    public org.bukkit.command.CommandSender getBukkitSender(net.minecraft.commands.CommandSourceStack wrapper) {
++
++        return null;
+     }
+ 
+     @Override

@@ -1,0 +1,15 @@
+--- a/net/minecraft/server/commands/DebugCommand.java
++++ b/net/minecraft/server/commands/DebugCommand.java
+@@ -261,6 +_,12 @@
+         }
+ 
+         @Override
++        public org.bukkit.command.CommandSender getBukkitSender(net.minecraft.commands.CommandSourceStack wrapper) {
++
++            return null;
++        }
++
++        @Override
+         public void close() {
+             IOUtils.closeQuietly((Writer)this.output);
+         }

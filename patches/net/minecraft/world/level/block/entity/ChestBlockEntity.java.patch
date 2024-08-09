@@ -1,5 +1,42 @@
 --- a/net/minecraft/world/level/block/entity/ChestBlockEntity.java
 +++ b/net/minecraft/world/level/block/entity/ChestBlockEntity.java
+@@ -56,6 +_,36 @@
+     };
+     private final ChestLidController chestLidController = new ChestLidController();
+ 
++    // CraftBukkit start - add fields and methods
++    public java.util.List<org.bukkit.entity.HumanEntity> transaction = new java.util.ArrayList<org.bukkit.entity.HumanEntity>();
++    private int maxStack = MAX_STACK;
++
++    public java.util.List<net.minecraft.world.item.ItemStack> getContents() {
++        return this.items;
++    }
++
++    public void onOpen(org.bukkit.craftbukkit.entity.CraftHumanEntity who) {
++        transaction.add(who);
++    }
++
++    public void onClose(org.bukkit.craftbukkit.entity.CraftHumanEntity who) {
++        transaction.remove(who);
++    }
++
++    public java.util.List<org.bukkit.entity.HumanEntity> getViewers() {
++        return transaction;
++    }
++
++    @Override
++    public int getMaxStackSize() {
++        return maxStack;
++    }
++
++    public void setMaxStackSize(int size) {
++        maxStack = size;
++    }
++    // CraftBukkit end
++
+     protected ChestBlockEntity(BlockEntityType<?> p_155327_, BlockPos p_155328_, BlockState p_155329_) {
+         super(p_155327_, p_155328_, p_155329_);
+     }
 @@ -173,6 +_,17 @@
          return ChestMenu.threeRows(p_59082_, p_59083_, this);
      }
@@ -18,3 +55,15 @@
      public void recheckOpen() {
          if (!this.remove) {
              this.openersCounter.recheckOpeners(this.getLevel(), this.getBlockPos(), this.getBlockState());
+@@ -183,4 +_,11 @@
+         Block block = p_155335_.getBlock();
+         p_155333_.blockEvent(p_155334_, block, 1, p_155337_);
+     }
++
++    // CraftBukkit start
++    @Override
++    public boolean onlyOpCanSetNbt() {
++        return true;
++    }
++    // CraftBukkit end
+ }

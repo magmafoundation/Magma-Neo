@@ -143,7 +143,6 @@ dependencies {
     // Magma - CraftBukkit
     installer 'jline:jline:2.12.1'
     installer 'org.apache.logging.log4j:log4j-iostreams:2.22.1'
-    installer 'commons-lang:commons-lang:2.6'
     installer 'com.googlecode.json-simple:json-simple:1.1.1'
     installer 'org.xerial:sqlite-jdbc:3.46.0.0'
     installer 'com.mysql:mysql-connector-j:8.4.0'

@@ -246,10 +246,36 @@
      }
  
      @Override
-@@ -1710,6 +_,7 @@
+@@ -1710,6 +_,33 @@
      }
  
      public void setRespawnPosition(ResourceKey<Level> p_9159_, @Nullable BlockPos p_9160_, float p_9161_, boolean p_9162_, boolean p_9163_) {
++        // CraftBukkit start
++        this.setRespawnPosition(p_9159_, p_9160_, p_9161_, p_9162_, p_9163_, org.bukkit.event.player.PlayerSpawnChangeEvent.Cause.UNKNOWN);
++    }
++
++    public void setRespawnPosition(ResourceKey<Level> p_9159_, @Nullable BlockPos p_9160_, float p_9161_, boolean p_9162_, boolean p_9163_, org.bukkit.event.player.PlayerSpawnChangeEvent.Cause cause) {
++        ServerLevel newWorld = this.server.getLevel(p_9159_);
++        org.bukkit.Location newSpawn = (p_9160_ != null) ? org.bukkit.craftbukkit.util.CraftLocation.toBukkit(p_9160_, newWorld.getWorld(), p_9161_, 0) : null;
++
++        org.bukkit.event.player.PlayerSpawnChangeEvent event = new org.bukkit.event.player.PlayerSpawnChangeEvent(this.getBukkitEntity(), newSpawn, p_9162_, cause);
++        org.bukkit.Bukkit.getServer().getPluginManager().callEvent(event);
++        if (event.isCancelled()) {
++            return;
++        }
++        newSpawn = event.getNewSpawn();
++        p_9162_ = event.isForced();
++
++        if (newSpawn != null) {
++            p_9159_ = ((org.bukkit.craftbukkit.CraftWorld) newSpawn.getWorld()).getHandle().dimension();
++            p_9160_ = BlockPos.containing(newSpawn.getX(), newSpawn.getY(), newSpawn.getZ());
++            p_9161_ = newSpawn.getYaw();
++        } else {
++            p_9159_ = Level.OVERWORLD;
++            p_9160_ = null;
++            p_9161_ = 0.0F;
++        }
++        // CraftBukkit end
 +        if (net.neoforged.neoforge.event.EventHooks.onPlayerSpawnSet(this, p_9160_ == null ? Level.OVERWORLD : p_9159_, p_9160_, p_9162_)) return;
          if (p_9160_ != null) {
              boolean flag = p_9160_.equals(this.respawnPosition) && p_9159_.equals(this.respawnDimension);
@@ -362,10 +388,140 @@
          public static ServerPlayer.RespawnPosAngle of(Vec3 p_348670_, BlockPos p_348504_) {
              return new ServerPlayer.RespawnPosAngle(p_348670_, calculateLookAtYaw(p_348670_, p_348504_));
          }
-@@ -1968,4 +_,10 @@
+@@ -1968,4 +_,140 @@
              return (float)Mth.wrapDegrees(Mth.atan2(vec3.z, vec3.x) * 180.0F / (float)Math.PI - 90.0);
          }
      }
++
++    // CraftBukkit start - Add per-player time and weather.
++    public long timeOffset = 0;
++    public boolean relativeTime = true;
++
++    public long getPlayerTime() {
++        if (this.relativeTime) {
++            // Adds timeOffset to the current server time.
++            return this.level().getDayTime() + this.timeOffset;
++        } else {
++            // Adds timeOffset to the beginning of this day.
++            return this.level().getDayTime() - (this.level().getDayTime() % 24000) + this.timeOffset;
++        }
++    }
++
++    public org.bukkit.WeatherType weather = null;
++
++    public org.bukkit.WeatherType getPlayerWeather() {
++        return this.weather;
++    }
++
++    public void setPlayerWeather(org.bukkit.WeatherType type, boolean plugin) {
++        if (!plugin && this.weather != null) {
++            return;
++        }
++        if (plugin) {
++            this.weather = type;
++        }
++        if (type == org.bukkit.WeatherType.DOWNFALL) {
++            this.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.STOP_RAINING, 0));
++        } else {
++            this.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.START_RAINING, 0));
++        }
++    }
++
++    private float pluginRainPosition;
++    private float pluginRainPositionPrevious;
++
++    public void updateWeather(float oldRain, float newRain, float oldThunder, float newThunder) {
++        if (this.weather == null) {
++            // Vanilla
++            if (oldRain != newRain) {
++                this.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.RAIN_LEVEL_CHANGE, newRain));
++            }
++        } else {
++            // Plugin
++            if (pluginRainPositionPrevious != pluginRainPosition) {
++                this.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.RAIN_LEVEL_CHANGE, pluginRainPosition));
++            }
++        }
++        if (oldThunder != newThunder) {
++            if (weather == org.bukkit.WeatherType.DOWNFALL || weather == null) {
++                this.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE, newThunder));
++            } else {
++                this.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE, 0));
++            }
++        }
++    }
++
++    public void tickWeather() {
++        if (this.weather == null) return;
++        pluginRainPositionPrevious = pluginRainPosition;
++        if (weather == org.bukkit.WeatherType.DOWNFALL) {
++            pluginRainPosition += 0.01;
++        } else {
++            pluginRainPosition -= 0.01;
++        }
++        pluginRainPosition = Mth.clamp(pluginRainPosition, 0.0F, 1.0F);
++    }
++
++    public void resetPlayerWeather() {
++        this.weather = null;
++        this.setPlayerWeather(this.level().getLevelData().isRaining() ? org.bukkit.WeatherType.DOWNFALL : org.bukkit.WeatherType.CLEAR, false);
++    }
++
++    @Override
++    public String toString() {
++        return super.toString() + "(" + this.getScoreboardName() + " at " + this.getX() + "," + this.getY() + "," + this.getZ() + ")";
++    }
++
++    // SPIGOT-1903, MC-98153
++    public void forceSetPositionRotation(double x, double y, double z, float yaw, float pitch) {
++        this.moveTo(x, y, z, yaw, pitch);
++        this.connection.resetPosition();
++    }
++
++    @Override
++    public boolean isImmobile() {
++        return super.isImmobile() || !getBukkitEntity().isOnline();
++    }
++
++    @Override
++    public net.minecraft.world.scores.Scoreboard getScoreboard() {
++        return getBukkitEntity().getScoreboard().getHandle();
++    }
++
++    public void reset() {
++        float exp = 0;
++        boolean keepInventory = this.level().getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY);
++        if (this.keepLevel) { // CraftBukkit - SPIGOT-6687: Only use keepLevel (was pre-set with RULE_KEEPINVENTORY value in PlayerDeathEvent)
++            exp = this.experienceProgress;
++            this.newTotalExp = this.totalExperience;
++            this.newLevel = this.experienceLevel;
++        }
++        this.setHealth(this.getMaxHealth());
++        this.stopUsingItem(); // CraftBukkit - SPIGOT-6682: Clear active item on reset
++        this.setRemainingFireTicks(0);
++        this.fallDistance = 0;
++        this.foodData = new net.minecraft.world.food.FoodData(this);
++        this.experienceLevel = this.newLevel;
++        this.totalExperience = this.newTotalExp;
++        this.experienceProgress = 0;
++        this.deathTime = 0;
++        this.setArrowCount(0, true); // CraftBukkit - ArrowBodyCountChangeEvent
++        this.removeAllEffects(org.bukkit.event.entity.EntityPotionEffectEvent.Cause.DEATH);
++        this.effectsDirty = true;
++        this.containerMenu = this.inventoryMenu;
++        this.lastHurtByPlayer = null;
++        this.lastHurtByMob = null;
++        this.combatTracker = new net.minecraft.world.damagesource.CombatTracker(this);
++        this.lastSentExp = -1;
++        if (this.keepLevel) { // CraftBukkit - SPIGOT-6687: Only use keepLevel (was pre-set with RULE_KEEPINVENTORY value in PlayerDeathEvent)
++            this.experienceProgress = exp;
++        } else {
++            this.giveExperiencePoints(this.newExp);
++        }
++        this.keepLevel = false;
++        this.setDeltaMovement(0, 0, 0); // CraftBukkit - SPIGOT-6948: Reset velocity on death
++        this.skipDropExperience = false; // CraftBukkit - SPIGOT-7462: Reset experience drop skip, so that further deaths drop xp
++    }
 +
 +    @Override
 +    public org.bukkit.craftbukkit.entity.CraftPlayer getBukkitEntity() {

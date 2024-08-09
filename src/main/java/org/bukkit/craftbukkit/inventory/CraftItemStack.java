@@ -206,7 +206,7 @@ public final class CraftItemStack extends ItemStack {
         if (list == null) {
             list = ItemEnchantments.EMPTY;
         }
-        ItemEnchantments.a listCopy = new ItemEnchantments.a(list);
+        ItemEnchantments.Mutable listCopy = new ItemEnchantments.Mutable(list);
         listCopy.set(CraftEnchantment.bukkitToMinecraftHolder(ench), level);
         handle.set(DataComponents.ENCHANTMENTS, listCopy.toImmutable());
     }

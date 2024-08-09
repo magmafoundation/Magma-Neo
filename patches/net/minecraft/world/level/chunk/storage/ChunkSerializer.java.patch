@@ -1,5 +1,14 @@
 --- a/net/minecraft/world/level/chunk/storage/ChunkSerializer.java
 +++ b/net/minecraft/world/level/chunk/storage/ChunkSerializer.java
+@@ -128,7 +_,7 @@
+                     );
+                 }
+ 
+-                LevelChunkSection levelchunksection = new LevelChunkSection(palettedcontainer, palettedcontainerro);
++                LevelChunkSection levelchunksection = new LevelChunkSection(palettedcontainer, (net.minecraft.world.level.chunk.PalettedContainer<net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome>>) palettedcontainerro);
+                 alevelchunksection[l] = levelchunksection;
+                 SectionPos sectionpos = SectionPos.of(p_188233_, k);
+                 p_188232_.checkConsistencyWithBlocks(sectionpos, levelchunksection);
 @@ -183,6 +_,8 @@
                  postLoadChunk(p_188231_, p_188234_),
                  blendingdata

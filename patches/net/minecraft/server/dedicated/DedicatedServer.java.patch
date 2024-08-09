@@ -1,14 +1,32 @@
 --- a/net/minecraft/server/dedicated/DedicatedServer.java
 +++ b/net/minecraft/server/dedicated/DedicatedServer.java
+@@ -67,7 +_,7 @@
+     private final List<ConsoleInput> consoleInput = Collections.synchronizedList(Lists.newArrayList());
+     @Nullable
+     private QueryThreadGs4 queryThreadGs4;
+-    private final RconConsoleSource rconConsoleSource;
++    // private final RconConsoleSource rconConsoleSource; // CraftBukkit - remove field
+     @Nullable
+     private RconThread rconThread;
+     public DedicatedServerSettings settings;
 @@ -80,6 +_,8 @@
      @Nullable
      private DebugSampleSubscriptionTracker debugSampleSubscriptionTracker;
-     private final ServerLinks serverLinks;
+     public ServerLinks serverLinks;
 +    @Nullable
 +    private net.minecraft.client.server.LanServerPinger dediLanPinger;
  
      public DedicatedServer(
          Thread p_214789_,
+@@ -93,7 +_,7 @@
+     ) {
+         super(p_214789_, p_214790_, p_214791_, p_214792_, Proxy.NO_PROXY, p_214794_, p_214795_, p_214796_);
+         this.settings = p_214793_;
+-        this.rconConsoleSource = new RconConsoleSource(this);
++        // this.rconConsoleSource = new RconConsoleSource(this); // CraftBukkit - remove field
+         this.textFilterClient = TextFilterClient.createFromConfig(p_214793_.getProperties().textFilteringConfig);
+         this.serverLinks = createServerLinks(p_214793_);
+     }
 @@ -103,6 +_,7 @@
          Thread thread = new Thread("Server console handler") {
              @Override
@@ -17,7 +35,7 @@
                  BufferedReader bufferedreader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
  
                  String s1;
-@@ -185,11 +_,13 @@
+@@ -185,13 +_,15 @@
              long i = Util.getNanos();
              SkullBlockEntity.setup(this.services, this);
              GameProfileCache.setUsesAuthentication(this.usesAuthentication());
@@ -30,8 +48,11 @@
              LOGGER.info("Done ({})! For help, type \"help\"", s);
 +            this.nextTickTimeNanos = Util.getNanos(); // Neo: Update server time to prevent watchdog/spaming during long load.
              if (dedicatedserverproperties.announcePlayerAchievements != null) {
-                 this.getGameRules().getRule(GameRules.RULE_ANNOUNCE_ADVANCEMENTS).set(dedicatedserverproperties.announcePlayerAchievements, this);
+-                this.getGameRules().getRule(GameRules.RULE_ANNOUNCE_ADVANCEMENTS).set(dedicatedserverproperties.announcePlayerAchievements, this);
++                this.getGameRules().getRule(GameRules.RULE_ANNOUNCE_ADVANCEMENTS).set(dedicatedserverproperties.announcePlayerAchievements, this.overworld()); // CraftBukkit - per-world
              }
+ 
+             if (dedicatedserverproperties.enableQuery) {
 @@ -217,6 +_,12 @@
                  LOGGER.info("JMX monitoring enabled");
              }
@@ -56,6 +77,63 @@
      }
  
      @Override
+@@ -532,14 +_,52 @@
+ 
+     @Override
+     public String getPluginNames() {
+-        return "";
++        // CraftBukkit start - Whole method
++        StringBuilder result = new StringBuilder();
++        org.bukkit.plugin.Plugin[] plugins = server.getPluginManager().getPlugins();
++
++        result.append(server.getName());
++        result.append(" on Bukkit ");
++        result.append(server.getBukkitVersion());
++
++        if (plugins.length > 0 && server.getQueryPlugins()) {
++            result.append(": ");
++
++            for (int i = 0; i < plugins.length; i++) {
++                if (i > 0) {
++                    result.append("; ");
++                }
++
++                result.append(plugins[i].getDescription().getName());
++                result.append(" ");
++                result.append(plugins[i].getDescription().getVersion().replaceAll(";", ","));
++            }
++        }
++
++        return result.toString();
++        // CraftBukkit end
+     }
+ 
+     @Override
+     public String runCommand(String p_139644_) {
+-        this.rconConsoleSource.prepareForCommand();
+-        this.executeBlocking(() -> this.getCommands().performPrefixedCommand(this.rconConsoleSource.createCommandSourceStack(), p_139644_));
+-        return this.rconConsoleSource.getCommandResponse();
++        // CraftBukkit start - fire RemoteServerCommandEvent
++        throw new UnsupportedOperationException("Not supported - remote source required.");
++    }
++
++    public String runCommand(RconConsoleSource rconConsoleSource, String p_139644_) {
++        rconConsoleSource.prepareForCommand();
++        this.executeBlocking(() -> {
++            CommandSourceStack wrapper = rconConsoleSource.createCommandSourceStack();
++            org.bukkit.event.server.RemoteServerCommandEvent event = new org.bukkit.event.server.RemoteServerCommandEvent(rconConsoleSource.getBukkitSender(wrapper), p_139644_);
++            server.getPluginManager().callEvent(event);
++            if (event.isCancelled()) {
++                return;
++            }
++            ConsoleInput serverCommand = new ConsoleInput(event.getCommand(), wrapper);
++            server.dispatchServerCommand(event.getSender(), serverCommand);
++        });
++        return rconConsoleSource.getCommandResponse();
++        // CraftBukkit end
+     }
+ 
+     public void storeUsingWhiteList(boolean p_139689_) {
 @@ -548,7 +_,12 @@
  
      @Override

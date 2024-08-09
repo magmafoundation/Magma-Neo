@@ -1,0 +1,44 @@
+--- a/net/minecraft/world/level/block/entity/ChiseledBookShelfBlockEntity.java
++++ b/net/minecraft/world/level/block/entity/ChiseledBookShelfBlockEntity.java
+@@ -26,6 +_,41 @@
+     private static final Logger LOGGER = LogUtils.getLogger();
+     private final NonNullList<ItemStack> items = NonNullList.withSize(6, ItemStack.EMPTY);
+     public int lastInteractedSlot = -1;
++    // CraftBukkit start - add fields and methods
++    public java.util.List<org.bukkit.entity.HumanEntity> transaction = new java.util.ArrayList<>();
++    private int maxStack = 1;
++
++    @Override
++    public java.util.List<net.minecraft.world.item.ItemStack> getContents() {
++        return this.items;
++    }
++
++    @Override
++    public void onOpen(org.bukkit.craftbukkit.entity.CraftHumanEntity who) {
++        transaction.add(who);
++    }
++
++    @Override
++    public void onClose(org.bukkit.craftbukkit.entity.CraftHumanEntity who) {
++        transaction.remove(who);
++    }
++
++    @Override
++    public java.util.List<org.bukkit.entity.HumanEntity> getViewers() {
++        return transaction;
++    }
++
++    @Override
++    public void setMaxStackSize(int size) {
++        maxStack = size;
++    }
++
++    @Override
++    public org.bukkit.Location getLocation() {
++        if (level == null) return null;
++        return new org.bukkit.Location(level.getWorld(), worldPosition.getX(), worldPosition.getY(), worldPosition.getZ());
++    }
++    // CraftBukkit end
+ 
+     public ChiseledBookShelfBlockEntity(BlockPos p_249541_, BlockState p_251752_) {
+         super(BlockEntityType.CHISELED_BOOKSHELF, p_249541_, p_251752_);

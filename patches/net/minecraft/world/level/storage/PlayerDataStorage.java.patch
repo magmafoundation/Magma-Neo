@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/level/storage/PlayerDataStorage.java
 +++ b/net/minecraft/world/level/storage/PlayerDataStorage.java
-@@ -39,6 +_,7 @@
+@@ -39,31 +_,34 @@
              Path path2 = path.resolve(p_78434_.getStringUUID() + ".dat");
              Path path3 = path.resolve(p_78434_.getStringUUID() + ".dat_old");
              Util.safeReplaceFile(path2, path1, path3);
@@ -8,11 +8,84 @@
          } catch (Exception exception) {
              LOGGER.warn("Failed to save player data for {}", p_78434_.getName().getString());
          }
-@@ -80,7 +_,12 @@
+     }
+ 
+-    private void backup(Player p_316529_, String p_316776_) {
++    private void backup(String name, String uuid, String p_316776_) { // name, uuid, extension
+         Path path = this.playerDir.toPath();
+-        Path path1 = path.resolve(p_316529_.getStringUUID() + p_316776_);
+-        Path path2 = path.resolve(p_316529_.getStringUUID() + "_corrupted_" + LocalDateTime.now().format(FORMATTER) + p_316776_);
++        Path path1 = path.resolve(uuid + p_316776_);
++        Path path2 = path.resolve(uuid + "_corrupted_" + LocalDateTime.now().format(FORMATTER) + p_316776_);
+         if (Files.isRegularFile(path1)) {
+             try {
+                 Files.copy(path1, path2, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
+             } catch (Exception exception) {
+-                LOGGER.warn("Failed to copy the player.dat file for {}", p_316529_.getName().getString(), exception);
++                LOGGER.warn("Failed to copy the player.dat file for {}", name, exception); // CraftBukkit
+             }
+         }
+     }
+ 
+-    public Optional<CompoundTag> load(Player p_316534_, String p_316666_) {
+-        File file1 = new File(this.playerDir, p_316534_.getStringUUID() + p_316666_);
++    // CraftBukkit start
++    private Optional<CompoundTag> load(String name, String uuid, String p_316666_) { // name, uuid, extension
++        File file = this.playerDir;
++        File file1 = new File(file, uuid + p_316666_);
+         if (file1.exists() && file1.isFile()) {
+             try {
+                 return Optional.of(NbtIo.readCompressed(file1.toPath(), NbtAccounter.unlimitedHeap()));
+             } catch (Exception exception) {
+-                LOGGER.warn("Failed to load player data for {}", p_316534_.getName().getString());
++                LOGGER.warn("Failed to load player data for {}", name); // CraftBukkit
+             }
+         }
+ 
+@@ -71,16 +_,47 @@
+     }
+ 
+     public Optional<CompoundTag> load(Player p_78436_) {
+-        Optional<CompoundTag> optional = this.load(p_78436_, ".dat");
++        // CraftBukkit start
++        magma_player_for_neo = p_78436_; // Magma
++        return load(p_78436_.getName().getString(), p_78436_.getStringUUID()).map((nbttagcompound) -> {
++            if (p_78436_ instanceof net.minecraft.server.level.ServerPlayer) {
++                org.bukkit.craftbukkit.entity.CraftPlayer player = (org.bukkit.craftbukkit.entity.CraftPlayer) p_78436_.getBukkitEntity();
++                // Only update first played if it is older than the one we have
++                long modified = new File(this.playerDir, p_78436_.getStringUUID() + ".dat").lastModified();
++                if (modified < player.getFirstPlayed()) {
++                    player.setFirstPlayed(modified);
++                }
++            }
++            p_78436_.load(nbttagcompound); // From below
++            return nbttagcompound;
++        });
++    }
++
++    private Player magma_player_for_neo;
++
++    public Optional<CompoundTag> load(String name, String uuid) { // Magma player for neo
++        Optional<CompoundTag> optional = this.load(name, uuid, ".dat"); // CraftBukkit
++        // CraftBukkit end
++
+         if (optional.isEmpty()) {
+-            this.backup(p_78436_, ".dat");
++            this.backup(name, uuid, ".dat"); // CraftBukkit
+         }
+ 
+-        return optional.or(() -> this.load(p_78436_, ".dat_old")).map(p_316252_ -> {
++        return optional.or(() ->
++                this.load(name, uuid, ".dat_old") // CraftBukkit
++        ).map(p_316252_ -> {
              int i = NbtUtils.getDataVersion(p_316252_, -1);
              p_316252_ = DataFixTypes.PLAYER.updateToCurrentVersion(this.fixerUpper, p_316252_, i);
-             p_78436_.load(p_316252_);
-+            net.neoforged.neoforge.event.EventHooks.firePlayerLoadingEvent(p_78436_, playerDir, p_78436_.getStringUUID());
+-            p_78436_.load(p_316252_);
++            // p_78436_.load(p_316252_); // CraftBukkit
++            if (magma_player_for_neo != null) {
++                net.neoforged.neoforge.event.EventHooks.firePlayerLoadingEvent(magma_player_for_neo, playerDir, magma_player_for_neo.getStringUUID());
++                magma_player_for_neo = null; // Magma
++            }
              return p_316252_;
          });
 +    }

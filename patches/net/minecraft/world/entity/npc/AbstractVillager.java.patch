@@ -1,5 +1,22 @@
 --- a/net/minecraft/world/entity/npc/AbstractVillager.java
 +++ b/net/minecraft/world/entity/npc/AbstractVillager.java
+@@ -38,6 +_,16 @@
+ import org.slf4j.Logger;
+ 
+ public abstract class AbstractVillager extends AgeableMob implements InventoryCarrier, Npc, Merchant {
++
++    // CraftBukkit start
++    private org.bukkit.craftbukkit.inventory.CraftMerchant craftMerchant;
++
++    @Override
++    public org.bukkit.craftbukkit.inventory.CraftMerchant getCraftMerchant() {
++        return (craftMerchant == null) ? craftMerchant = new org.bukkit.craftbukkit.inventory.CraftMerchant(this) : craftMerchant;
++    }
++    // CraftBukkit end
++
+     private static final EntityDataAccessor<Integer> DATA_UNHAPPY_COUNTER = SynchedEntityData.defineId(AbstractVillager.class, EntityDataSerializers.INT);
+     private static final Logger LOGGER = LogUtils.getLogger();
+     public static final int VILLAGER_SLOT_OFFSET = 300;
 @@ -127,6 +_,7 @@
          if (this.tradingPlayer instanceof ServerPlayer) {
              CriteriaTriggers.TRADE.trigger((ServerPlayer)this.tradingPlayer, this, p_35274_.getResult());

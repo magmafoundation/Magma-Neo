@@ -12,7 +12,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParam;
@@ -30,6 +29,7 @@ import org.bukkit.craftbukkit.util.CraftLocation;
 import org.bukkit.craftbukkit.util.CraftNamespacedKey;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.loot.LootContext;
 
 public class CraftLootTable implements org.bukkit.loot.LootTable {
     public static org.bukkit.loot.LootTable minecraftToBukkit(ResourceLocation minecraft) {
@@ -149,7 +149,7 @@ public class CraftLootTable implements org.bukkit.loot.LootTable {
         }
     }
 
-    public static LootContext convertContext(LootContext info) {
+    public static LootContext convertContext(net.minecraft.world.level.storage.loot.LootContext info) {
         Vec3 position = info.getParamOrNull(LootContextParams.ORIGIN);
         if (position == null) {
             position = info.getParamOrNull(LootContextParams.THIS_ENTITY).position(); // Every vanilla context has origin or this_entity, see LootContextParameterSets

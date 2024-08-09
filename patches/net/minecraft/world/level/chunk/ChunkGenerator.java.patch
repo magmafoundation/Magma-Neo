@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/level/chunk/ChunkGenerator.java
 +++ b/net/minecraft/world/level/chunk/ChunkGenerator.java
-@@ -92,9 +_,14 @@
+@@ -92,11 +_,16 @@
      public ChunkGenerator(BiomeSource p_255838_, Function<Holder<Biome>, BiomeGenerationSettings> p_256216_) {
          this.biomeSource = p_255838_;
          this.generationSettingsGetter = p_256216_;
@@ -8,11 +8,55 @@
 +        this.featuresPerStep = net.neoforged.neoforge.common.util.Lazy.of(
              () -> FeatureSorter.buildFeaturesPerStep(List.copyOf(p_255838_.possibleBiomes()), p_223216_ -> p_256216_.apply(p_223216_).features(), true)
          );
-+    }
-+
+     }
+ 
 +    @org.jetbrains.annotations.ApiStatus.Internal
 +    public void refreshFeaturesPerStep() {
 +        ((net.neoforged.neoforge.common.util.Lazy<?>) this.featuresPerStep).invalidate();
++    }
++
+     public void validate() {
+         this.featuresPerStep.get();
+     }
+@@ -313,7 +_,7 @@
+         }
      }
  
-     public void validate() {
+-    public void applyBiomeDecoration(WorldGenLevel p_223087_, ChunkAccess p_223088_, StructureManager p_223089_) {
++    public void addVanillaDecorations(WorldGenLevel p_223087_, ChunkAccess p_223088_, StructureManager p_223089_) { // CraftBukkit
+         ChunkPos chunkpos = p_223088_.getPos();
+         if (!SharedConstants.debugVoidTerrain(chunkpos)) {
+             SectionPos sectionpos = SectionPos.of(chunkpos, p_223087_.getMinSection());
+@@ -406,6 +_,32 @@
+             }
+         }
+     }
++
++    // CraftBukkit start
++    public void applyBiomeDecoration(WorldGenLevel generatoraccessseed, ChunkAccess ichunkaccess, StructureManager structuremanager) {
++        applyBiomeDecoration(generatoraccessseed, ichunkaccess, structuremanager, true);
++    }
++
++    public void applyBiomeDecoration(WorldGenLevel generatoraccessseed, ChunkAccess ichunkaccess, StructureManager structuremanager, boolean vanilla) {
++        if (vanilla) {
++            addVanillaDecorations(generatoraccessseed, ichunkaccess, structuremanager);
++        }
++        org.bukkit.World world = generatoraccessseed.getMinecraftWorld().getWorld();
++        // only call when a populator is present (prevents unnecessary entity conversion)
++        if (!world.getPopulators().isEmpty()) {
++            org.bukkit.craftbukkit.generator.CraftLimitedRegion limitedRegion = new org.bukkit.craftbukkit.generator.CraftLimitedRegion(generatoraccessseed, ichunkaccess.getPos());
++            int x = ichunkaccess.getPos().x;
++            int z = ichunkaccess.getPos().z;
++            for (org.bukkit.generator.BlockPopulator populator : world.getPopulators()) {
++                WorldgenRandom seededrandom = new WorldgenRandom(new net.minecraft.world.level.levelgen.LegacyRandomSource(generatoraccessseed.getSeed()));
++                seededrandom.setDecorationSeed(generatoraccessseed.getSeed(), x, z);
++                populator.populate(world, new org.bukkit.craftbukkit.util.RandomSourceWrapper.RandomWrapper(seededrandom), x, z, limitedRegion);
++            }
++            limitedRegion.saveEntities();
++            limitedRegion.breakLink();
++        }
++    }
++    // CraftBukkit end
+ 
+     private static BoundingBox getWritableArea(ChunkAccess p_187718_) {
+         ChunkPos chunkpos = p_187718_.getPos();

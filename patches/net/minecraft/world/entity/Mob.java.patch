@@ -1,12 +1,14 @@
 --- a/net/minecraft/world/entity/Mob.java
 +++ b/net/minecraft/world/entity/Mob.java
-@@ -131,6 +_,9 @@
+@@ -131,6 +_,11 @@
      private Leashable.LeashData leashData;
      private BlockPos restrictCenter = BlockPos.ZERO;
      private float restrictRadius = -1.0F;
 +    @Nullable
 +    private MobSpawnType spawnType;
 +    private boolean spawnCancelled = false;
++
++    public boolean aware = true; // CraftBukkit
  
      protected Mob(EntityType<? extends Mob> p_21368_, Level p_21369_) {
          super(p_21368_, p_21369_);
@@ -23,15 +25,47 @@
      protected void registerGoals() {
      }
  
-@@ -237,7 +_,10 @@
+@@ -237,7 +_,42 @@
      }
  
      public void setTarget(@Nullable LivingEntity p_21544_) {
 -        this.target = p_21544_;
++        // CraftBukkit start - fire event
++        setTarget(p_21544_, org.bukkit.event.entity.EntityTargetEvent.TargetReason.UNKNOWN, true);
++    }
++
++    public boolean setTarget(LivingEntity p_21544_, org.bukkit.event.entity.EntityTargetEvent.TargetReason reason, boolean fireEvent) {
++        if (getTarget() == p_21544_) return false;
++        if (fireEvent) {
++            if (reason == org.bukkit.event.entity.EntityTargetEvent.TargetReason.UNKNOWN && getTarget() != null && p_21544_ == null) {
++                reason = getTarget().isAlive() ? org.bukkit.event.entity.EntityTargetEvent.TargetReason.FORGOT_TARGET : org.bukkit.event.entity.EntityTargetEvent.TargetReason.TARGET_DIED;
++            }
++            if (reason == org.bukkit.event.entity.EntityTargetEvent.TargetReason.UNKNOWN) {
++                this.level().getCraftServer().getLogger().log(java.util.logging.Level.WARNING, "Unknown target reason, please report on the issue tracker", new Exception());
++            }
++            org.bukkit.craftbukkit.entity.CraftLivingEntity ctarget = null;
++            if (p_21544_ != null) {
++                ctarget = (org.bukkit.craftbukkit.entity.CraftLivingEntity) p_21544_.getBukkitEntity();
++            }
++            org.bukkit.event.entity.EntityTargetLivingEntityEvent event = new org.bukkit.event.entity.EntityTargetLivingEntityEvent(this.getBukkitEntity(), ctarget, reason);
++            this.level().getCraftServer().getPluginManager().callEvent(event);
++            if (event.isCancelled()) {
++                return false;
++            }
++            if (event.getTarget() != null) {
++                p_21544_ = ((org.bukkit.craftbukkit.entity.CraftLivingEntity) event.getTarget()).getHandle();
++            } else {
++                p_21544_ = null;
++            }
++        }
++
 +        net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent changeTargetEvent = net.neoforged.neoforge.common.CommonHooks.onLivingChangeTarget(this, p_21544_, net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent.LivingTargetType.MOB_TARGET);
 +        if(!changeTargetEvent.isCanceled()) {
 +             this.target = changeTargetEvent.getNewAboutToBeSetTarget();
 +        }
++
++        return true;
++        // CraftBukkit end
      }
  
      @Override
@@ -48,6 +82,19 @@
      }
  
      protected void updateControlFlags() {
+@@ -367,6 +_,12 @@
+         return null;
+     }
+ 
++    // CraftBukkit start - Add delegate method
++    public SoundEvent getAmbientSound0() {
++        return getAmbientSound();
++    }
++    // CraftBukkit end
++
+     @Override
+     public void addAdditionalSaveData(CompoundTag p_21484_) {
+         super.addAdditionalSaveData(p_21484_);
 @@ -425,6 +_,9 @@
          if (this.isNoAi()) {
              p_21484_.putBoolean("NoAI", this.isNoAi());
@@ -121,6 +168,44 @@
          return p_21437_;
      }
  
+@@ -1270,8 +_,15 @@
+         return this.restrictRadius != -1.0F;
+     }
+ 
++    // CraftBukkit start
+     @Nullable
+     public <T extends Mob> T convertTo(EntityType<T> p_21407_, boolean p_21408_) {
++        return this.convertTo(p_21407_, p_21408_, org.bukkit.event.entity.EntityTransformEvent.TransformReason.UNKNOWN, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT);
++    }
++
++    @Nullable
++    public <T extends Mob> T convertTo(EntityType<T> p_21407_, boolean p_21408_, org.bukkit.event.entity.EntityTransformEvent.TransformReason transformReason, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason spawnReason) {
++        // CraftBukkit end
+         if (this.isRemoved()) {
+             return null;
+         } else {
+@@ -1304,14 +_,19 @@
+                     }
+                 }
+ 
+-                this.level().addFreshEntity(t);
++                // CraftBukkit start
++                if (org.bukkit.craftbukkit.event.CraftEventFactory.callEntityTransformEvent(this, t, transformReason).isCancelled()) {
++                    return null;
++                }
++                this.level().addFreshEntity(t, spawnReason);
++                // CraftBukkit end
+                 if (this.isPassenger()) {
+                     Entity entity = this.getVehicle();
+                     this.stopRiding();
+                     t.startRiding(entity, true);
+                 }
+ 
+-                this.discard();
++                this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.TRANSFORMATION); // CraftBukkit - add Bukkit remove cause
+                 return t;
+             }
+         }
 @@ -1470,14 +_,24 @@
      }
  

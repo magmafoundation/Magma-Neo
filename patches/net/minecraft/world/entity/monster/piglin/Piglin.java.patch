@@ -1,5 +1,16 @@
 --- a/net/minecraft/world/entity/monster/piglin/Piglin.java
 +++ b/net/minecraft/world/entity/monster/piglin/Piglin.java
+@@ -116,6 +_,10 @@
+         MemoryModuleType.ATE_RECENTLY,
+         MemoryModuleType.NEAREST_REPELLENT
+     );
++    // CraftBukkit start - Custom bartering and interest list
++    public java.util.Set<net.minecraft.world.item.Item> allowedBarterItems = new java.util.HashSet<>();
++    public java.util.Set<net.minecraft.world.item.Item> interestItems = new java.util.HashSet<>();
++    // CraftBukkit end
+ 
+     public Piglin(EntityType<? extends AbstractPiglin> p_34683_, Level p_34684_) {
+         super(p_34683_, p_34684_);
 @@ -349,7 +_,7 @@
          } else if (this.isChargingCrossbow()) {
              return PiglinArmPose.CROSSBOW_CHARGE;

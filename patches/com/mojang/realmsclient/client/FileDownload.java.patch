@@ -1,0 +1,11 @@
+--- a/com/mojang/realmsclient/client/FileDownload.java
++++ b/com/mojang/realmsclient/client/FileDownload.java
+@@ -324,7 +_,7 @@
+                 p_86993_.delete();
+             }
+ 
+-            try (LevelStorageSource.LevelStorageAccess levelstoragesource$levelstorageaccess = p_86994_.validateAndCreateAccess(s)) {
++            try (LevelStorageSource.LevelStorageAccess levelstoragesource$levelstorageaccess = p_86994_.validateAndCreateAccess(s, net.minecraft.world.level.dimension.LevelStem.OVERWORLD)) { // Magma
+                 levelstoragesource$levelstorageaccess.renameAndDropPlayer(s);
+             } catch (NbtException | ReportedNbtException | IOException ioexception) {
+                 LOGGER.error("Failed to modify unpacked realms level {}", s, ioexception);

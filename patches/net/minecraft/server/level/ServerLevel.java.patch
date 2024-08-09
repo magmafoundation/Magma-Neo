@@ -36,7 +36,7 @@
      public ServerLevel(
          MinecraftServer p_214999_,
          Executor p_215000_,
-@@ -230,10 +_,15 @@
+@@ -230,11 +_,30 @@
              p_215007_,
              p_214999_.getMaxChainedNeighborUpdates()
          );
@@ -51,8 +51,23 @@
 -        this.serverLevelData = p_215002_;
 +        this.serverLevelData = (net.minecraft.world.level.storage.PrimaryLevelData) p_215002_;
          ChunkGenerator chunkgenerator = p_215004_.generator();
++        // CraftBukkit start
++        serverLevelData.setWorld(this);
++        if (biomeProvider != null) {
++            net.minecraft.world.level.biome.BiomeSource worldChunkManager = new org.bukkit.craftbukkit.generator.CustomWorldChunkManager(getWorld(), biomeProvider, server.registryAccess().registryOrThrow(Registries.BIOME));
++            if (chunkgenerator instanceof net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator cga) {
++                chunkgenerator = new net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator(worldChunkManager, cga.settings);
++            } else if (chunkgenerator instanceof net.minecraft.world.level.levelgen.FlatLevelSource cpf) {
++                chunkgenerator = new net.minecraft.world.level.levelgen.FlatLevelSource(cpf.settings(), worldChunkManager);
++            }
++        }
++        if (generator != null) {
++            chunkgenerator = new org.bukkit.craftbukkit.generator.CustomChunkGenerator(this, chunkgenerator, generator);
++        }
++        // CraftBukkit end
          boolean flag = p_214999_.forceSynchronousWrites();
          DataFixer datafixer = p_214999_.getFixerUpper();
+         EntityPersistentStorage<Entity> entitypersistentstorage = new EntityStorage(
 @@ -298,6 +_,8 @@
          this.randomSequences = Objects.requireNonNullElseGet(
              p_288977_, () -> this.getDataStorage().computeIfAbsent(RandomSequences.factory(i), "random_sequences")
@@ -144,7 +159,19 @@
          }
      }
  
-@@ -876,7 +_,13 @@
+@@ -872,18 +_,40 @@
+ 
+     @Override
+     public boolean addFreshEntity(Entity p_8837_) {
+-        return this.addEntity(p_8837_);
++        // CraftBukkit start
++        return this.addFreshEntity(p_8837_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT);
++    }
++
++    @Override
++    public boolean addFreshEntity(Entity entity, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason reason) {
++        return this.addEntity(entity, reason);
++        // CraftBukkit end
      }
  
      public boolean addWithUUID(Entity p_8848_) {
@@ -159,6 +186,23 @@
      }
  
      public void addDuringTeleport(Entity p_143335_) {
++        // CraftBukkit start
++        // SPIGOT-6415: Don't call spawn event for entities which travel trough worlds,
++        // since it is only an implementation detail, that a new entity is created when
++        // they are traveling between worlds.
++        this.addDuringTeleport(p_143335_, null);
++    }
++
++    public void addDuringTeleport(Entity p_143335_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason reason) {
++        // CraftBukkit end
+         if (p_143335_ instanceof ServerPlayer serverplayer) {
+             this.addPlayer(serverplayer);
+         } else {
+-            this.addEntity(p_143335_);
++            this.addEntity(p_143335_, reason); // CraftBukkit
+         }
+     }
+ 
 @@ -896,6 +_,7 @@
      }
  
@@ -167,7 +211,7 @@
          Entity entity = this.getEntities().get(p_8854_.getUUID());
          if (entity != null) {
              LOGGER.warn("Force-added player with duplicate UUID {}", p_8854_.getUUID());
-@@ -903,15 +_,28 @@
+@@ -903,23 +_,42 @@
              this.removePlayerImmediately((ServerPlayer)entity, Entity.RemovalReason.DISCARDED);
          }
  
@@ -200,6 +244,42 @@
          }
      }
  
+     public boolean tryAddFreshEntityWithPassengers(Entity p_8861_) {
++        // CraftBukkit start
++        return this.tryAddFreshEntityWithPassengers(p_8861_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT);
++    }
++
++    public boolean tryAddFreshEntityWithPassengers(Entity p_8861_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason reason) {
++        // CraftBukkit end
+         if (p_8861_.getSelfAndPassengers().map(Entity::getUUID).anyMatch(this.entityManager::isLoaded)) {
+             return false;
+         } else {
+-            this.addFreshEntityWithPassengers(p_8861_);
++            this.addFreshEntityWithPassengers(p_8861_, reason); // CraftBukkit
+             return true;
+         }
+     }
+@@ -933,6 +_,20 @@
+         p_143262_.remove(p_143263_);
+     }
+ 
++    // CraftBukkit start
++    public boolean strikeLightning(Entity entitylightning) {
++        return this.strikeLightning(entitylightning, org.bukkit.event.weather.LightningStrikeEvent.Cause.UNKNOWN);
++    }
++
++    public boolean strikeLightning(Entity entitylightning, org.bukkit.event.weather.LightningStrikeEvent.Cause cause) {
++        org.bukkit.event.weather.LightningStrikeEvent lightning = org.bukkit.craftbukkit.event.CraftEventFactory.callLightningStrikeEvent((org.bukkit.entity.LightningStrike) entitylightning.getBukkitEntity(), cause);
++        if (lightning.isCancelled()) {
++            return false;
++        }
++        return this.addFreshEntity(entitylightning);
++    }
++    // CraftBukkit end
++
+     @Override
+     public void destroyBlockProgress(int p_8612_, BlockPos p_8613_, int p_8614_) {
+         for (ServerPlayer serverplayer : this.server.getPlayerList().getPlayers()) {
 @@ -959,6 +_,12 @@
          float p_263390_,
          long p_263403_

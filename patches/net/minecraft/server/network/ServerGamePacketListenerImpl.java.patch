@@ -1,5 +1,14 @@
 --- a/net/minecraft/server/network/ServerGamePacketListenerImpl.java
 +++ b/net/minecraft/server/network/ServerGamePacketListenerImpl.java
+@@ -237,7 +_,7 @@
+     private boolean waitingForSwitchToConfig;
+ 
+     public ServerGamePacketListenerImpl(MinecraftServer p_9770_, Connection p_9771_, ServerPlayer p_9772_, CommonListenerCookie p_301978_) {
+-        super(p_9770_, p_9771_, p_301978_);
++        super(p_9770_, p_9771_, p_301978_, p_9772_); // CraftBukkit
+         this.chunkSender = new PlayerChunkSender(p_9771_.isMemoryConnection());
+         this.player = p_9772_;
+         p_9772_.connection = this;
 @@ -439,9 +_,11 @@
                  }
  
@@ -87,6 +96,122 @@
                      PlayerChatMessage playerchatmessage1 = playerchatmessage.withUnsignedContent(component).filter(p_300785_.mask());
                      this.broadcastChatMessage(playerchatmessage1);
                  });
+@@ -1381,6 +_,115 @@
+         return false;
+     }
+ 
++    // CraftBukkit start - add method
++    public void chat(String s, PlayerChatMessage original, boolean async) {
++        if (s.isEmpty() || this.player.getChatVisibility() == ChatVisiblity.HIDDEN) {
++            return;
++        }
++        net.minecraft.network.chat.OutgoingChatMessage outgoing = net.minecraft.network.chat.OutgoingChatMessage.create(original);
++
++        if (!async && s.startsWith("/")) {
++            this.handleCommand(s);
++        } else if (this.player.getChatVisibility() == ChatVisiblity.SYSTEM) {
++            // Do nothing, this is coming from a plugin
++        } else {
++            org.bukkit.entity.Player player = this.getCraftPlayer();
++            org.bukkit.event.player.AsyncPlayerChatEvent event = new org.bukkit.event.player.AsyncPlayerChatEvent(async, player, s, new org.bukkit.craftbukkit.util.LazyPlayerSet(server));
++            String originalFormat = event.getFormat(), originalMessage = event.getMessage();
++            this.cserver.getPluginManager().callEvent(event);
++
++            if (org.bukkit.event.player.PlayerChatEvent.getHandlerList().getRegisteredListeners().length != 0) {
++                // Evil plugins still listening to deprecated event
++                final org.bukkit.event.player.PlayerChatEvent queueEvent = new org.bukkit.event.player.PlayerChatEvent(player, event.getMessage(), event.getFormat(), event.getRecipients());
++                queueEvent.setCancelled(event.isCancelled());
++                org.bukkit.craftbukkit.util.Waitable waitable = new org.bukkit.craftbukkit.util.Waitable() {
++                    @Override
++                    protected Object evaluate() {
++                        org.bukkit.Bukkit.getPluginManager().callEvent(queueEvent);
++
++                        if (queueEvent.isCancelled()) {
++                            return null;
++                        }
++
++                        String message = String.format(queueEvent.getFormat(), queueEvent.getPlayer().getDisplayName(), queueEvent.getMessage());
++                        if (((org.bukkit.craftbukkit.util.LazyPlayerSet) queueEvent.getRecipients()).isLazy()) {
++                            if (originalFormat.equals(queueEvent.getFormat()) && originalMessage.equals(queueEvent.getMessage()) && queueEvent.getPlayer().getName().equalsIgnoreCase(queueEvent.getPlayer().getDisplayName())) {
++                                ServerGamePacketListenerImpl.this.server.getPlayerList().broadcastChatMessage(original, ServerGamePacketListenerImpl.this.player, ChatType.bind(ChatType.CHAT, (Entity) ServerGamePacketListenerImpl.this.player));
++                                return null;
++                            }
++
++                            for (ServerPlayer recipient : server.getPlayerList().players) {
++                                recipient.getBukkitEntity().sendMessage(ServerGamePacketListenerImpl.this.player.getUUID(), message);
++                            }
++                        } else {
++                            for (org.bukkit.entity.Player player : queueEvent.getRecipients()) {
++                                player.sendMessage(ServerGamePacketListenerImpl.this.player.getUUID(), message);
++                            }
++                        }
++                        ServerGamePacketListenerImpl.this.server.console.sendMessage(message);
++
++                        return null;
++                    }};
++                if (async) {
++                    server.processQueue.add(waitable);
++                } else {
++                    waitable.run();
++                }
++                try {
++                    waitable.get();
++                } catch (InterruptedException e) {
++                    Thread.currentThread().interrupt(); // This is proper habit for java. If we aren't handling it, pass it on!
++                } catch (java.util.concurrent.ExecutionException e) {
++                    throw new RuntimeException("Exception processing chat event", e.getCause());
++                }
++            } else {
++                if (event.isCancelled()) {
++                    return;
++                }
++
++                s = String.format(event.getFormat(), event.getPlayer().getDisplayName(), event.getMessage());
++                if (((org.bukkit.craftbukkit.util.LazyPlayerSet) event.getRecipients()).isLazy()) {
++                    if (originalFormat.equals(event.getFormat()) && originalMessage.equals(event.getMessage()) && event.getPlayer().getName().equalsIgnoreCase(event.getPlayer().getDisplayName())) {
++                        ServerGamePacketListenerImpl.this.server.getPlayerList().broadcastChatMessage(original, ServerGamePacketListenerImpl.this.player, ChatType.bind(ChatType.CHAT, (Entity) ServerGamePacketListenerImpl.this.player));
++                        return;
++                    }
++
++                    for (ServerPlayer recipient : server.getPlayerList().players) {
++                        recipient.getBukkitEntity().sendMessage(ServerGamePacketListenerImpl.this.player.getUUID(), s);
++                    }
++                } else {
++                    for (org.bukkit.entity.Player recipient : event.getRecipients()) {
++                        recipient.sendMessage(ServerGamePacketListenerImpl.this.player.getUUID(), s);
++                    }
++                }
++                server.console.sendMessage(s);
++            }
++        }
++    }
++    private void handleCommand(String s) {
++        this.LOGGER.info(this.player.getScoreboardName() + " issued server command: " + s);
++
++        org.bukkit.craftbukkit.entity.CraftPlayer player = this.getCraftPlayer();
++
++        org.bukkit.event.player.PlayerCommandPreprocessEvent event = new org.bukkit.event.player.PlayerCommandPreprocessEvent(player, s, new org.bukkit.craftbukkit.util.LazyPlayerSet(server));
++        this.cserver.getPluginManager().callEvent(event);
++
++        if (event.isCancelled()) {
++            return;
++        }
++
++        try {
++            if (this.cserver.dispatchCommand(event.getPlayer(), event.getMessage().substring(1))) {
++                return;
++            }
++        } catch (org.bukkit.command.CommandException ex) {
++            player.sendMessage(org.bukkit.ChatColor.RED + "An internal error occurred while attempting to perform this command");
++            java.util.logging.Logger.getLogger(ServerGamePacketListenerImpl.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
++            return;
++        }
++    }
++    // CraftBukkit end
++
+     private PlayerChatMessage getSignedMessage(ServerboundChatPacket p_251061_, LastSeenMessages p_250566_) throws SignedMessageChain.DecodeException {
+         SignedMessageBody signedmessagebody = new SignedMessageBody(p_251061_.message(), p_251061_.timeStamp(), p_251061_.salt(), p_250566_);
+         return this.signedMessageDecoder.unpack(p_251061_.signature(), signedmessagebody);
 @@ -1561,7 +_,11 @@
  
                          @Override
@@ -100,6 +225,15 @@
                          }
  
                          @Override
+@@ -1610,7 +_,7 @@
+                     this.player = this.server.getPlayerList().respawn(this.player, false, Entity.RemovalReason.KILLED);
+                     if (this.server.isHardcore()) {
+                         this.player.setGameMode(GameType.SPECTATOR);
+-                        this.player.level().getGameRules().getRule(GameRules.RULE_SPECTATORSGENERATECHUNKS).set(false, this.server);
++                        this.player.level().getGameRules().getRule(GameRules.RULE_SPECTATORSGENERATECHUNKS).set(false, this.server.overworld()); // CraftBukkit - per-world
+                     }
+                 }
+                 break;
 @@ -1753,7 +_,7 @@
      @Override
      public void handlePlayerAbilities(ServerboundPlayerAbilitiesPacket p_9887_) {
@@ -114,11 +248,11 @@
                  .setupInboundProtocol(
                      ConfigurationProtocols.SERVERBOUND,
 -                    new ServerConfigurationPacketListenerImpl(this.server, this.connection, this.createCookie(this.player.clientInformation()))
-+                    new ServerConfigurationPacketListenerImpl(this.server, this.connection, this.createCookie(this.player.clientInformation(), this.connectionType))
++                    new ServerConfigurationPacketListenerImpl(this.server, this.connection, this.createCookie(this.player.clientInformation(), this.connectionType), this.player) // CraftBukkit
                  );
          }
      }
-@@ -1847,6 +_,7 @@
+@@ -1847,12 +_,15 @@
  
      @Override
      public void handleCustomPayload(ServerboundCustomPayloadPacket p_333887_) {
@@ -126,3 +260,11 @@
      }
  
      @Override
+     public ServerPlayer getPlayer() {
+         return this.player;
+     }
++
++    public void teleport(org.bukkit.Location to) {} // Magma - todo
+ 
+     @FunctionalInterface
+     interface EntityInteraction {
