@@ -479,7 +479,7 @@ afterEvaluate {
 }
 
 publishing {
-    publications.create('NeoForge', MavenPublication) {
+    publications.create('Magma', MavenPublication) {
         groupId = project.group
         artifactId = project.name
         version = project.version
@@ -521,6 +521,13 @@ publishing {
         }
     }
     repositories {
-        maven gradleutils.getPublishingMaven()
+        maven {
+            name = 'Magma'
+            url = 'https://repo.magmafoundation.org/releases'
+            credentials {
+                username = project.findProperty('mavenUsername') ?: System.getenv('MAVEN_USER')
+                password = project.findProperty('mavenPassword') ?: System.getenv('MAVEN_PASSWORD')
+            }
+        }
     }
 }

@@ -35,7 +35,7 @@ System.out.println("Magma Neo version ${project.version}")
 
 allprojects {
     version rootProject.version
-    group 'net.neoforged'
+    group 'org.magmafoundation'
     repositories {
         mavenLocal()
     }
