@@ -9,8 +9,6 @@ plugins {
 
 apply plugin: 'net.neoforged.gradleutils'
 
-gradleutils.setupSigning(project: project, signAllPublications: true)
-
 changelog {
     from '1.0'
     disableAutomaticPublicationRegistration()
