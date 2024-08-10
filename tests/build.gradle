@@ -17,7 +17,7 @@ repositories {
     }
     maven {
         name 'NeoForged'
-        url 'https://maven.neoforged.net/releases'
+        url 'https://repo.magmafoundation.org/releases'
     }
 }
 

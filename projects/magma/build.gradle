@@ -21,12 +21,12 @@ dynamicProject {
 }
 
 final checkVersion = JCCPlugin.providePreviousVersion(
-        project.providers, project.providers.provider({['https://maven.neoforged.net/releases']}), project.providers.provider({'net.neoforged:neoforge'})
+        project.providers, project.providers.provider({['https://repo.magmafoundation.org/releases']}), project.providers.provider({'net.neoforged:neoforge'})
 )
 final createCompatJar = tasks.register('createCompatibilityCheckJar', ProvideNeoForgeJarTask) {
     // Use the same jar that the patches were generated against
     cleanJar.set(tasks.generateClientBinaryPatches.clean)
-    maven.set('https://maven.neoforged.net/releases')
+    maven.set('https://repo.magmafoundation.org/releases')
     artifact.set('net.neoforged:neoforge')
     version.set(checkVersion)
     javaLauncher = javaToolchains.launcherFor {
