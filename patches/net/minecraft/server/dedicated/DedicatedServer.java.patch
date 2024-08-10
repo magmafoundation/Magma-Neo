@@ -35,6 +35,28 @@
                  BufferedReader bufferedreader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
  
                  String s1;
+@@ -161,6 +_,12 @@
+             return false;
+         }
+ 
++        // CraftBukkit start
++        this.setPlayerList(new DedicatedPlayerList(this, this.registries(), this.playerDataStorage));
++        server.loadPlugins();
++        server.enablePlugins(org.bukkit.plugin.PluginLoadOrder.STARTUP);
++        // CraftBukkit end
++
+         if (!this.usesAuthentication()) {
+             LOGGER.warn("**** SERVER IS RUNNING IN OFFLINE/INSECURE MODE!");
+             LOGGER.warn("The server will make no attempt to authenticate usernames. Beware.");
+@@ -177,7 +_,7 @@
+         if (!OldUsersConverter.serverReadyAfterUserconversion(this)) {
+             return false;
+         } else {
+-            this.setPlayerList(new DedicatedPlayerList(this, this.registries(), this.playerDataStorage));
++            //this.setPlayerList(new DedicatedPlayerList(this, this.registries(), this.playerDataStorage));
+             this.debugSampleSubscriptionTracker = new DebugSampleSubscriptionTracker(this.getPlayerList());
+             this.tickTimeLogger = new RemoteSampleLogger(
+                 TpsDebugDimensions.values().length, this.debugSampleSubscriptionTracker, RemoteDebugSampleType.TICK_TIME
 @@ -185,13 +_,15 @@
              long i = Util.getNanos();
              SkullBlockEntity.setup(this.services, this);

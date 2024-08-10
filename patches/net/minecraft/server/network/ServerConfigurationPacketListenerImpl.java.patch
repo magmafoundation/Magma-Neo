@@ -46,7 +46,7 @@
          this.synchronizeRegistriesTask = new SynchronizeRegistriesTask(list, layeredregistryaccess);
          this.configurationTasks.add(this.synchronizeRegistriesTask);
          this.addOptionalTasks();
-@@ -95,6 +_,33 @@
+@@ -95,6 +_,34 @@
  
      private void addOptionalTasks() {
          this.server.getServerResourcePack().ifPresent(p_296496_ -> this.configurationTasks.add(new ServerResourcePackConfigurationTask(p_296496_)));
@@ -69,6 +69,7 @@
 +    @Override
 +    public void handlePong(net.minecraft.network.protocol.common.ServerboundPongPacket p_295142_) {
 +        super.handlePong(p_295142_);
++        net.minecraft.network.protocol.PacketUtils.ensureRunningOnSameThread(p_295142_, this, this.server); // CraftBukkit
 +        // During startConfiguration() we send a ping with id 0, if we get a pong back, we initiate the connection.
 +        if (p_295142_.getId() == 0) {
 +            if (!this.connectionType.isNeoForge() && !net.neoforged.neoforge.network.registration.NetworkRegistry.initializeOtherConnection(this)) {

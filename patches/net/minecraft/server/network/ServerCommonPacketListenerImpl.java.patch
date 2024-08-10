@@ -61,6 +61,14 @@
      }
  
      private void close() {
+@@ -68,6 +_,7 @@
+ 
+     @Override
+     public void handleKeepAlive(ServerboundKeepAlivePacket p_294627_) {
++        PacketUtils.ensureRunningOnSameThread(p_294627_, this, this.player.serverLevel()); // CraftBukkit
+         if (this.keepAlivePending && p_294627_.getId() == this.keepAliveChallenge) {
+             int i = (int)(Util.getMillis() - this.keepAliveTime);
+             this.latency = (this.latency * 3 + i) / 4;
 @@ -83,6 +_,22 @@
  
      @Override
@@ -84,6 +92,19 @@
      }
  
      @Override
+@@ -96,6 +_,12 @@
+ 
+     @Override
+     public void handleCookieResponse(ServerboundCookieResponsePacket p_320918_) {
++        // CraftBukkit start
++        PacketUtils.ensureRunningOnSameThread(p_320918_, this, (net.minecraft.util.thread.BlockableEventLoop<?>) this.server);
++        if (this.player.getBukkitEntity().handleCookieResponse(p_320918_)) {
++            return;
++        }
++        // CraftBukkit end
+         this.disconnect(DISCONNECT_UNEXPECTED_QUERY);
+     }
+ 
 @@ -141,7 +_,10 @@
          this.send(p_294278_, null);
      }
