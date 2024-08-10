@@ -10,7 +10,7 @@ plugins {
 apply plugin: 'net.neoforged.gradleutils'
 
 changelog {
-    from '1.0'
+    from '21.0'
     disableAutomaticPublicationRegistration()
 }
 
