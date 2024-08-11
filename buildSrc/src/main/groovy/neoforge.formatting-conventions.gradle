@@ -17,6 +17,9 @@ final generatePackageInfos = tasks.register('generatePackageInfos', Task) {
                 else if (pkgName.contains("com/mojang/")) {
                     pkgName = pkgName.substring(pkgName.indexOf('com/mojang/'), pkgName.lastIndexOf('/'))
                 }
+                else if (pkgName.contains("org/magmafoundation/")) {
+                    pkgName = pkgName.substring(pkgName.indexOf('org/magmafoundation/'), pkgName.lastIndexOf('/'))
+                }
                 pkgName = pkgName.replaceAll('/', '.')
 
                 def pkgInfoText = """
