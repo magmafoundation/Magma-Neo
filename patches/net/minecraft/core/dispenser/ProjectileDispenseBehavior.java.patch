@@ -1,0 +1,50 @@
+--- a/net/minecraft/core/dispenser/ProjectileDispenseBehavior.java
++++ b/net/minecraft/core/dispenser/ProjectileDispenseBehavior.java
+@@ -28,17 +_,37 @@
+         Direction direction = p_338635_.state().getValue(DispenserBlock.FACING);
+         Position position = this.dispenseConfig.positionFunction().getDispensePosition(p_338635_, direction);
+         Projectile projectile = this.projectileItem.asProjectile(level, position, p_338423_, direction);
+-        this.projectileItem
+-            .shoot(
+-                projectile,
+-                (double)direction.getStepX(),
+-                (double)direction.getStepY(),
+-                (double)direction.getStepZ(),
+-                this.dispenseConfig.power(),
+-                this.dispenseConfig.uncertainty()
+-            );
++        // CraftBukkit start
++        ItemStack itemstack1 = p_338423_.split(1);
++        org.bukkit.block.Block block = org.bukkit.craftbukkit.block.CraftBlock.at(level, p_338635_.pos());
++        org.bukkit.craftbukkit.inventory.CraftItemStack craftItem = org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(itemstack1);
++
++        org.bukkit.event.block.BlockDispenseEvent event = new org.bukkit.event.block.BlockDispenseEvent(block, craftItem.clone(), new org.bukkit.util.Vector((double) direction.getStepX(), (double) direction.getStepY(), (double) direction.getStepZ()));
++        if (!DispenserBlock.eventFired) {
++            level.getCraftServer().getPluginManager().callEvent(event);
++        }
++
++        if (event.isCancelled()) {
++            p_338423_.grow(1);
++            return p_338423_;
++        }
++
++        if (!event.getItem().equals(craftItem)) {
++            p_338423_.grow(1);
++            // Chain to handler for new item
++            ItemStack eventStack = org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(event.getItem());
++            DispenseItemBehavior idispensebehavior = (DispenseItemBehavior) DispenserBlock.DISPENSER_REGISTRY.get(eventStack.getItem());
++            if (idispensebehavior != DispenseItemBehavior.NOOP && idispensebehavior != this) {
++                idispensebehavior.dispense(p_338635_, eventStack);
++                return p_338423_;
++            }
++        }
++
++        this.projectileItem.shoot(projectile, event.getVelocity().getX(), event.getVelocity().getY(), event.getVelocity().getZ(), this.dispenseConfig.power(), this.dispenseConfig.uncertainty());
++        projectile.projectileSource = new org.bukkit.craftbukkit.projectiles.CraftBlockProjectileSource(p_338635_.blockEntity());
++        // CraftBukkit end
+         level.addFreshEntity(projectile);
+-        p_338423_.shrink(1);
++        // p_338423_.shrink(1); // CraftBukkit - handled during event processing
+         return p_338423_;
+     }
+ 

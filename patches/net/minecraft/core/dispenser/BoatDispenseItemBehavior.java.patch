@@ -1,10 +1,38 @@
 --- a/net/minecraft/core/dispenser/BoatDispenseItemBehavior.java
 +++ b/net/minecraft/core/dispenser/BoatDispenseItemBehavior.java
-@@ -35,21 +_,22 @@
+@@ -35,23 +_,52 @@
          double d2 = vec3.y() + (double)((float)direction.getStepY() * 1.125F);
          double d3 = vec3.z() + (double)direction.getStepZ() * d0;
          BlockPos blockpos = p_302460_.pos().relative(direction);
-+        Boat boat = (Boat)(this.isChestBoat ? new ChestBoat(serverlevel, d1, d2, d3) : new Boat(serverlevel, d1, d2, d3));
++        // CraftBukkit start
++        ItemStack itemstack1 = p_123376_.split(1);
++        org.bukkit.block.Block block = org.bukkit.craftbukkit.block.CraftBlock.at(serverlevel, p_302460_.pos());
++        org.bukkit.craftbukkit.inventory.CraftItemStack craftItem = org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(itemstack1);
++
++        org.bukkit.event.block.BlockDispenseEvent event = new org.bukkit.event.block.BlockDispenseEvent(block, craftItem.clone(), new org.bukkit.util.Vector(d1, d2, d3));
++        if (!DispenserBlock.eventFired) {
++            serverlevel.getCraftServer().getPluginManager().callEvent(event);
++        }
++
++        if (event.isCancelled()) {
++            p_123376_.grow(1);
++            return p_123376_;
++        }
++
++        if (!event.getItem().equals(craftItem)) {
++            p_123376_.grow(1);
++            // Chain to handler for new item
++            ItemStack eventStack = org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(event.getItem());
++            DispenseItemBehavior idispensebehavior = (DispenseItemBehavior) DispenserBlock.DISPENSER_REGISTRY.get(eventStack.getItem());
++            if (idispensebehavior != DispenseItemBehavior.NOOP && idispensebehavior != this) {
++                idispensebehavior.dispense(p_302460_, eventStack);
++                return p_123376_;
++            }
++        }
++
++        Boat boat = this.isChestBoat ? new ChestBoat(serverlevel, event.getVelocity().getX(), event.getVelocity().getY(), event.getVelocity().getZ()) : new Boat(serverlevel, event.getVelocity().getX(), event.getVelocity().getY(), event.getVelocity().getZ());
++        // CraftBukkit end
++
 +        EntityType.<Boat>createDefaultStackConfig(serverlevel, p_123376_, null).accept(boat);
 +        boat.setVariant(this.type);
 +        boat.setYRot(direction.toYRot());
@@ -25,7 +53,11 @@
 -        EntityType.<Boat>createDefaultStackConfig(serverlevel, p_123376_, null).accept(boat);
 -        boat.setVariant(this.type);
 -        boat.setYRot(direction.toYRot());
+-        serverlevel.addFreshEntity(boat);
+-        p_123376_.shrink(1);
 +        boat.setPos(d1, d2 + d4, d3);
-         serverlevel.addFreshEntity(boat);
-         p_123376_.shrink(1);
++        if (!serverlevel.addFreshEntity((net.minecraft.world.entity.Entity) boat)) p_123376_.grow(1); // CraftBukkit
++        // p_123376_.shrink(1); // CraftBukkit - handled during event processing
          return p_123376_;
+     }
+ 
