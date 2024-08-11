@@ -1,11 +1,31 @@
 --- a/net/minecraft/util/SpawnUtil.java
 +++ b/net/minecraft/util/SpawnUtil.java
-@@ -35,7 +_,7 @@
+@@ -25,6 +_,12 @@
+         int p_216410_,
+         SpawnUtil.Strategy p_216411_
+     ) {
++        // CraftBukkit start
++        return trySpawnMob(p_216404_, p_216405_, p_216406_, p_216407_, p_216408_, p_216409_, p_216410_, p_216411_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT);
++    }
++
++    public static <T extends Mob> Optional<T> trySpawnMob(EntityType<T> p_216404_, MobSpawnType p_216405_, ServerLevel p_216406_, BlockPos p_216407_, int p_216408_, int p_216409_, int p_216410_, SpawnUtil.Strategy p_216411_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason reason) {
++        // CraftBukkit end
+         BlockPos.MutableBlockPos blockpos$mutableblockpos = p_216407_.mutable();
+ 
+         for (int i = 0; i < p_216408_; i++) {
+@@ -35,12 +_,12 @@
                  && moveToPossibleSpawnPosition(p_216406_, p_216410_, blockpos$mutableblockpos, p_216411_)) {
                  T t = (T)p_216404_.create(p_216406_, null, blockpos$mutableblockpos, p_216405_, false, false);
                  if (t != null) {
 -                    if (t.checkSpawnRules(p_216406_, p_216405_) && t.checkSpawnObstruction(p_216406_)) {
+-                        p_216406_.addFreshEntityWithPassengers(t);
 +                    if (net.neoforged.neoforge.event.EventHooks.checkSpawnPosition(t, p_216406_, p_216405_)) {
-                         p_216406_.addFreshEntityWithPassengers(t);
++                        p_216406_.addFreshEntityWithPassengers(t, reason); // CraftBukkit
                          return Optional.of(t);
                      }
+ 
+-                    t.discard();
++                    t.discard(null); // CraftBukkit - add Bukkit remove cause
+                 }
+             }
+         }
