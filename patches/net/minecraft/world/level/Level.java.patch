@@ -74,6 +74,58 @@
          this.profiler = p_270692_;
          this.levelData = p_270739_;
          this.dimensionTypeRegistration = p_270240_;
+@@ -136,12 +_,12 @@
+             this.worldBorder = new WorldBorder() {
+                 @Override
+                 public double getCenterX() {
+-                    return super.getCenterX() / dimensiontype.coordinateScale();
++                    return super.getCenterX(); // CraftBukkit
+                 }
+ 
+                 @Override
+                 public double getCenterZ() {
+-                    return super.getCenterZ() / dimensiontype.coordinateScale();
++                    return super.getCenterZ(); // CraftBukkit
+                 }
+             };
+         } else {
+@@ -154,6 +_,36 @@
+         this.neighborUpdater = new CollectingNeighborUpdater(this, p_270466_);
+         this.registryAccess = p_270200_;
+         this.damageSources = new DamageSources(p_270200_);
++        // CraftBukkit start
++        getWorldBorder().world = (net.minecraft.server.level.ServerLevel) this;
++        // From PlayerList.setPlayerFileData
++        getWorldBorder().addListener(new net.minecraft.world.level.border.BorderChangeListener() {
++            @Override
++            public void onBorderSizeSet(WorldBorder worldborder, double d0) {
++                getCraftServer().getHandle().broadcastAll(new net.minecraft.network.protocol.game.ClientboundSetBorderSizePacket(worldborder), worldborder.world);
++            }
++            @Override
++            public void onBorderSizeLerping(WorldBorder worldborder, double d0, double d1, long i) {
++                getCraftServer().getHandle().broadcastAll(new net.minecraft.network.protocol.game.ClientboundSetBorderLerpSizePacket(worldborder), worldborder.world);
++            }
++            @Override
++            public void onBorderCenterSet(WorldBorder worldborder, double d0, double d1) {
++                getCraftServer().getHandle().broadcastAll(new net.minecraft.network.protocol.game.ClientboundSetBorderCenterPacket(worldborder), worldborder.world);
++            }
++            @Override
++            public void onBorderSetWarningTime(WorldBorder worldborder, int i) {
++                getCraftServer().getHandle().broadcastAll(new net.minecraft.network.protocol.game.ClientboundSetBorderWarningDelayPacket(worldborder), worldborder.world);
++            }
++            @Override
++            public void onBorderSetWarningBlocks(WorldBorder worldborder, int i) {
++                getCraftServer().getHandle().broadcastAll(new net.minecraft.network.protocol.game.ClientboundSetBorderWarningDistancePacket(worldborder), worldborder.world);
++            }
++            @Override
++            public void onBorderSetDamagePerBlock(WorldBorder worldborder, double d0) {}
++            @Override
++            public void onBorderSetDamageSafeZOne(WorldBorder worldborder, double d0) {}
++        });
++        // CraftBukkit end
+     }
+ 
+     @Override
 @@ -216,11 +_,40 @@
          } else {
              LevelChunk levelchunk = this.getChunkAt(p_46605_);

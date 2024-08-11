@@ -212,6 +212,31 @@
          if (!p_11238_) {
              BlockPos blockpos = BlockPos.containing(dimensiontransition.pos());
              BlockState blockstate = serverlevel.getBlockState(blockpos);
+@@ -529,6 +_,24 @@
+         }
+     }
+ 
++    // CraftBukkit start - add a world/entity limited version
++    public void broadcastAll(Packet packet, Player entityhuman) {
++        for (int i = 0; i < this.players.size(); ++i) {
++            ServerPlayer entityplayer =  this.players.get(i);
++            if (entityhuman != null && !entityplayer.getBukkitEntity().canSee(entityhuman.getBukkitEntity())) {
++                continue;
++            }
++            ((ServerPlayer) this.players.get(i)).connection.send(packet);
++        }
++    }
++
++    public void broadcastAll(Packet packet, Level world) {
++        for (int i = 0; i < world.players().size(); ++i) {
++            ((ServerPlayer) world.players().get(i)).connection.send(packet);
++        }
++    }
++    // CraftBukkit end
++
+     public void broadcastAll(Packet<?> p_11271_, ResourceKey<Level> p_11272_) {
+         for (ServerPlayer serverplayer : this.players) {
+             if (serverplayer.level().dimension() == p_11272_) {
 @@ -582,6 +_,7 @@
      }
  
