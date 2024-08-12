@@ -25,6 +25,15 @@
                  this.dropItem(p_31776_.getEntity(), false);
                  this.gameEvent(GameEvent.BLOCK_CHANGE, p_31776_.getEntity());
                  this.playSound(this.getRemoveItemSound(), 1.0F, 1.0F);
+@@ -212,7 +_,7 @@
+     private void removeFramedMap(ItemStack p_31811_) {
+         MapId mapid = this.getFramedMapId(p_31811_);
+         if (mapid != null) {
+-            MapItemSavedData mapitemsaveddata = MapItem.getSavedData(mapid, this.level());
++            MapItemSavedData mapitemsaveddata = MapItem.getSavedData(p_31811_, this.level());
+             if (mapitemsaveddata != null) {
+                 mapitemsaveddata.removedFromFrame(this.pos, this.getId());
+                 mapitemsaveddata.setDirty(true);
 @@ -240,13 +_,19 @@
      }
  

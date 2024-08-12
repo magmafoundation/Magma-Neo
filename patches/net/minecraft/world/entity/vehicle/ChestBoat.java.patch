@@ -20,6 +20,16 @@
      }
  
      @Override
+@@ -122,7 +_,8 @@
+             case DARK_OAK -> Items.DARK_OAK_CHEST_BOAT;
+             case MANGROVE -> Items.MANGROVE_CHEST_BOAT;
+             case BAMBOO -> Items.BAMBOO_CHEST_RAFT;
+-            default -> Items.OAK_CHEST_BOAT;
++            case OAK -> Items.OAK_CHEST_BOAT;
++            default -> this.getVariant().chestBoatItem.get();
+         };
+     }
+ 
 @@ -220,4 +_,51 @@
      public void stopOpen(Player p_270286_) {
          this.level().gameEvent(GameEvent.CONTAINER_CLOSE, this.position(), GameEvent.Context.of(p_270286_));

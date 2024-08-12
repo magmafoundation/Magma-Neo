@@ -20,7 +20,4 @@ dynamicProjects {
     project(":magma").projectDir = file("projects/magma")
 }
 
-include ':tests'
-project(":tests").projectDir = file("tests")
-
 include ':testframework'

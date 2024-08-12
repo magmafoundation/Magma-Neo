@@ -5,10 +5,12 @@
 
 package net.neoforged.neoforge.common;
 
+import com.google.common.base.CaseFormat;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.Lifecycle;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -36,8 +38,8 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.ResourceLocationException;
 import net.minecraft.SharedConstants;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.selector.EntitySelectorParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -100,6 +102,8 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.AnvilMenu;
 import net.minecraft.world.inventory.ClickAction;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.EnchantmentMenu;
+import net.minecraft.world.inventory.RecipeBookType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.AdventureModePredicate;
 import net.minecraft.world.item.ArmorItem;
@@ -117,6 +121,7 @@ import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
@@ -148,6 +153,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.ModLoader;
+import net.neoforged.fml.common.asm.enumextension.ExtensionInfo;
 import net.neoforged.fml.i18n.MavenVersionTranslator;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.client.ClientHooks;
@@ -196,6 +202,7 @@ import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
 import net.neoforged.neoforge.event.entity.player.AnvilRepairEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.CriticalHitEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEnchantItemEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockDropsEvent;
@@ -235,7 +242,7 @@ public class CommonHooks {
      * <p>
      * Called from {@link AbstractContainerMenu#doClick} in the utility method {@link AbstractContainerMenu#tryItemClickBehaviourOverride} before either
      * {@link ItemStack#overrideStackedOnOther} or {@link ItemStack#overrideOtherStackedOnMe} is called.
-     * 
+     *
      * @param carriedItem       The item currently held by the player, being clicked <i>into</i> the slot
      * @param stackedOnItem     The item currently present in the clicked slot
      * @param slot              The {@link Slot} being clicked
@@ -659,6 +666,18 @@ public class CommonHooks {
         level.capturedBlockSnapshots.clear();
 
         return ret;
+    }
+
+    /**
+     * Fires {@link PlayerEnchantItemEvent} in {@link EnchantmentMenu#clickMenuButton(Player, int)} after the enchants are
+     * applied to the item.
+     *
+     * @param player    the player who clicked the menu button
+     * @param stack     the item enchanted
+     * @param instances the specific enchantments that were applied to the item.
+     */
+    public static void onPlayerEnchantItem(Player player, ItemStack stack, List<EnchantmentInstance> instances) {
+        NeoForge.EVENT_BUS.post(new PlayerEnchantItemEvent(player, stack, instances));
     }
 
     public static boolean onAnvilChange(AnvilMenu container, ItemStack left, ItemStack right, Container outputSlot, String name, long baseCost, Player player) {
@@ -1289,7 +1308,7 @@ public class CommonHooks {
     }
 
     public static boolean canUseEntitySelectors(SharedSuggestionProvider provider) {
-        if (provider.hasPermission(Commands.LEVEL_GAMEMASTERS)) {
+        if (EntitySelectorParser.allowSelectors(provider)) {
             return true;
         } else if (provider instanceof CommandSourceStack source && source.source instanceof ServerPlayer player) {
             return PermissionAPI.getPermission(player, NeoForgeMod.USE_SELECTORS_PERMISSION);
@@ -1504,7 +1523,7 @@ public class CommonHooks {
 
     /**
      * Creates a {@link UseOnContext} for {@link net.minecraft.core.dispenser.DispenseItemBehavior dispense behavior}.
-     * 
+     *
      * @param source the {@link BlockSource block source} context of the dispense behavior
      * @param stack  the dispensed item stack
      * @return a {@link UseOnContext} representing the dispense behavior
@@ -1537,5 +1556,28 @@ public class CommonHooks {
         level.setBlock(pos, blockstate, 3);
         level.gameEvent(null, GameEvent.SHEAR, pos);
         return true;
+    }
+
+    public static Map<RecipeBookType, Pair<String, String>> buildRecipeBookTypeTagFields(Map<RecipeBookType, Pair<String, String>> vanillaMap) {
+        ExtensionInfo extInfo = RecipeBookType.getExtensionInfo();
+        if (extInfo.extended()) {
+            vanillaMap = new HashMap<>(vanillaMap);
+            for (RecipeBookType type : RecipeBookType.values()) {
+                if (type.ordinal() < extInfo.vanillaCount()) {
+                    continue;
+                }
+                String name = CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, type.name());
+                vanillaMap.put(type, Pair.of("is" + name + "GuiOpen", "is" + name + "FilteringCraftable"));
+            }
+            vanillaMap = Map.copyOf(vanillaMap);
+        }
+        return vanillaMap;
+    }
+
+    public static RecipeBookType[] getFilteredRecipeBookTypeValues() {
+        if (FMLEnvironment.dist.isClient()) {
+            return ClientHooks.getFilteredRecipeBookTypeValues();
+        }
+        return RecipeBookType.values();
     }
 }

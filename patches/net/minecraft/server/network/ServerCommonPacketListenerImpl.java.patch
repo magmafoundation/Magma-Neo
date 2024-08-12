@@ -69,7 +69,7 @@
          if (this.keepAlivePending && p_294627_.getId() == this.keepAliveChallenge) {
              int i = (int)(Util.getMillis() - this.keepAliveTime);
              this.latency = (this.latency * 3 + i) / 4;
-@@ -83,6 +_,22 @@
+@@ -83,6 +_,32 @@
  
      @Override
      public void handleCustomPayload(ServerboundCustomPayloadPacket p_294276_) {
@@ -81,6 +81,16 @@
 +
 +        if (p_294276_.payload() instanceof net.neoforged.neoforge.network.payload.MinecraftUnregisterPayload minecraftUnregisterPayload) {
 +            net.neoforged.neoforge.network.registration.NetworkRegistry.onMinecraftUnregister(this.getConnection(), minecraftUnregisterPayload.forgottenChannels());
++            return;
++        }
++
++        if (p_294276_.payload() instanceof net.neoforged.neoforge.network.payload.CommonVersionPayload commonVersionPayload) {
++            net.neoforged.neoforge.network.registration.NetworkRegistry.checkCommonVersion(this.getConnection(), commonVersionPayload);
++            return;
++        }
++
++        if (p_294276_.payload() instanceof net.neoforged.neoforge.network.payload.CommonRegisterPayload commonRegisterPayload) {
++            net.neoforged.neoforge.network.registration.NetworkRegistry.onCommonRegister(this.getConnection(), commonRegisterPayload);
 +            return;
 +        }
 +
