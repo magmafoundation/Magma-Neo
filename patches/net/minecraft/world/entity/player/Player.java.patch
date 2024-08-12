@@ -457,6 +457,29 @@
          this.experienceLevel += p_36276_;
          if (this.experienceLevel < 0) {
              this.experienceLevel = 0;
+@@ -1661,10 +_,21 @@
+         }
+     }
+ 
++    // CraftBukkit start
+     public void causeFoodExhaustion(float p_36400_) {
++        this.causeFoodExhaustion(p_36400_, org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.UNKNOWN);
++    }
++
++    public void causeFoodExhaustion(float p_36400_, org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason reason) {
++        // CraftBukkit end
+         if (!this.abilities.invulnerable) {
+             if (!this.level().isClientSide) {
+-                this.foodData.addExhaustion(p_36400_);
++                // CraftBukkit start
++                org.bukkit.event.entity.EntityExhaustionEvent event = org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerExhaustionEvent(this, reason, p_36400_);
++                if (!event.isCancelled()) {
++                    this.foodData.addExhaustion(event.getExhaustion());
++                }
++                // CraftBukkit end
+             }
+         }
+     }
 @@ -1801,24 +_,30 @@
  
      protected void removeEntitiesOnShoulder() {

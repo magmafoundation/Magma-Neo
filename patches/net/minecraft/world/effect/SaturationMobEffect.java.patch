@@ -1,0 +1,18 @@
+--- a/net/minecraft/world/effect/SaturationMobEffect.java
++++ b/net/minecraft/world/effect/SaturationMobEffect.java
+@@ -11,7 +_,14 @@
+     @Override
+     public boolean applyEffectTick(LivingEntity p_295892_, int p_296026_) {
+         if (!p_295892_.level().isClientSide && p_295892_ instanceof Player player) {
+-            player.getFoodData().eat(p_296026_ + 1, 1.0F);
++            // CraftBukkit start
++            int oldFoodLevel = player.getFoodData().foodLevel;
++            org.bukkit.event.entity.FoodLevelChangeEvent event = org.bukkit.craftbukkit.event.CraftEventFactory.callFoodLevelChangeEvent(player, p_296026_ + 1 + oldFoodLevel);
++            if (!event.isCancelled()) {
++                player.getFoodData().eat(event.getFoodLevel() - oldFoodLevel, 1.0F);
++            }
++            ((org.bukkit.craftbukkit.entity.CraftPlayer) p_295892_.getBukkitEntity()).sendHealthUpdate();
++            // CraftBukkit end
+         }
+ 
+         return true;

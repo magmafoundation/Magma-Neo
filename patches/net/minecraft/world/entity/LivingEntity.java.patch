@@ -284,15 +284,33 @@
          if (mobeffectinstance != null) {
              this.onEffectRemoved(mobeffectinstance);
              return true;
-@@ -1061,6 +_,8 @@
+@@ -1060,10 +_,25 @@
+         }
      }
  
++    // CraftBukkit start - Delegate so we can handle providing a reason for health being regained
      public void heal(float p_21116_) {
++        heal(p_21116_, org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.CUSTOM);
++    }
++
++    public void heal(float p_21116_, org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason regainReason) {
 +        p_21116_ = net.neoforged.neoforge.event.EventHooks.onLivingHeal(this, p_21116_);
 +        if (p_21116_ <= 0) return;
          float f = this.getHealth();
          if (f > 0.0F) {
-             this.setHealth(f + p_21116_);
+-            this.setHealth(f + p_21116_);
++            org.bukkit.event.entity.EntityRegainHealthEvent event = new org.bukkit.event.entity.EntityRegainHealthEvent(this.getBukkitEntity(), p_21116_, regainReason);
++            // Suppress during worldgen
++            if (this.valid) {
++                this.level().getCraftServer().getPluginManager().callEvent(event);
++            }
++            if (!event.isCancelled()) {
++                this.setHealth((float) (this.getHealth() + event.getAmount()));
++            }
++            // CraftBukkit end
+         }
+     }
+ 
 @@ -1090,23 +_,30 @@
          } else if (p_21016_.is(DamageTypeTags.IS_FIRE) && this.hasEffect(MobEffects.FIRE_RESISTANCE)) {
              return false;
@@ -776,6 +794,20 @@
              if (itemstack.is(Items.ELYTRA) && ElytraItem.isFlyEnabled(itemstack)) {
                  flag = true;
                  int i = this.fallFlyTicks + 1;
+@@ -2921,6 +_,13 @@
+         return this.isAlive() && !this.isSpectator() && !this.onClimbable();
+     }
+ 
++    // CraftBukkit start - collidable API
++    @Override
++    public boolean canCollideWithBukkit(Entity entity) {
++        return isPushable() && this.collides != this.collidableExemptions.contains(entity.getUUID());
++    }
++    // CraftBukkit end
++
+     @Override
+     public float getYHeadRot() {
+         return this.yHeadRot;
 @@ -2979,8 +_,11 @@
  
      private void updatingUsingItem() {

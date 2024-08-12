@@ -1,0 +1,24 @@
+--- a/net/minecraft/world/effect/MobEffectUtil.java
++++ b/net/minecraft/world/effect/MobEffectUtil.java
+@@ -47,6 +_,12 @@
+     public static List<ServerPlayer> addEffectToPlayersAround(
+         ServerLevel p_216947_, @Nullable Entity p_216948_, Vec3 p_216949_, double p_216950_, MobEffectInstance p_216951_, int p_216952_
+     ) {
++        // CraftBukkit start
++        return addEffectToPlayersAround(p_216947_, p_216948_, p_216949_, p_216950_, p_216951_, p_216952_, org.bukkit.event.entity.EntityPotionEffectEvent.Cause.UNKNOWN);
++    }
++
++    public static List<ServerPlayer> addEffectToPlayersAround(ServerLevel p_216947_, @Nullable Entity p_216948_, Vec3 p_216949_, double p_216950_, MobEffectInstance p_216951_, int p_216952_, org.bukkit.event.entity.EntityPotionEffectEvent.Cause cause) {
++        // CraftBukkit end
+         Holder<MobEffect> holder = p_216951_.getEffect();
+         List<ServerPlayer> list = p_216947_.getPlayers(
+             p_267925_ -> p_267925_.gameMode.isSurvival()
+@@ -58,7 +_,7 @@
+                             || p_267925_.getEffect(holder).endsWithin(p_216952_ - 1)
+                     )
+         );
+-        list.forEach(p_238232_ -> p_238232_.addEffect(new MobEffectInstance(p_216951_), p_216948_));
++        list.forEach(p_238232_ -> p_238232_.addEffect(new MobEffectInstance(p_216951_), p_216948_, cause)); // CraftBukkit
+         return list;
+     }
+ }
