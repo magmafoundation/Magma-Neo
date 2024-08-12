@@ -1,5 +1,31 @@
 --- a/net/minecraft/world/entity/animal/Wolf.java
 +++ b/net/minecraft/world/entity/animal/Wolf.java
+@@ -366,10 +_,15 @@
+     }
+ 
+     @Override
+-    protected void actuallyHurt(DamageSource p_331935_, float p_330695_) {
++    public boolean actuallyHurt(DamageSource p_331935_, float p_330695_, org.bukkit.event.entity.EntityDamageEvent event) { // CraftBukkit - void -> boolean
+         if (!this.canArmorAbsorb(p_331935_)) {
+-            super.actuallyHurt(p_331935_, p_330695_);
++            return super.actuallyHurt(p_331935_, p_330695_, event); // CraftBukkit
+         } else {
++            // CraftBukkit start - SPIGOT-7815: if the damage was cancelled, no need to run the wolf armor behaviour
++            if (event.isCancelled()) {
++                return false;
++            }
++            // CraftBukkit end
+             ItemStack itemstack = this.getBodyArmorItem();
+             int i = itemstack.getDamageValue();
+             int j = itemstack.getMaxDamage();
+@@ -391,6 +_,7 @@
+                 }
+             }
+         }
++        return false; // CraftBukkit
+     }
+ 
+     private boolean canArmorAbsorb(DamageSource p_331524_) {
 @@ -419,10 +_,11 @@
          if (!this.level().isClientSide || this.isBaby() && this.isFood(itemstack)) {
              if (this.isTame()) {

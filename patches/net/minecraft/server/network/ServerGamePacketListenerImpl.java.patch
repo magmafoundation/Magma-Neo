@@ -9,6 +9,29 @@
          this.chunkSender = new PlayerChunkSender(p_9771_.isMemoryConnection());
          this.player = p_9772_;
          p_9772_.connection = this;
+@@ -246,6 +_,22 @@
+         this.chatMessageChain = new FutureChain(p_9770_);
+     }
+ 
++    // CraftBukkit start - add fields and methods
++    private int lastTick = MinecraftServer.currentTick;
++    private int allowedPlayerTicks = 1;
++    private int lastDropTick = MinecraftServer.currentTick;
++    private int lastBookTick  = MinecraftServer.currentTick;
++    private int dropCount = 0;
++
++    private boolean hasMoved = false;
++    private double lastPosX = Double.MAX_VALUE;
++    private double lastPosY = Double.MAX_VALUE;
++    private double lastPosZ = Double.MAX_VALUE;
++    private float lastPitch = Float.MAX_VALUE;
++    private float lastYaw = Float.MAX_VALUE;
++    private boolean justTeleported = false;
++    // CraftBukkit end
++
+     @Override
+     public void tick() {
+         if (this.ackBlockChangesUpTo > -1) {
 @@ -439,9 +_,11 @@
                  }
  
@@ -54,6 +77,84 @@
                                      && !this.player.hasEffect(MobEffects.LEVITATION)
                                      && !flag
                                      && !flag3
+@@ -999,11 +_,61 @@
+         return false;
+     }
+ 
++    // CraftBukkit start - Delegate to teleport(Location)
+     public void teleport(double p_9775_, double p_9776_, double p_9777_, float p_9778_, float p_9779_) {
+-        this.teleport(p_9775_, p_9776_, p_9777_, p_9778_, p_9779_, Collections.emptySet());
++        this.teleport(p_9775_, p_9776_, p_9777_, p_9778_, p_9779_, org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.UNKNOWN);
++    }
++    public boolean teleport(double d0, double d1, double d2, float f, float f1, org.bukkit.event.player.PlayerTeleportEvent.TeleportCause cause) {
++        return this.teleport(d0, d1, d2, f, f1, Collections.emptySet(), cause);
+     }
+ 
+     public void teleport(double p_9781_, double p_9782_, double p_9783_, float p_9784_, float p_9785_, Set<RelativeMovement> p_9786_) {
++        this.teleport(p_9781_, p_9782_, p_9783_, p_9784_, p_9785_, p_9786_, org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.UNKNOWN);
++    }
++
++    public boolean teleport(double d0, double d1, double d2, float f, float f1, Set<RelativeMovement> set, org.bukkit.event.player.PlayerTeleportEvent.TeleportCause cause) { // CraftBukkit - Return event status
++        org.bukkit.entity.Player player = this.getCraftPlayer();
++        org.bukkit.Location from = player.getLocation();
++        double x = d0;
++        double y = d1;
++        double z = d2;
++        float yaw = f;
++        float pitch = f1;
++        org.bukkit.Location to = new org.bukkit.Location(this.getCraftPlayer().getWorld(), x, y, z, yaw, pitch);
++        // SPIGOT-5171: Triggered on join
++        if (from.equals(to)) {
++            this.internalTeleport(d0, d1, d2, f, f1, set);
++            return true; // CraftBukkit - Return event status
++        }
++        org.bukkit.event.player.PlayerTeleportEvent event = new org.bukkit.event.player.PlayerTeleportEvent(player, from.clone(), to.clone(), cause);
++        this.cserver.getPluginManager().callEvent(event);
++        if (event.isCancelled() || !to.equals(event.getTo())) {
++            set.clear(); // Can't relative teleport
++            to = event.isCancelled() ? event.getFrom() : event.getTo();
++            d0 = to.getX();
++            d1 = to.getY();
++            d2 = to.getZ();
++            f = to.getYaw();
++            f1 = to.getPitch();
++        }
++        this.internalTeleport(d0, d1, d2, f, f1, set);
++        return !event.isCancelled(); // CraftBukkit - Return event status
++    }
++
++    public void teleport(org.bukkit.Location dest) {
++        internalTeleport(dest.getX(), dest.getY(), dest.getZ(), dest.getYaw(), dest.getPitch(), Collections.emptySet());
++    }
++
++    private void internalTeleport(double p_9781_, double p_9782_, double p_9783_, float p_9784_, float p_9785_, Set<RelativeMovement> p_9786_) {
++        // CraftBukkit start
++        if (Float.isNaN(p_9784_)) {
++            p_9784_ = 0;
++        }
++        if (Float.isNaN(p_9785_)) {
++            p_9785_ = 0;
++        }
++        this.justTeleported = true;
++        // CraftBukkit end
+         double d0 = p_9786_.contains(RelativeMovement.X) ? this.player.getX() : 0.0;
+         double d1 = p_9786_.contains(RelativeMovement.Y) ? this.player.getY() : 0.0;
+         double d2 = p_9786_.contains(RelativeMovement.Z) ? this.player.getZ() : 0.0;
+@@ -1014,6 +_,14 @@
+             this.awaitingTeleport = 0;
+         }
+ 
++        // CraftBukkit start - update last location
++        this.lastPosX = this.awaitingPositionFromClient.x;
++        this.lastPosY = this.awaitingPositionFromClient.y;
++        this.lastPosZ = this.awaitingPositionFromClient.z;
++        this.lastYaw = f;
++        this.lastPitch = f1;
++        // CraftBukkit end
++
+         this.awaitingTeleportTime = this.tickCount;
+         this.player.absMoveTo(p_9781_, p_9782_, p_9783_, p_9784_, p_9785_);
+         this.player
 @@ -1031,8 +_,10 @@
              case SWAP_ITEM_WITH_OFFHAND:
                  if (!this.player.isSpectator()) {
@@ -252,7 +353,7 @@
                  );
          }
      }
-@@ -1847,12 +_,15 @@
+@@ -1847,6 +_,7 @@
  
      @Override
      public void handleCustomPayload(ServerboundCustomPayloadPacket p_333887_) {
@@ -260,11 +361,3 @@
      }
  
      @Override
-     public ServerPlayer getPlayer() {
-         return this.player;
-     }
-+
-+    public void teleport(org.bukkit.Location to) {} // Magma - todo
- 
-     @FunctionalInterface
-     interface EntityInteraction {

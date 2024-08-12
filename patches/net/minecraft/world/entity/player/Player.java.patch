@@ -203,9 +203,16 @@
                  if (this.useItem.isEmpty()) {
                      if (interactionhand == InteractionHand.MAIN_HAND) {
                          this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
-@@ -952,11 +_,14 @@
+@@ -950,19 +_,26 @@
+     }
+ 
      @Override
-     protected void actuallyHurt(DamageSource p_36312_, float p_36313_) {
+-    protected void actuallyHurt(DamageSource p_36312_, float p_36313_) {
++    protected boolean actuallyHurt(DamageSource p_36312_, float fe, org.bukkit.event.entity.EntityDamageEvent event) { // void -> boolean
++        if (true) {
++            return super.actuallyHurt(p_36312_, fe, event);
++        }
++        // CraftBukkit end
          if (!this.isInvulnerableTo(p_36312_)) {
 -            p_36313_ = this.getDamageAfterArmorAbsorb(p_36312_, p_36313_);
 -            p_36313_ = this.getDamageAfterMagicAbsorb(p_36312_, p_36313_);
@@ -223,7 +230,14 @@
              if (f > 0.0F && f < 3.4028235E37F) {
                  this.awardStat(Stats.DAMAGE_ABSORBED, Math.round(f * 10.0F));
              }
-@@ -970,7 +_,9 @@
+ 
+             if (f1 != 0.0F) {
+-                this.causeFoodExhaustion(p_36312_.getFoodExhaustion());
++                this.causeFoodExhaustion(p_36312_.getFoodExhaustion(), org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.DAMAGED); // CraftBukkit - EntityExhaustionEvent
+                 this.getCombatTracker().recordDamage(p_36312_, f1);
+                 this.setHealth(this.getHealth() - f1);
+                 if (f1 < 3.4028235E37F) {
+@@ -970,8 +_,11 @@
                  }
  
                  this.gameEvent(GameEvent.ENTITY_DAMAGE);
@@ -231,8 +245,10 @@
              }
 +            net.neoforged.neoforge.common.CommonHooks.onLivingDamagePost(this, this.damageContainers.peek());
          }
++        return false; // CraftBukkit
      }
  
+     public boolean isTextFilteringEnabled() {
 @@ -1014,6 +_,8 @@
  
              return InteractionResult.PASS;

@@ -1,5 +1,24 @@
 --- a/net/minecraft/world/entity/animal/Animal.java
 +++ b/net/minecraft/world/entity/animal/Animal.java
+@@ -68,10 +_,15 @@
+         }
+     }
+ 
+-    @Override
+-    protected void actuallyHurt(DamageSource p_341676_, float p_341648_) {
++    // CraftBukkit start - void -> boolean
++    public boolean actuallyHurt(DamageSource damagesource, float f, org.bukkit.event.entity.EntityDamageEvent event) {
++        boolean damageResult = super.actuallyHurt(damagesource, f, event);
++        if (!damageResult) {
++            return false;
++        }
+         this.resetLove();
+-        super.actuallyHurt(p_341676_, p_341648_);
++        return true;
++        // CraftBukkit end
+     }
+ 
+     @Override
 @@ -201,6 +_,17 @@
  
      public void spawnChildFromBreeding(ServerLevel p_27564_, Animal p_27565_) {
