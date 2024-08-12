@@ -163,7 +163,7 @@
                                          WorldDimensions.Complete worlddimensions$complete = worlddimensions.bake(registry);
                                          Lifecycle lifecycle = worlddimensions$complete.lifecycle().add(p_307161_.datapackWorldgen().allRegistriesLifecycle());
                                          return new WorldLoader.DataLoadOutput<>(
-@@ -246,24 +_,24 @@
+@@ -246,24 +_,25 @@
  
              WorldData worlddata = worldstem.worldData();
              levelstoragesource$levelstorageaccess.saveDataTag(registryaccess$frozen, worlddata);
@@ -197,7 +197,8 @@
 -                    if (flag2 && !GraphicsEnvironment.isHeadless()) {
 -                        dedicatedserver1.showGui();
 +                    if (dedicatedserver1 instanceof DedicatedServer dedicatedServer && flag2 && !GraphicsEnvironment.isHeadless()) {
-+                        dedicatedServer.showGui();
++                        // Magma: Disable GUI
++                        //dedicatedServer.showGui();
                      }
  
                      return dedicatedserver1;
