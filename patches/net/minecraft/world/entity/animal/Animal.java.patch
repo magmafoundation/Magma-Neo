@@ -1,20 +1,24 @@
 --- a/net/minecraft/world/entity/animal/Animal.java
 +++ b/net/minecraft/world/entity/animal/Animal.java
-@@ -68,10 +_,15 @@
+@@ -68,10 +_,19 @@
          }
      }
  
 -    @Override
 -    protected void actuallyHurt(DamageSource p_341676_, float p_341648_) {
-+    // CraftBukkit start - void -> boolean
++    // CraftBukkit start
 +    public boolean actuallyHurt(DamageSource damagesource, float f, org.bukkit.event.entity.EntityDamageEvent event) {
-+        boolean damageResult = super.actuallyHurt(damagesource, f, event);
++        this.magmaDamageEventMixin = event;
++        return super.actuallyHurtCB(damagesource, f);
++    }
++
++    public void actuallyHurt(DamageSource damagesource, float f) {
++        boolean damageResult = super.actuallyHurtCB(damagesource, f);
 +        if (!damageResult) {
-+            return false;
++            return;
 +        }
          this.resetLove();
 -        super.actuallyHurt(p_341676_, p_341648_);
-+        return true;
 +        // CraftBukkit end
      }
  
