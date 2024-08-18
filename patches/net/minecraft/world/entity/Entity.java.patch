@@ -118,6 +118,23 @@
      }
  
      protected abstract void defineSynchedData(SynchedEntityData.Builder p_326003_);
+@@ -339,6 +_,16 @@
+         return this.entityData;
+     }
+ 
++    // CraftBukkit start
++    public void refreshEntityData(ServerPlayer to) {
++        List<SynchedEntityData.DataValue<?>> list = this.getEntityData().getNonDefaultValues();
++
++        if (list != null) {
++            to.connection.send(new net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket(this.getId(), list));
++        }
++    }
++    // CraftBukkit end
++
+     @Override
+     public boolean equals(Object p_20245_) {
+         return p_20245_ instanceof Entity ? ((Entity)p_20245_).id == this.id : false;
 @@ -350,7 +_,13 @@
      }
  
@@ -142,6 +159,29 @@
          }
  
          this.checkBelowWorld();
+@@ -525,6 +_,22 @@
+     }
+ 
+     public final void igniteForSeconds(float p_345382_) {
++        // CraftBukkit start
++        this.igniteForSeconds(p_345382_, true);
++    }
++
++    public final void igniteForSeconds(float p_345382_, boolean callEvent) {
++        if (callEvent) {
++            org.bukkit.event.entity.EntityCombustEvent event = new org.bukkit.event.entity.EntityCombustEvent(this.getBukkitEntity(), p_345382_);
++            this.level.getCraftServer().getPluginManager().callEvent(event);
++
++            if (event.isCancelled()) {
++                return;
++            }
++
++            p_345382_ = event.getDuration();
++        }
++        // CraftBukkit end
+         this.igniteForTicks(Mth.floor(p_345382_ * 20.0F));
+     }
+ 
 @@ -673,7 +_,7 @@
                      double d1 = vec3.x;
                      double d2 = vec3.y;
@@ -446,6 +486,19 @@
                  if (p_20259_.contains("Tags", 9)) {
                      this.tags.clear();
                      ListTag listtag3 = p_20259_.getList("Tags", 8);
+@@ -1820,6 +_,12 @@
+         return entitytype.canSerialize() && resourcelocation != null ? resourcelocation.toString() : null;
+     }
+ 
++    // CraftBukkit start - allow excluding certain data when saving
++    protected void addAdditionalSaveData(CompoundTag nbttagcompound, boolean includeAll) {
++        addAdditionalSaveData(nbttagcompound);
++    }
++    // CraftBukkit end
++
+     protected abstract void readAdditionalSaveData(CompoundTag p_20052_);
+ 
+     protected abstract void addAdditionalSaveData(CompoundTag p_20139_);
 @@ -1868,6 +_,8 @@
          } else {
              ItemEntity itementity = new ItemEntity(this.level(), this.getX(), this.getY() + (double)p_19986_, this.getZ(), p_19985_);

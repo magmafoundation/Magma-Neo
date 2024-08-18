@@ -129,6 +129,39 @@
              Vec3i vec3i = this.getPickupReach();
  
              for (ItemEntity itementity : this.level()
+@@ -571,6 +_,12 @@
+     }
+ 
+     public ItemStack equipItemIfPossible(ItemStack p_255842_) {
++        // CraftBukkit start - add item
++        return this.equipItemIfPossible(p_255842_, null);
++    }
++
++    public ItemStack equipItemIfPossible(ItemStack p_255842_, ItemEntity entityitem) {
++        // CraftBukkit end
+         EquipmentSlot equipmentslot = this.getEquipmentSlotForItem(p_255842_);
+         ItemStack itemstack = this.getItemBySlot(equipmentslot);
+         boolean flag = this.canReplaceCurrentItem(p_255842_, itemstack);
+@@ -580,10 +_,18 @@
+             flag = itemstack.isEmpty();
+         }
+ 
+-        if (flag && this.canHoldItem(p_255842_)) {
++        // CraftBukkit start
++        boolean canPickup = flag && this.canHoldItem(itemstack);
++        if (entityitem != null) {
++            canPickup = !org.bukkit.craftbukkit.event.CraftEventFactory.callEntityPickupItemEvent(this, entityitem, 0, !canPickup).isCancelled();
++        }
++        if (canPickup) {
++            // CraftBukkit end
+             double d0 = (double)this.getEquipmentDropChance(equipmentslot);
+             if (!itemstack.isEmpty() && (double)Math.max(this.random.nextFloat() - 0.1F, 0.0F) < d0) {
++                this.forceDrops = true; // CraftBukkit
+                 this.spawnAtLocation(itemstack);
++                this.forceDrops = false; // CraftBukkit
+             }
+ 
+             ItemStack itemstack1 = equipmentslot.limit(p_255842_);
 @@ -666,6 +_,10 @@
  
      private double getApproximateAttackDamageWithItem(ItemStack p_330413_) {
