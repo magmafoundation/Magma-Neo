@@ -24,8 +24,17 @@
      public static final int MAX_NAME_LENGTH = 35;
      public static final int INPUT_SLOT = 0;
      public static final int ADDITIONAL_SLOT = 1;
-@@ -38,6 +_,7 @@
+@@ -36,8 +_,16 @@
+             super.setChanged();
+             GrindstoneMenu.this.slotsChanged(this);
          }
++
++        // CraftBukkit start
++        @Override
++        public org.bukkit.Location getLocation() {
++            return access.getLocation();
++        }
++        // CraftBukkit end
      };
      private final ContainerLevelAccess access;
 +    private int xp = -1;
@@ -64,7 +73,24 @@
                  int l = 0;
                  l += this.getExperienceFromItem(GrindstoneMenu.this.repairSlots.getItem(0));
                  l += this.getExperienceFromItem(GrindstoneMenu.this.repairSlots.getItem(1));
-@@ -131,6 +_,8 @@
+@@ -114,6 +_,8 @@
+         for (int k = 0; k < 9; k++) {
+             this.addSlot(new Slot(p_39567_, k, 8 + k * 18, 142));
+         }
++
++        player = (org.bukkit.entity.Player) p_39567_.player.getBukkitEntity(); // CraftBukkit
+     }
+ 
+     @Override
+@@ -125,12 +_,15 @@
+     }
+ 
+     private void createResult() {
+-        this.resultSlots.setItem(0, this.computeResult(this.repairSlots.getItem(0), this.repairSlots.getItem(1)));
++        org.bukkit.craftbukkit.event.CraftEventFactory.callPrepareGrindstoneEvent(getBukkitView(), this.computeResult(this.repairSlots.getItem(0), this.repairSlots.getItem(1))); // CraftBukkit
++        sendAllDataToRemote(); // CraftBukkit - SPIGOT-6686: Always send completed inventory to stay in sync with client
+         this.broadcastChanges();
+     }
  
      private ItemStack computeResult(ItemStack p_332654_, ItemStack p_332736_) {
          boolean flag = !p_332654_.isEmpty() || !p_332736_.isEmpty();
@@ -90,3 +116,11 @@
              }
  
              this.mergeEnchantsFrom(itemstack, p_332686_);
+@@ -213,6 +_,7 @@
+ 
+     @Override
+     public boolean stillValid(Player p_39572_) {
++        if (!this.checkReachable) return true; // CraftBukkit
+         return stillValid(this.access, p_39572_, Blocks.GRINDSTONE);
+     }
+ 

@@ -24,3 +24,62 @@
      private static final int PATTERN_NOT_SET = -1;
      private static final int INV_SLOT_START = 4;
      private static final int INV_SLOT_END = 31;
+@@ -48,6 +_,13 @@
+             LoomMenu.this.slotsChanged(this);
+             LoomMenu.this.slotUpdateListener.run();
+         }
++
++        // CraftBukkit start
++        @Override
++        public org.bukkit.Location getLocation() {
++            return access.getLocation();
++        }
++        // CraftBukkit end
+     };
+     private final Container outputContainer = new SimpleContainer(1) {
+         @Override
+@@ -55,6 +_,13 @@
+             super.setChanged();
+             LoomMenu.this.slotUpdateListener.run();
+         }
++
++        // CraftBukkit start
++        @Override
++        public org.bukkit.Location getLocation() {
++            return access.getLocation();
++        }
++        // CraftBukkit end
+     };
+ 
+     public LoomMenu(int p_39856_, Inventory p_39857_) {
+@@ -119,10 +_,12 @@
+ 
+         this.addDataSlot(this.selectedBannerPatternIndex);
+         this.patternGetter = p_39860_.player.registryAccess().lookupOrThrow(Registries.BANNER_PATTERN);
++        player = (org.bukkit.entity.Player) p_39860_.player.getBukkitEntity(); // CraftBukkit
+     }
+ 
+     @Override
+     public boolean stillValid(Player p_39865_) {
++        if (!this.checkReachable) return true; // CraftBukkit
+         return stillValid(this.access, p_39865_, Blocks.LOOM);
+     }
+ 
+@@ -282,7 +_,16 @@
+             itemstack2.update(
+                 DataComponents.BANNER_PATTERNS,
+                 BannerPatternLayers.EMPTY,
+-                p_330070_ -> new BannerPatternLayers.Builder().addAll(p_330070_).add(p_219992_, dyecolor).build()
++                p_330070_ -> {
++
++                    // CraftBukkit start
++                    if (p_330070_.layers().size() > 20) {
++                        p_330070_ = new BannerPatternLayers(List.copyOf(p_330070_.layers().subList(0, 20)));
++                    }
++                    // CraftBukkit end
++
++                    return new BannerPatternLayers.Builder().addAll(p_330070_).add(p_219992_, dyecolor).build();
++                }
+             );
+         }
+ 

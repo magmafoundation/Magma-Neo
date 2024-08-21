@@ -1,6 +1,12 @@
 --- a/net/minecraft/world/inventory/CraftingMenu.java
 +++ b/net/minecraft/world/inventory/CraftingMenu.java
-@@ -30,6 +_,9 @@
+@@ -25,11 +_,14 @@
+     private static final int INV_SLOT_END = 37;
+     private static final int USE_ROW_SLOT_START = 37;
+     private static final int USE_ROW_SLOT_END = 46;
+-    public final CraftingContainer craftSlots = new TransientCraftingContainer(this, 3, 3);
++    public final TransientCraftingContainer craftSlots;
+     public final ResultContainer resultSlots = new ResultContainer();
      public final ContainerLevelAccess access;
      private final Player player;
      private boolean placingRecipe;
@@ -10,6 +16,33 @@
  
      public CraftingMenu(int p_39353_, Inventory p_39354_) {
          this(p_39353_, p_39354_, ContainerLevelAccess.NULL);
+@@ -37,6 +_,10 @@
+ 
+     public CraftingMenu(int p_39356_, Inventory p_39357_, ContainerLevelAccess p_39358_) {
+         super(MenuType.CRAFTING, p_39356_);
++        // CraftBukkit start - Switched order of IInventory construction and stored player
++        this.craftSlots = new TransientCraftingContainer(this, 3, 3, p_39357_.player); // CraftBukkit - pass player
++        this.craftSlots.resultInventory = this.resultSlots;
++        // CraftBukkit end
+         this.access = p_39358_;
+         this.player = p_39357_.player;
+         this.addSlot(new ResultSlot(p_39357_.player, this.craftSlots, this.resultSlots, 0, 124, 35));
+@@ -73,6 +_,7 @@
+             Optional<RecipeHolder<CraftingRecipe>> optional = p_150548_.getServer()
+                 .getRecipeManager()
+                 .getRecipeFor(RecipeType.CRAFTING, craftinginput, p_150548_, p_345124_);
++            p_150550_.setCurrentRecipe(optional.orElse(null)); // CraftBukkit
+             if (optional.isPresent()) {
+                 RecipeHolder<CraftingRecipe> recipeholder = optional.get();
+                 CraftingRecipe craftingrecipe = recipeholder.value();
+@@ -83,6 +_,7 @@
+                     }
+                 }
+             }
++            itemstack = org.bukkit.craftbukkit.event.CraftEventFactory.callPreCraftEvent(p_150550_, p_150551_, itemstack, p_150547_.getBukkitView(), optional.map(RecipeHolder::value).orElse(null) instanceof net.minecraft.world.item.crafting.RepairItemRecipe); // CraftBukkit
+ 
+             p_150551_.setItem(0, itemstack);
+             p_150547_.setRemoteSlot(0, itemstack);
 @@ -132,6 +_,7 @@
  
      @Override

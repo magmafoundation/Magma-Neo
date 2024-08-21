@@ -10,6 +10,25 @@
  
      public SmithingMenu(int p_40245_, Inventory p_40246_) {
          this(p_40245_, p_40246_, ContainerLevelAccess.NULL);
+@@ -91,14 +_,16 @@
+         SmithingRecipeInput smithingrecipeinput = this.createRecipeInput();
+         List<RecipeHolder<SmithingRecipe>> list = this.level.getRecipeManager().getRecipesFor(RecipeType.SMITHING, smithingrecipeinput, this.level);
+         if (list.isEmpty()) {
+-            this.resultSlots.setItem(0, ItemStack.EMPTY);
++            org.bukkit.craftbukkit.event.CraftEventFactory.callPrepareSmithingEvent(getBukkitView(), ItemStack.EMPTY); // CraftBukkit
+         } else {
+             RecipeHolder<SmithingRecipe> recipeholder = list.get(0);
+             ItemStack itemstack = recipeholder.value().assemble(smithingrecipeinput, this.level.registryAccess());
+             if (itemstack.isItemEnabled(this.level.enabledFeatures())) {
+                 this.selectedRecipe = recipeholder;
+                 this.resultSlots.setRecipeUsed(recipeholder);
+-                this.resultSlots.setItem(0, itemstack);
++                // CraftBukkit start
++                org.bukkit.craftbukkit.event.CraftEventFactory.callPrepareSmithingEvent(getBukkitView(), itemstack);
++                // CraftBukkit end
+             }
+         }
+     }
 @@ -135,4 +_,18 @@
              .filter(p_294045_ -> !this.getSlot(p_294045_).hasItem())
              .findFirst();
