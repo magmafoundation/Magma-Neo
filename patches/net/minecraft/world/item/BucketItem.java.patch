@@ -1,14 +1,31 @@
 --- a/net/minecraft/world/item/BucketItem.java
 +++ b/net/minecraft/world/item/BucketItem.java
-@@ -58,7 +_,7 @@
+@@ -55,12 +_,23 @@
+             } else if (this.content == Fluids.EMPTY) {
+                 BlockState blockstate1 = p_40703_.getBlockState(blockpos);
+                 if (blockstate1.getBlock() instanceof BucketPickup bucketpickup) {
++                    // CraftBukkit start
++                    ItemStack dummyFluid = bucketpickup.pickupBlock(p_40704_, org.bukkit.craftbukkit.util.DummyGeneratorAccess.INSTANCE, blockpos, blockstate1);
++                    if (dummyFluid.isEmpty()) return InteractionResultHolder.fail(itemstack); // Don't fire event if the bucket won't be filled.
++                    org.bukkit.event.player.PlayerBucketFillEvent event = org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerBucketFillEvent((net.minecraft.server.level.ServerLevel) p_40703_, p_40704_, blockpos, blockpos, blockhitresult.getDirection(), itemstack, dummyFluid.getItem(), p_40705_);
++
++                    if (event.isCancelled()) {
++                        ((ServerPlayer) p_40704_).connection.send(new net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket(p_40703_, blockpos)); // SPIGOT-5163 (see PlayerInteractManager)
++                        ((ServerPlayer) p_40704_).getBukkitEntity().updateInventory(); // SPIGOT-4541
++                        return InteractionResultHolder.fail(itemstack);
++                    }
++                    // CraftBukkit end
                      ItemStack itemstack3 = bucketpickup.pickupBlock(p_40704_, p_40703_, blockpos, blockstate1);
                      if (!itemstack3.isEmpty()) {
                          p_40704_.awardStat(Stats.ITEM_USED.get(this));
 -                        bucketpickup.getPickupSound().ifPresent(p_150709_ -> p_40704_.playSound(p_150709_, 1.0F, 1.0F));
 +                        bucketpickup.getPickupSound(blockstate1).ifPresent(p_150709_ -> p_40704_.playSound(p_150709_, 1.0F, 1.0F));
                          p_40703_.gameEvent(p_40704_, GameEvent.FLUID_PICKUP, blockpos);
-                         ItemStack itemstack2 = ItemUtils.createFilledResult(itemstack, p_40704_, itemstack3);
+-                        ItemStack itemstack2 = ItemUtils.createFilledResult(itemstack, p_40704_, itemstack3);
++                        ItemStack itemstack2 = ItemUtils.createFilledResult(itemstack, p_40704_, org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(event.getItemStack())); // CraftBukkit
                          if (!p_40703_.isClientSide) {
+                             CriteriaTriggers.FILLED_BUCKET.trigger((ServerPlayer)p_40704_, itemstack3);
+                         }
 @@ -72,8 +_,8 @@
                  return InteractionResultHolder.fail(itemstack);
              } else {
@@ -16,11 +33,11 @@
 -                BlockPos blockpos2 = blockstate.getBlock() instanceof LiquidBlockContainer && this.content == Fluids.WATER ? blockpos : blockpos1;
 -                if (this.emptyContents(p_40704_, p_40703_, blockpos2, blockhitresult)) {
 +                BlockPos blockpos2 = canBlockContainFluid(p_40704_, p_40703_, blockpos, blockstate) ? blockpos : blockpos1;
-+                if (this.emptyContents(p_40704_, p_40703_, blockpos2, blockhitresult, itemstack)) {
++                if (this.emptyContents(p_40704_, p_40703_, blockpos2, blockhitresult, itemstack, blockhitresult.getDirection(), blockpos, itemstack, p_40705_)) { // CraftBukkit
                      this.checkExtraContent(p_40704_, p_40703_, itemstack, blockpos2);
                      if (p_40704_ instanceof ServerPlayer) {
                          CriteriaTriggers.PLACED_BLOCK.trigger((ServerPlayer)p_40704_, blockpos2, itemstack);
-@@ -98,7 +_,11 @@
+@@ -98,7 +_,17 @@
      }
  
      @Override
@@ -29,17 +46,33 @@
 +        return this.emptyContents(p_150716_, p_150717_, p_150718_, p_150719_, null);
 +    }
 +    public boolean emptyContents(@Nullable Player p_150716_, Level p_150717_, BlockPos p_150718_, @Nullable BlockHitResult p_150719_, @Nullable ItemStack container) {
++        // CraftBukkit start
++        return emptyContents(p_150716_, p_150717_, p_150718_, p_150719_,container, null, null, null, InteractionHand.MAIN_HAND);
++    }
++
++    public boolean emptyContents(@Nullable Player p_150716_, Level p_150717_, BlockPos p_150718_, @Nullable BlockHitResult p_150719_, @Nullable ItemStack container, Direction enumdirection, BlockPos clicked, ItemStack itemstack, InteractionHand enumhand) {
++        // CraftBukkit end
          if (!(this.content instanceof FlowingFluid flowingfluid)) {
              return false;
          } else {
-@@ -125,8 +_,12 @@
+@@ -125,8 +_,22 @@
              }
  
              boolean flag1 = flag2;
 +            java.util.Optional<net.neoforged.neoforge.fluids.FluidStack> containedFluidStack = java.util.Optional.ofNullable(container).flatMap(net.neoforged.neoforge.fluids.FluidUtil::getFluidContained);
++            // CraftBukkit start
++            if (flag1 && p_150716_ != null) {
++                org.bukkit.event.player.PlayerBucketEmptyEvent event = org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerBucketEmptyEvent((net.minecraft.server.level.ServerLevel) p_150717_, p_150716_, p_150718_, clicked, enumdirection, itemstack, enumhand);
++                if (event.isCancelled()) {
++                    ((ServerPlayer) p_150716_).connection.send(new net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket(p_150717_, p_150718_)); // SPIGOT-4238: needed when looking through entity
++                    ((ServerPlayer) p_150716_).getBukkitEntity().updateInventory(); // SPIGOT-4541
++                    return false;
++                }
++            }
++            // CraftBukkit end
              if (!flag1) {
 -                return p_150719_ != null && this.emptyContents(p_150716_, p_150717_, p_150719_.getBlockPos().relative(p_150719_.getDirection()), null);
-+                return p_150719_ != null && this.emptyContents(p_150716_, p_150717_, p_150719_.getBlockPos().relative(p_150719_.getDirection()), null, container);
++                return p_150719_ != null && this.emptyContents(p_150716_, p_150717_, p_150719_.getBlockPos().relative(p_150719_.getDirection()), null, container, enumdirection, clicked, itemstack, enumhand); // CraftBukkit
 +            } else if (containedFluidStack.isPresent() && this.content.getFluidType().isVaporizedOnPlacement(p_150717_, p_150718_, containedFluidStack.get())) {
 +                this.content.getFluidType().onVaporize(p_150716_, p_150717_, p_150718_, containedFluidStack.get());
 +                return true;

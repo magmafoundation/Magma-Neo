@@ -1,0 +1,24 @@
+--- a/net/minecraft/world/item/LeadItem.java
++++ b/net/minecraft/world/item/LeadItem.java
+@@ -37,7 +_,7 @@
+         }
+     }
+ 
+-    public static InteractionResult bindPlayerMobs(Player p_42830_, Level p_42831_, BlockPos p_42832_) {
++    public static InteractionResult bindPlayerMobs(Player p_42830_, Level p_42831_, BlockPos p_42832_, net.minecraft.world.InteractionHand enumhand) { // CraftBukkit - Add EnumHand
+         LeashFenceKnotEntity leashfenceknotentity = null;
+         List<Leashable> list = leashableInArea(p_42831_, p_42832_, p_353025_ -> p_353025_.getLeashHolder() == p_42830_);
+ 
+@@ -57,6 +_,12 @@
+             return InteractionResult.PASS;
+         }
+     }
++
++    // CraftBukkit start
++    public static InteractionResult bindPlayerMobs(Player entityhuman, Level world, BlockPos blockposition) {
++        return bindPlayerMobs(entityhuman, world, blockposition, net.minecraft.world.InteractionHand.MAIN_HAND);
++    }
++    // CraftBukkit end
+ 
+     public static List<Leashable> leashableInArea(Level p_353033_, BlockPos p_353031_, Predicate<Leashable> p_353062_) {
+         double d0 = 7.0;

@@ -1,11 +1,42 @@
 --- a/net/minecraft/world/item/ArmorItem.java
 +++ b/net/minecraft/world/item/ArmorItem.java
-@@ -49,6 +_,8 @@
+@@ -49,8 +_,38 @@
          } else {
              LivingEntity livingentity = list.get(0);
              EquipmentSlot equipmentslot = livingentity.getEquipmentSlotForItem(p_40400_);
 +            // Neo: Respect IItemExtension#canEquip in dispenseArmor
 +            if (!p_40400_.canEquip(equipmentslot, livingentity)) return false;
              ItemStack itemstack = p_40400_.split(1);
-             livingentity.setItemSlot(equipmentslot, itemstack);
+-            livingentity.setItemSlot(equipmentslot, itemstack);
++
++            // CraftBukkit start
++            Level world = p_302421_.level();
++            org.bukkit.block.Block block = org.bukkit.craftbukkit.block.CraftBlock.at(world, p_302421_.pos());
++            org.bukkit.craftbukkit.inventory.CraftItemStack craftItem = org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(itemstack);
++
++            org.bukkit.event.block.BlockDispenseArmorEvent event = new org.bukkit.event.block.BlockDispenseArmorEvent(block, craftItem.clone(), (org.bukkit.craftbukkit.entity.CraftLivingEntity) livingentity.getBukkitEntity());
++            if (!DispenserBlock.eventFired) {
++                world.getCraftServer().getPluginManager().callEvent(event);
++            }
++
++            if (event.isCancelled()) {
++                itemstack.grow(1);
++                return false;
++            }
++
++            if (!event.getItem().equals(craftItem)) {
++                itemstack.grow(1);
++                // Chain to handler for new item
++                ItemStack eventStack = org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(event.getItem());
++                DispenseItemBehavior idispensebehavior = (DispenseItemBehavior) DispenserBlock.DISPENSER_REGISTRY.get(eventStack.getItem());
++                if (idispensebehavior != DispenseItemBehavior.NOOP && idispensebehavior != ArmorItem.DISPENSE_ITEM_BEHAVIOR) {
++                    idispensebehavior.dispense(p_302421_, eventStack);
++                    return true;
++                }
++            }
++            livingentity.setItemSlot(equipmentslot, org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(event.getItem()));
++            // CraftBukkit end
++
              if (livingentity instanceof Mob) {
+                 ((Mob)livingentity).setDropChance(equipmentslot, 2.0F);
+                 ((Mob)livingentity).setPersistenceRequired();

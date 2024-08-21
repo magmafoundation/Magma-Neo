@@ -39,7 +39,15 @@
      }
  
      public Optional<Mob> spawnOffspringFromSpawnEgg(
-@@ -179,5 +_,9 @@
+@@ -172,12 +_,16 @@
+                     return Optional.empty();
+                 } else {
+                     mob.moveTo(p_43220_.x(), p_43220_.y(), p_43220_.z(), 0.0F, 0.0F);
+-                    p_43219_.addFreshEntityWithPassengers(mob);
++                    p_43219_.addFreshEntityWithPassengers(mob, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.SPAWNER_EGG); // CraftBukkit
+                     mob.setCustomName(p_43221_.get(DataComponents.CUSTOM_NAME));
+                     p_43221_.consume(1, p_43216_);
+                     return Optional.of(mob);
                  }
              }
          }

@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/item/crafting/RecipeManager.java
 +++ b/net/minecraft/world/item/crafting/RecipeManager.java
-@@ -50,16 +_,22 @@
+@@ -50,26 +_,47 @@
          this.hasErrors = false;
          Builder<RecipeType<?>, RecipeHolder<?>> builder = ImmutableMultimap.builder();
          com.google.common.collect.ImmutableMap.Builder<ResourceLocation, RecipeHolder<?>> builder1 = ImmutableMap.builder();
@@ -25,7 +25,14 @@
              } catch (IllegalArgumentException | JsonParseException jsonparseexception) {
                  LOGGER.error("Parsing error loading recipe {}", resourcelocation, jsonparseexception);
              }
-@@ -70,6 +_,19 @@
+         }
+ 
+-        this.byType = builder.build();
+-        this.byName = builder1.build();
++        // CraftBukkit start - mutable
++        this.byType = com.google.common.collect.LinkedHashMultimap.create(builder.build());
++        this.byName = com.google.common.collect.Maps.newHashMap(builder1.build());
++        // CraftBukkit end
          LOGGER.info("Loaded {} recipes", this.byType.size());
      }
  

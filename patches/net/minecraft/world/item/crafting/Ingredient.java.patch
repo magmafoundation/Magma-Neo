@@ -82,7 +82,7 @@
          }
  
          return this.itemStacks;
-@@ -58,6 +_,8 @@
+@@ -58,10 +_,20 @@
      public boolean test(@Nullable ItemStack p_43914_) {
          if (p_43914_ == null) {
              return false;
@@ -91,6 +91,18 @@
          } else if (this.isEmpty()) {
              return p_43914_.isEmpty();
          } else {
+             for (ItemStack itemstack : this.getItems()) {
++                // CraftBukkit start
++                if (exact) {
++                    if (itemstack.getItem() == p_43914_.getItem() && ItemStack.isSameItemSameComponents(p_43914_, itemstack)) {
++                        return true;
++                    }
++                    continue;
++                }
++                // CraftBukkit end
+                 if (itemstack.is(p_43914_.getItem())) {
+                     return true;
+                 }
 @@ -86,13 +_,65 @@
          return this.stackingIds;
      }
