@@ -1,7 +1,39 @@
 --- a/net/minecraft/world/level/dimension/end/EndDragonFight.java
 +++ b/net/minecraft/world/level/dimension/end/EndDragonFight.java
-@@ -510,7 +_,7 @@
+@@ -214,7 +_,7 @@
+             this.dragonKilled = false;
+             if (!flag) {
+                 LOGGER.info("But we didn't have a portal, let's remove it.");
+-                enderdragon.discard();
++                enderdragon.discard(null); // CraftBukkit - add Bukkit remove cause
+                 this.dragonUUID = null;
+             }
          }
+@@ -477,7 +_,7 @@
+         return this.previouslyKilled;
+     }
+ 
+-    public void tryRespawn() {
++    public boolean tryRespawn() { // CraftBukkit - return boolean
+         if (this.dragonKilled && this.respawnStage == null) {
+             BlockPos blockpos = this.portalLocation;
+             if (blockpos == null) {
+@@ -499,18 +_,19 @@
+             for (Direction direction : Direction.Plane.HORIZONTAL) {
+                 List<EndCrystal> list = this.level.getEntitiesOfClass(EndCrystal.class, new AABB(blockpos1.relative(direction, 2)));
+                 if (list.isEmpty()) {
+-                    return;
++                    return false; // CraftBukkit - return value
+                 }
+ 
+                 list1.addAll(list);
+             }
+ 
+             LOGGER.debug("Found all crystals, respawning dragon.");
+-            this.respawnDragon(list1);
++            return this.respawnDragon(list1); // CraftBukkit - return value
+         }
++        return false; // CraftBukkit - return value
      }
  
 -    public void respawnDragon(List<EndCrystal> p_64092_) {

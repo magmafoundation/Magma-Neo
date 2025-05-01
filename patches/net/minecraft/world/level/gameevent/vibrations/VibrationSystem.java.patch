@@ -25,3 +25,19 @@
      }
  
      static ResourceKey<GameEvent> getResonanceEventByFrequency(int p_282105_) {
+@@ -213,7 +_,14 @@
+                     return false;
+                 } else {
+                     Vec3 vec3 = optional.get();
+-                    if (!vibrationsystem$user.canReceiveVibration(p_282254_, BlockPos.containing(p_282426_), p_316513_, p_283664_)) {
++                    // CraftBukkit start
++                    boolean defaultCancel = !vibrationsystem$user.canReceiveVibration(p_282254_, BlockPos.containing(p_282426_), p_316513_, p_283664_);
++                    Entity entity = p_283664_.sourceEntity();
++                    org.bukkit.event.block.BlockReceiveGameEvent event = new org.bukkit.event.block.BlockReceiveGameEvent(org.bukkit.craftbukkit.CraftGameEvent.minecraftToBukkit(p_316513_.value()), org.bukkit.craftbukkit.block.CraftBlock.at(p_282254_, BlockPos.containing(vec3)), (entity == null) ? null : entity.getBukkitEntity());
++                    event.setCancelled(defaultCancel);
++                    p_282254_.getCraftServer().getPluginManager().callEvent(event);
++                    if (event.isCancelled()) {
++                        // CraftBukkit end
+                         return false;
+                     } else if (isOccluded(p_282254_, p_282426_, vec3)) {
+                         return false;

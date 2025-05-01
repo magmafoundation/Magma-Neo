@@ -126,10 +126,31 @@
      }
  
      @Override
-@@ -216,11 +_,40 @@
+@@ -209,6 +_,19 @@
+ 
+     @Override
+     public boolean setBlock(BlockPos p_46605_, BlockState p_46606_, int p_46607_, int p_46608_) {
++        // CraftBukkit start - tree generation
++        if (this.captureTreeGeneration) {
++            org.bukkit.craftbukkit.block.CapturedBlockState blockstate = capturedBlockStates.get(p_46605_);
++            if (blockstate == null) {
++                blockstate = org.bukkit.craftbukkit.block.CapturedBlockState.getTreeBlockState(this, p_46605_, p_46607_);
++                this.capturedBlockStates.put(p_46605_.immutable(), blockstate);
++            }
++            blockstate.setData(p_46606_);
++            blockstate.setFlag(p_46607_);
++            return true;
++        }
++        // CraftBukkit end
++
+         if (this.isOutsideBuildHeight(p_46605_)) {
+             return false;
+         } else if (!this.isClientSide && this.isDebug()) {
+@@ -216,11 +_,54 @@
          } else {
              LevelChunk levelchunk = this.getChunkAt(p_46605_);
              Block block = p_46606_.getBlock();
+-            BlockState blockstate = levelchunk.setBlockState(p_46605_, p_46606_, (p_46607_ & 64) != 0);
 +
 +            p_46605_ = p_46605_.immutable(); // Forge - prevent mutable BlockPos leaks
 +            net.neoforged.neoforge.common.util.BlockSnapshot blockSnapshot = null;
@@ -138,18 +159,32 @@
 +                 this.capturedBlockSnapshots.add(blockSnapshot);
 +            }
 +
++            // CraftBukkit start - capture blockstates
++            boolean captured = false;
++            if (this.captureBlockStates && !this.capturedBlockStates.containsKey(p_46605_)) {
++                org.bukkit.craftbukkit.block.CapturedBlockState blockstate = org.bukkit.craftbukkit.block.CapturedBlockState.getBlockState(this, p_46605_, p_46607_);
++                this.capturedBlockStates.put(p_46605_.immutable(), blockstate);
++                captured = true;
++            }
++            // CraftBukkit end
++
 +            BlockState old = getBlockState(p_46605_);
 +            int oldLight = old.getLightEmission(this, p_46605_);
 +            int oldOpacity = old.getLightBlock(this, p_46605_);
 +
-             BlockState blockstate = levelchunk.setBlockState(p_46605_, p_46606_, (p_46607_ & 64) != 0);
++            BlockState blockstate = levelchunk.setBlockState(p_46605_, p_46606_, (p_46607_ & 64) != 0, (p_46607_ & 1024) == 0); // CraftBukkit custom NO_PLACE flag
              if (blockstate == null) {
 +                if (blockSnapshot != null) this.capturedBlockSnapshots.remove(blockSnapshot);
++                // CraftBukkit start - remove blockstate if failed (or the same)
++                if (this.captureBlockStates && captured) {
++                    this.capturedBlockStates.remove(p_46605_);
++                }
++                // CraftBukkit end
                  return false;
              } else {
                  BlockState blockstate1 = this.getBlockState(p_46605_);
 +
-+                if (blockSnapshot == null) { // Don't notify clients or update physics while capturing blockstates
++                if (blockSnapshot == null && !this.captureBlockStates) { // Don't notify clients or update physics while capturing blockstates
 +                    this.markAndNotifyBlock(p_46605_, levelchunk, blockstate, p_46606_, p_46607_, p_46608_);
 +                }
 +
@@ -242,6 +277,21 @@
      }
  
      public void updateNeighborsAtExceptFromFacing(BlockPos p_46591_, Block p_46592_, Direction p_46593_) {
+@@ -342,6 +_,14 @@
+ 
+     @Override
+     public BlockState getBlockState(BlockPos p_46732_) {
++        // CraftBukkit start - tree generation
++        if (captureTreeGeneration) {
++            org.bukkit.craftbukkit.block.CapturedBlockState previous = capturedBlockStates.get(p_46732_);
++            if (previous != null) {
++                return previous.getHandle();
++            }
++        }
++        // CraftBukkit end
+         if (this.isOutsideBuildHeight(p_46732_)) {
+             return Blocks.VOID_AIR.defaultBlockState();
+         } else {
 @@ -489,10 +_,26 @@
          (this.tickingBlockEntities ? this.pendingBlockEntityTickers : this.blockEntityTickers).add(p_151526_);
      }
@@ -311,6 +361,38 @@
          explosion.explode();
          explosion.finalizeExplosion(p_312145_);
          return explosion;
+@@ -705,6 +_,16 @@
+     @Nullable
+     @Override
+     public BlockEntity getBlockEntity(BlockPos p_46716_) {
++        // CraftBukkit start
++        return getBlockEntity(p_46716_, true);
++    }
++
++    @Nullable
++    public BlockEntity getBlockEntity(BlockPos p_46716_, boolean validate) {
++        if (capturedTileEntities.containsKey(p_46716_)) {
++            return capturedTileEntities.get(p_46716_);
++        }
++        // CraftBukkit end
+         if (this.isOutsideBuildHeight(p_46716_)) {
+             return null;
+         } else {
+@@ -716,7 +_,14 @@
+ 
+     public void setBlockEntity(BlockEntity p_151524_) {
+         BlockPos blockpos = p_151524_.getBlockPos();
++
+         if (!this.isOutsideBuildHeight(blockpos)) {
++            // CraftBukkit start
++            if (captureBlockStates) {
++                capturedTileEntities.put(blockpos.immutable(), p_151524_);
++                return;
++            }
++            // CraftBukkit end
+             this.getChunkAt(blockpos).addAndRegisterBlockEntity(p_151524_);
+         }
+     }
 @@ -725,6 +_,7 @@
          if (!this.isOutsideBuildHeight(p_46748_)) {
              this.getChunkAt(p_46748_).removeBlockEntity(p_46748_);

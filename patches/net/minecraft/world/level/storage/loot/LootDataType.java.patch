@@ -48,7 +48,7 @@
      }
  
      public static Stream<LootDataType<?>> values() {
-@@ -48,9 +_,11 @@
+@@ -48,9 +_,12 @@
      }
  
      private static LootDataType.Validator<LootTable> createLootTableValidator() {
@@ -58,6 +58,7 @@
 +            p_279406_.validate(
 +                    p_279333_.setParams(p_279406_.getParamSet()).enterElement("{" + p_279227_.registry() + ":" + p_279227_.location() + "}", p_279227_)
              );
++            p_279406_.craftLootTable = new org.bukkit.craftbukkit.CraftLootTable(org.bukkit.craftbukkit.util.CraftNamespacedKey.fromMinecraft(p_279227_.location()), p_279406_); // CraftBukkit
 +        };
      }
  
