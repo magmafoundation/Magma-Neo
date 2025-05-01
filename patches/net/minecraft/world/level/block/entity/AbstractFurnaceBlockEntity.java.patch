@@ -136,15 +136,27 @@
          ContainerHelper.saveAllItems(p_187452_, this.items, p_323656_);
          CompoundTag compoundtag = new CompoundTag();
          this.recipesUsed.forEach((p_187449_, p_187450_) -> compoundtag.putInt(p_187449_.toString(), p_187450_));
-@@ -269,28 +_,30 @@
+@@ -269,28 +_,50 @@
              }
  
              int i = p_155017_.getMaxStackSize();
 -            if (!p_155017_.isLit() && canBurn(p_155014_.registryAccess(), recipeholder, p_155017_.items, i)) {
+-                p_155017_.litTime = p_155017_.getBurnDuration(itemstack);
 +            if (!p_155017_.isLit() && canBurn(p_155014_.registryAccess(), recipeholder, p_155017_.items, i, p_155017_)) {
-                 p_155017_.litTime = p_155017_.getBurnDuration(itemstack);
++                // CraftBukkit start
++                org.bukkit.craftbukkit.inventory.CraftItemStack fuel = org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(itemstack);
++
++                org.bukkit.event.inventory.FurnaceBurnEvent furnaceBurnEvent = new org.bukkit.event.inventory.FurnaceBurnEvent(org.bukkit.craftbukkit.block.CraftBlock.at(p_155014_, p_155015_), fuel, p_155017_.getBurnDuration(itemstack));
++                p_155014_.getCraftServer().getPluginManager().callEvent(furnaceBurnEvent);
++
++                if (furnaceBurnEvent.isCancelled()) {
++                    return;
++                }
++
                  p_155017_.litDuration = p_155017_.litTime;
-                 if (p_155017_.isLit()) {
+-                if (p_155017_.isLit()) {
++                if (p_155017_.isLit() && furnaceBurnEvent.isBurning()) {
++                    // CraftBukkit end
                      flag1 = true;
 +                    if (itemstack.hasCraftingRemainingItem())
 +                        p_155017_.items.set(1, itemstack.getCraftingRemainingItem());
@@ -163,12 +175,22 @@
  
 -            if (p_155017_.isLit() && canBurn(p_155014_.registryAccess(), recipeholder, p_155017_.items, i)) {
 +            if (p_155017_.isLit() && canBurn(p_155014_.registryAccess(), recipeholder, p_155017_.items, i, p_155017_)) {
++                // CraftBukkit start
++                if (recipeholder != null && p_155017_.cookingProgress == 0) {
++                    org.bukkit.craftbukkit.inventory.CraftItemStack source = org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(p_155017_.items.get(0));
++                    org.bukkit.inventory.CookingRecipe<?> recipe = (org.bukkit.inventory.CookingRecipe<?>) recipeholder.toBukkitRecipe();
++                    org.bukkit.event.inventory.FurnaceStartSmeltEvent event = new org.bukkit.event.inventory.FurnaceStartSmeltEvent(org.bukkit.craftbukkit.block.CraftBlock.at(p_155014_, p_155015_), source, recipe);
++                    p_155014_.getCraftServer().getPluginManager().callEvent(event);
++                    p_155017_.cookingTotalTime = event.getTotalCookTime();
++                }
++                // CraftBukkit end
++
                  p_155017_.cookingProgress++;
                  if (p_155017_.cookingProgress == p_155017_.cookingTotalTime) {
                      p_155017_.cookingProgress = 0;
                      p_155017_.cookingTotalTime = getTotalCookTime(p_155014_, p_155017_);
 -                    if (burn(p_155014_.registryAccess(), recipeholder, p_155017_.items, i)) {
-+                    if (burn(p_155014_.registryAccess(), recipeholder, p_155017_.items, i, p_155017_)) {
++                    if (burn(p_155017_.level, p_155017_.worldPosition, p_155014_.registryAccess(), recipeholder, p_155017_.items, i, p_155017_)) { // CraftBukkit
                          p_155017_.setRecipeUsed(recipeholder);
                      }
  
@@ -196,27 +218,55 @@
                  }
              }
          } else {
-@@ -336,15 +_,15 @@
+@@ -336,17 +_,42 @@
          }
      }
  
 -    private static boolean burn(RegistryAccess p_266740_, @Nullable RecipeHolder<?> p_300910_, NonNullList<ItemStack> p_267073_, int p_267157_) {
 -        if (p_300910_ != null && canBurn(p_266740_, p_300910_, p_267073_, p_267157_)) {
-+    private static boolean burn(RegistryAccess p_266740_, @Nullable RecipeHolder<?> p_300910_, NonNullList<ItemStack> p_267073_, int p_267157_, AbstractFurnaceBlockEntity furnace) {
++    private static boolean burn(Level level, BlockPos blockposition, RegistryAccess p_266740_, @Nullable RecipeHolder<?> p_300910_, NonNullList<ItemStack> p_267073_, int p_267157_, AbstractFurnaceBlockEntity furnace) { // CraftBukkit
 +        if (p_300910_ != null && canBurn(p_266740_, p_300910_, p_267073_, p_267157_, furnace)) {
              ItemStack itemstack = p_267073_.get(0);
 -            ItemStack itemstack1 = p_300910_.value().getResultItem(p_266740_);
 +            ItemStack itemstack1 = ((RecipeHolder<? extends AbstractCookingRecipe>) p_300910_).value().assemble(new SingleRecipeInput(furnace.getItem(0)), p_266740_);
              ItemStack itemstack2 = p_267073_.get(2);
++            // CraftBukkit start - fire FurnaceSmeltEvent
++            org.bukkit.craftbukkit.inventory.CraftItemStack source = org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(itemstack);
++            org.bukkit.inventory.ItemStack result = org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(itemstack1);
++
++            org.bukkit.event.inventory.FurnaceSmeltEvent furnaceSmeltEvent = new org.bukkit.event.inventory.FurnaceSmeltEvent(org.bukkit.craftbukkit.block.CraftBlock.at(level, blockposition), source, result);
++            level.getCraftServer().getPluginManager().callEvent(furnaceSmeltEvent);
++
++            if (furnaceSmeltEvent.isCancelled()) {
++                return false;
++            }
++
++            result = furnaceSmeltEvent.getResult();
++            itemstack1 = org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(result);
++
++            if (!itemstack1.isEmpty()) {
++                if (itemstack2.isEmpty()) {
++                    p_267073_.set(2, itemstack1.copy());
++                } else if (org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(itemstack2).isSimilar(result)) {
++                    itemstack2.grow(itemstack1.getCount());
++                } else {
++                    return false;
++                }
++            }
++            /*
              if (itemstack2.isEmpty()) {
                  p_267073_.set(2, itemstack1.copy());
              } else if (ItemStack.isSameItemSameComponents(itemstack2, itemstack1)) {
 -                itemstack2.grow(1);
 +                itemstack2.grow(itemstack1.getCount());
              }
- 
+-
++            */
++            // CraftBukkit end
              if (itemstack.is(Blocks.WET_SPONGE.asItem()) && !p_267073_.get(1).isEmpty() && p_267073_.get(1).is(Items.BUCKET)) {
-@@ -362,8 +_,7 @@
+                 p_267073_.set(1, new ItemStack(Items.WATER_BUCKET));
+             }
+@@ -362,18 +_,18 @@
          if (p_58343_.isEmpty()) {
              return 0;
          } else {
@@ -226,7 +276,10 @@
          }
      }
  
-@@ -373,7 +_,7 @@
+     private static int getTotalCookTime(Level p_222693_, AbstractFurnaceBlockEntity p_222694_) {
++        if (p_222693_ == null) return 200; // CraftBukkit - SPIGOT-4302
+         SingleRecipeInput singlerecipeinput = new SingleRecipeInput(p_222694_.getItem(0));
+         return p_222694_.quickCheck.getRecipeFor(singlerecipeinput, p_222693_).map(p_300840_ -> p_300840_.value().getCookingTime()).orElse(200);
      }
  
      public static boolean isFuel(ItemStack p_58400_) {
@@ -255,7 +308,7 @@
          p_155004_.awardRecipes(list);
  
          for (RecipeHolder<?> recipeholder : list) {
-@@ -467,6 +_,12 @@
+@@ -467,24 +_,41 @@
      }
  
      public List<RecipeHolder<?>> getRecipesToAwardAndPopExperience(ServerLevel p_154996_, Vec3 p_154997_) {
@@ -268,3 +321,34 @@
          List<RecipeHolder<?>> list = Lists.newArrayList();
  
          for (Entry<ResourceLocation> entry : this.recipesUsed.object2IntEntrySet()) {
+             p_154996_.getRecipeManager().byKey(entry.getKey()).ifPresent(p_300839_ -> {
+                 list.add((RecipeHolder<?>)p_300839_);
+-                createExperience(p_154996_, p_154997_, entry.getIntValue(), ((AbstractCookingRecipe)p_300839_.value()).getExperience());
++                createExperience(p_154996_, p_154997_, entry.getIntValue(), ((AbstractCookingRecipe)p_300839_.value()).getExperience(), blockposition, entityplayer, itemstack, amount); // CraftBukkit
+             });
+         }
+ 
+         return list;
+     }
+ 
+-    private static void createExperience(ServerLevel p_154999_, Vec3 p_155000_, int p_155001_, float p_155002_) {
++    private static void createExperience(ServerLevel p_154999_, Vec3 p_155000_, int p_155001_, float p_155002_, BlockPos blockposition, Player entityhuman, ItemStack itemstack, int amount) { // CraftBukkit
+         int i = Mth.floor((float)p_155001_ * p_155002_);
+         float f = Mth.frac((float)p_155001_ * p_155002_);
+         if (f != 0.0F && Math.random() < (double)f) {
+             i++;
+         }
++
++        // CraftBukkit start - fire FurnaceExtractEvent / BlockExpEvent
++        org.bukkit.event.block.BlockExpEvent event;
++        if (amount != 0) {
++            event = new org.bukkit.event.inventory.FurnaceExtractEvent((org.bukkit.entity.Player) entityhuman.getBukkitEntity(), org.bukkit.craftbukkit.block.CraftBlock.at(p_154999_, blockposition), org.bukkit.craftbukkit.inventory.CraftItemType.minecraftToBukkit(itemstack.getItem()), amount, i);
++        } else {
++            event = new org.bukkit.event.block.BlockExpEvent(org.bukkit.craftbukkit.block.CraftBlock.at(p_154999_, blockposition), i);
++        }
++        p_154999_.getCraftServer().getPluginManager().callEvent(event);
++        i = event.getExpToDrop();
++        // CraftBukkit end
+ 
+         ExperienceOrb.award(p_154999_, p_155000_, i);
+     }

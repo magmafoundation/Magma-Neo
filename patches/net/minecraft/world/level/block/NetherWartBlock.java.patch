@@ -7,7 +7,8 @@
 -        if (i < 3 && p_221809_.nextInt(10) == 0) {
 +        if (i < 3 && net.neoforged.neoforge.common.CommonHooks.canCropGrow(p_221807_, p_221808_, p_221806_, p_221809_.nextInt(10) == 0)) {
              p_221806_ = p_221806_.setValue(AGE, Integer.valueOf(i + 1));
-             p_221807_.setBlock(p_221808_, p_221806_, 2);
+-            p_221807_.setBlock(p_221808_, p_221806_, 2);
++            org.bukkit.craftbukkit.event.CraftEventFactory.handleBlockGrowEvent(p_221807_, p_221808_, p_221806_, 2); // CraftBukkit
 +            net.neoforged.neoforge.common.CommonHooks.fireCropGrowPost(p_221807_, p_221808_, p_221806_);
          }
      }
