@@ -92,6 +92,15 @@
      }
  
      @Override
+@@ -345,7 +_,7 @@
+     private void turtleHelmetTick() {
+         ItemStack itemstack = this.getItemBySlot(EquipmentSlot.HEAD);
+         if (itemstack.is(Items.TURTLE_HELMET) && !this.isEyeInFluid(FluidTags.WATER)) {
+-            this.addEffect(new MobEffectInstance(MobEffects.WATER_BREATHING, 200, 0, false, false, true));
++            this.addEffect(new MobEffectInstance(MobEffects.WATER_BREATHING, 200, 0, false, false, true), org.bukkit.event.entity.EntityPotionEffectEvent.Cause.TURTLE_HELMET); // CraftBukkit
+         }
+     }
+ 
 @@ -397,6 +_,10 @@
      }
  
@@ -103,6 +112,33 @@
          if (this.canPlayerFitWithinBlocksAndEntitiesWhen(Pose.SWIMMING)) {
              Pose pose;
              if (this.isFallFlying()) {
+@@ -492,8 +_,14 @@
+     public void rideTick() {
+         if (!this.level().isClientSide && this.wantsToStopRiding() && this.isPassenger()) {
+             this.stopRiding();
+-            this.setShiftKeyDown(false);
+-        } else {
++            // CraftBukkit start - SPIGOT-7316: no longer passenger, dismount and return
++            if (!this.isPassenger()) {
++                this.setShiftKeyDown(false);
++                return;
++            }
++        }
++        {
++            // CraftBukkit end
+             super.rideTick();
+             this.oBob = this.bob;
+             this.bob = 0.0F;
+@@ -515,7 +_,8 @@
+ 
+         if (this.level().getDifficulty() == Difficulty.PEACEFUL && this.level().getGameRules().getBoolean(GameRules.RULE_NATURAL_REGENERATION)) {
+             if (this.getHealth() < this.getMaxHealth() && this.tickCount % 20 == 0) {
+-                this.heal(1.0F);
++                // CraftBukkit - added regain reason of "REGEN" for filtering purposes.
++                this.heal(1.0F, org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.REGEN);
+             }
+ 
+             if (this.foodData.getSaturationLevel() < 20.0F && this.tickCount % 20 == 0) {
 @@ -630,6 +_,7 @@
  
      @Override
@@ -195,8 +231,12 @@
      @Override
      public void readAdditionalSaveData(CompoundTag p_36215_) {
          super.readAdditionalSaveData(p_36215_);
-@@ -872,7 +_,9 @@
-                     this.removeEntitiesOnShoulder();
+@@ -869,12 +_,14 @@
+                 return false;
+             } else {
+                 if (!this.level().isClientSide) {
+-                    this.removeEntitiesOnShoulder();
++                    // this.removeEntitiesOnShoulder(); // CraftBukkit - moved down
                  }
  
 -                if (p_36154_.scalesWithDifficulty()) {
@@ -204,8 +244,61 @@
 +
 +                if (false && p_36154_.scalesWithDifficulty()) {
                      if (this.level().getDifficulty() == Difficulty.PEACEFUL) {
-                         p_36155_ = 0.0F;
+-                        p_36155_ = 0.0F;
++                        return false; // CraftBukkit - f = 0.0f -> return false
                      }
+ 
+                     if (this.level().getDifficulty() == Difficulty.EASY) {
+@@ -886,7 +_,13 @@
+                     }
+                 }
+ 
+-                return p_36155_ == 0.0F ? false : super.hurt(p_36154_, p_36155_);
++                // CraftBukkit start - Don't filter out 0 damage
++                boolean damaged = super.hurt(p_36154_, p_36155_);
++                if (damaged) {
++                    this.removeEntitiesOnShoulder();
++                }
++                return damaged;
++                // CraftBukkit end
+             }
+         }
+     }
+@@ -905,13 +_,29 @@
+     }
+ 
+     public boolean canHarmPlayer(Player p_36169_) {
+-        Team team = this.getTeam();
+-        Team team1 = p_36169_.getTeam();
+-        if (team == null) {
++        // CraftBukkit start - Change to check OTHER player's scoreboard team according to API
++        // To summarize this method's logic, it's "Can parameter hurt this"
++        org.bukkit.scoreboard.Team team;
++        if (p_36169_ instanceof ServerPlayer) {
++            ServerPlayer thatPlayer = (ServerPlayer) p_36169_;
++            team = thatPlayer.getBukkitEntity().getScoreboard().getPlayerTeam(thatPlayer.getBukkitEntity());
++            if (team == null || team.allowFriendlyFire()) {
+             return true;
++            }
+         } else {
+-            return !team.isAlliedTo(team1) ? true : team.isAllowFriendlyFire();
+-        }
++            // This should never be called, but is implemented anyway
++            org.bukkit.OfflinePlayer thisPlayer = p_36169_.level().getCraftServer().getOfflinePlayer(p_36169_.getScoreboardName());
++            team = p_36169_.level().getCraftServer().getScoreboardManager().getMainScoreboard().getPlayerTeam(thisPlayer);
++            if (team == null || team.allowFriendlyFire()) {
++                return true;
++            }
++        }
++
++        if (this instanceof ServerPlayer) {
++            return !team.hasPlayer(((ServerPlayer) this).getBukkitEntity());
++        }
++        return !team.hasPlayer(this.level().getCraftServer().getOfflinePlayer(this.getScoreboardName()));
++        // CraftBukkit end
+     }
+ 
+     @Override
 @@ -926,7 +_,7 @@
  
      @Override
@@ -380,6 +473,36 @@
                                      float f5 = this.getEnchantedDamage(livingentity2, f7, damagesource) * f2;
                                      livingentity2.knockback(
                                          0.4F,
+@@ -1241,9 +_,26 @@
+                         }
+ 
+                         if (p_36347_ instanceof ServerPlayer && p_36347_.hurtMarked) {
+-                            ((ServerPlayer)p_36347_).connection.send(new ClientboundSetEntityMotionPacket(p_36347_));
+-                            p_36347_.hurtMarked = false;
+-                            p_36347_.setDeltaMovement(vec3);
++                            // CraftBukkit start - Add Velocity Event
++                            boolean cancelled = false;
++                            org.bukkit.entity.Player player = (org.bukkit.entity.Player) p_36347_.getBukkitEntity();
++                            org.bukkit.util.Vector velocity = org.bukkit.craftbukkit.util.CraftVector.toBukkit(vec3);
++
++                            org.bukkit.event.player.PlayerVelocityEvent event = new org.bukkit.event.player.PlayerVelocityEvent(player, velocity.clone());
++                            this.level().getCraftServer().getPluginManager().callEvent(event);
++
++                            if (event.isCancelled()) {
++                                cancelled = true;
++                            } else if (!velocity.equals(event.getVelocity())) {
++                                player.setVelocity(event.getVelocity());
++                            }
++
++                            if (!cancelled) {
++                                ((ServerPlayer) p_36347_).connection.send(new ClientboundSetEntityMotionPacket(p_36347_));
++                                p_36347_.hurtMarked = false;
++                                p_36347_.setDeltaMovement(vec3);
++                            }
++                            // CraftBukkit end
+                         }
+ 
+                         if (flag1) {
 @@ -1268,11 +_,12 @@
  
                          this.setLastHurtMob(p_36347_);
@@ -403,8 +526,20 @@
                                  if (itemstack == this.getMainHandItem()) {
                                      this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
                                  } else {
-@@ -1311,6 +_,7 @@
+@@ -1305,12 +_,18 @@
+                             }
+                         }
+ 
+-                        this.causeFoodExhaustion(0.1F);
++                        this.causeFoodExhaustion(0.1F, org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.ATTACK); // CraftBukkit - EntityExhaustionEvent
+                     } else {
+                         this.level()
                              .playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.PLAYER_ATTACK_NODAMAGE, this.getSoundSource(), 1.0F, 1.0F);
++                        // CraftBukkit start - resync on cancelled event
++                        if (this instanceof ServerPlayer) {
++                            ((ServerPlayer) this).getBukkitEntity().updateInventory();
++                        }
++                        // CraftBukkit end
                      }
                  }
 +                this.resetAttackStrengthTicker(); // FORGE: Moved from beginning of attack() so that getAttackStrengthScale() returns an accurate value during all attack events
@@ -420,6 +555,21 @@
          this.stopUsingItem();
          this.level().broadcastEntityEvent(this, (byte)30);
      }
+@@ -1349,7 +_,13 @@
+ 
+     @Override
+     public void remove(Entity.RemovalReason p_150097_) {
+-        super.remove(p_150097_);
++        // CraftBukkit start - add Bukkit remove cause
++        this.remove(p_150097_, null);
++    }
++
++    public void remove(Entity.RemovalReason p_150097_, org.bukkit.event.entity.EntityRemoveEvent.Cause cause) {
++        super.remove(p_150097_, cause);
++        // CraftBukkit end
+         this.inventoryMenu.removed(this);
+         if (this.containerMenu != null && this.hasContainerOpen()) {
+             this.doCloseContainer();
 @@ -1384,6 +_,11 @@
          return this.containerMenu != this.inventoryMenu;
      }
@@ -440,6 +590,31 @@
          super.stopSleeping();
          if (this.level() instanceof ServerLevel && p_36227_) {
              ((ServerLevel)this.level()).updateSleepingPlayerList();
+@@ -1452,9 +_,9 @@
+         super.jumpFromGround();
+         this.awardStat(Stats.JUMP);
+         if (this.isSprinting()) {
+-            this.causeFoodExhaustion(0.2F);
++            this.causeFoodExhaustion(0.2F, org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.JUMP_SPRINT); // CraftBukkit - EntityExhaustionEvent
+         } else {
+-            this.causeFoodExhaustion(0.05F);
++            this.causeFoodExhaustion(0.05F, org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.JUMP); // CraftBukkit - EntityExhaustionEvent
+         }
+     }
+ 
+@@ -1477,7 +_,11 @@
+             Vec3 vec31 = this.getDeltaMovement();
+             this.setDeltaMovement(vec31.x, d2 * 0.6, vec31.z);
+             this.resetFallDistance();
+-            this.setSharedFlag(7, false);
++            // CraftBukkit start
++            if (this.getSharedFlag(7) && !org.bukkit.craftbukkit.event.CraftEventFactory.callToggleGlideEvent(this, false).isCancelled()) {
++                this.setSharedFlag(7, false);
++            }
++            // CraftBukkit end
+         } else {
+             super.travel(p_36359_);
+         }
 @@ -1503,7 +_,8 @@
  
      @Override
@@ -459,6 +634,34 @@
                  this.startFallFlying();
                  return true;
              }
+@@ -1545,12 +_,24 @@
+     }
+ 
+     public void startFallFlying() {
+-        this.setSharedFlag(7, true);
++        // CraftBukkit start
++        if (!org.bukkit.craftbukkit.event.CraftEventFactory.callToggleGlideEvent(this, true).isCancelled()) {
++            this.setSharedFlag(7, true);
++        } else {
++            // SPIGOT-5542: must toggle like below
++            this.setSharedFlag(7, true);
++            this.setSharedFlag(7, false);
++        }
++        // CraftBukkit end
+     }
+ 
+     public void stopFallFlying() {
+-        this.setSharedFlag(7, true);
+-        this.setSharedFlag(7, false);
++        // CraftBukkit start
++        if (!org.bukkit.craftbukkit.event.CraftEventFactory.callToggleGlideEvent(this, false).isCancelled()) {
++            this.setSharedFlag(7, true);
++            this.setSharedFlag(7, false);
++        }
++        // CraftBukkit end
+     }
+ 
+     @Override
 @@ -1564,13 +_,13 @@
      protected void playStepSound(BlockPos p_282121_, BlockState p_282194_) {
          if (this.isInWater()) {
@@ -529,6 +732,28 @@
              }
          }
      }
+@@ -1754,13 +_,18 @@
+ 
+     @Override
+     public void setItemSlot(EquipmentSlot p_36161_, ItemStack p_36162_) {
++        this.setItemSlot(p_36161_, p_36162_, false);
++    }
++
++    @Override
++    public void setItemSlot(EquipmentSlot p_36161_, ItemStack p_36162_, boolean silent) {
+         this.verifyEquippedItem(p_36162_);
+         if (p_36161_ == EquipmentSlot.MAINHAND) {
+-            this.onEquipItem(p_36161_, this.inventory.items.set(this.inventory.selected, p_36162_), p_36162_);
++            this.onEquipItem(p_36161_, this.inventory.items.set(this.inventory.selected, p_36162_), p_36162_, silent); // CraftBukkit
+         } else if (p_36161_ == EquipmentSlot.OFFHAND) {
+-            this.onEquipItem(p_36161_, this.inventory.offhand.set(0, p_36162_), p_36162_);
++            this.onEquipItem(p_36161_, this.inventory.offhand.set(0, p_36162_), p_36162_, silent); // CraftBukkit
+         } else if (p_36161_.getType() == EquipmentSlot.Type.HUMANOID_ARMOR) {
+-            this.onEquipItem(p_36161_, this.inventory.armor.set(p_36161_.getIndex(), p_36162_), p_36162_);
++            this.onEquipItem(p_36161_, this.inventory.armor.set(p_36161_.getIndex(), p_36162_), p_36162_, silent); // CraftBukkit
+         }
+     }
+ 
 @@ -1801,24 +_,30 @@
  
      protected void removeEntitiesOnShoulder() {
@@ -581,7 +806,7 @@
          return this.decorateDisplayNameComponent(mutablecomponent);
      }
  
-@@ -2009,21 +_,21 @@
+@@ -2009,28 +_,28 @@
          if (!(p_36349_.getItem() instanceof ProjectileWeaponItem)) {
              return ItemStack.EMPTY;
          } else {
@@ -608,6 +833,14 @@
              }
          }
      }
+ 
+     @Override
+     public ItemStack eat(Level p_36185_, ItemStack p_36186_, FoodProperties p_347562_) {
+-        this.getFoodData().eat(p_347562_);
++        this.getFoodData().eat(p_36186_, p_347562_); // CraftBukkit - add item to parameter
+         this.awardStat(Stats.ITEM_USED.get(p_36186_.getItem()));
+         p_36185_.playSound(
+             null, this.getX(), this.getY(), this.getZ(), SoundEvents.PLAYER_BURP, SoundSource.PLAYERS, 0.5F, p_36185_.random.nextFloat() * 0.1F + 0.9F
 @@ -2047,7 +_,10 @@
              }
  

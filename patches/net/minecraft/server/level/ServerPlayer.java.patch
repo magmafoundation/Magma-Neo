@@ -33,7 +33,7 @@
      public ServerPlayer(MinecraftServer p_254143_, ServerLevel p_254435_, GameProfile p_253651_, ClientInformation p_301997_) {
          super(p_254435_, p_254435_.getSharedSpawnPos(), p_254435_.getSharedSpawnAngle(), p_253651_);
          this.textFilter = p_254143_.createTextFilterForPlayer(this);
-@@ -287,7 +_,44 @@
+@@ -287,7 +_,53 @@
          this.moveTo(this.adjustSpawnLocation(p_254435_, p_254435_.getSharedSpawnPos()).getBottomCenter(), 0.0F, 0.0F);
          this.updateOptions(p_301997_);
          this.object = null;
@@ -43,6 +43,15 @@
 +        this.displayName = this.getScoreboardName();
 +        this.bukkitPickUpLoot = true;
 +        this.maxHealthCache = this.getMaxHealth();
++    }
++
++    // Use method to resend items in hands in case of client desync, because the item use got cancelled.
++    // For example, when cancelling the leash event
++    public void resendItemInHands() {
++        containerMenu.findSlot(getInventory(), getInventory().selected).ifPresent(s -> {
++            containerSynchronizer.sendSlotChange(containerMenu, s, getMainHandItem());
++        });
++        containerSynchronizer.sendSlotChange(inventoryMenu, net.minecraft.world.inventory.InventoryMenu.SHIELD_SLOT, getOffhandItem());
 +    }
 +
 +    // Yes, this doesn't match Vanilla, but it's the best we can do for now.

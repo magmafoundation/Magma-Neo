@@ -1,0 +1,139 @@
+--- a/net/minecraft/world/entity/AreaEffectCloud.java
++++ b/net/minecraft/world/entity/AreaEffectCloud.java
+@@ -165,14 +_,14 @@
+                     this.level().addAlwaysVisibleParticle(particleoptions, d0, d2, d4, 0.0, 0.0, 0.0);
+                 } else {
+                     this.level()
+-                        .addAlwaysVisibleParticle(
+-                            particleoptions, d0, d2, d4, (0.5 - this.random.nextDouble()) * 0.15, 0.01F, (0.5 - this.random.nextDouble()) * 0.15
+-                        );
++                            .addAlwaysVisibleParticle(
++                                    particleoptions, d0, d2, d4, (0.5 - this.random.nextDouble()) * 0.15, 0.01F, (0.5 - this.random.nextDouble()) * 0.15
++                            );
+                 }
+             }
+         } else {
+             if (this.tickCount >= this.waitTime + this.duration) {
+-                this.discard();
++                this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
+                 return;
+             }
+ 
+@@ -188,7 +_,7 @@
+             if (this.radiusPerTick != 0.0F) {
+                 f += this.radiusPerTick;
+                 if (f < 0.5F) {
+-                    this.discard();
++                    this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
+                     return;
+                 }
+ 
+@@ -204,55 +_,72 @@
+                     if (this.potionContents.potion().isPresent()) {
+                         for (MobEffectInstance mobeffectinstance1 : this.potionContents.potion().get().value().getEffects()) {
+                             list.add(
+-                                new MobEffectInstance(
+-                                    mobeffectinstance1.getEffect(),
+-                                    mobeffectinstance1.mapDuration(p_267926_ -> p_267926_ / 4),
+-                                    mobeffectinstance1.getAmplifier(),
+-                                    mobeffectinstance1.isAmbient(),
+-                                    mobeffectinstance1.isVisible()
+-                                )
++                                    new MobEffectInstance(
++                                            mobeffectinstance1.getEffect(),
++                                            mobeffectinstance1.mapDuration(p_267926_ -> p_267926_ / 4),
++                                            mobeffectinstance1.getAmplifier(),
++                                            mobeffectinstance1.isAmbient(),
++                                            mobeffectinstance1.isVisible()
++                                    )
+                             );
+                         }
+                     }
+ 
+                     list.addAll(this.potionContents.customEffects());
+                     List<LivingEntity> list1 = this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox());
++
++                    List<org.bukkit.entity.LivingEntity> entities = new java.util.ArrayList<org.bukkit.entity.LivingEntity>(); // CraftBukkit
++
+                     if (!list1.isEmpty()) {
+                         for (LivingEntity livingentity : list1) {
+                             if (!this.victims.containsKey(livingentity)
+-                                && livingentity.isAffectedByPotions()
+-                                && !list.stream().noneMatch(livingentity::canBeAffected)) {
++                                    && livingentity.isAffectedByPotions()
++                                    && !list.stream().noneMatch(livingentity::canBeAffected)) {
+                                 double d5 = livingentity.getX() - this.getX();
+                                 double d1 = livingentity.getZ() - this.getZ();
+                                 double d3 = d5 * d5 + d1 * d1;
+                                 if (d3 <= (double)(f * f)) {
+-                                    this.victims.put(livingentity, this.tickCount + this.reapplicationDelay);
+-
+-                                    for (MobEffectInstance mobeffectinstance : list) {
+-                                        if (mobeffectinstance.getEffect().value().isInstantenous()) {
+-                                            mobeffectinstance.getEffect()
+-                                                .value()
+-                                                .applyInstantenousEffect(this, this.getOwner(), livingentity, mobeffectinstance.getAmplifier(), 0.5);
+-                                        } else {
+-                                            livingentity.addEffect(new MobEffectInstance(mobeffectinstance), this);
+-                                        }
+-                                    }
+-
+-                                    if (this.radiusOnUse != 0.0F) {
+-                                        f += this.radiusOnUse;
+-                                        if (f < 0.5F) {
+-                                            this.discard();
+-                                            return;
+-                                        }
+-
+-                                        this.setRadius(f);
+-                                    }
+-
+-                                    if (this.durationOnUse != 0) {
+-                                        this.duration = this.duration + this.durationOnUse;
+-                                        if (this.duration <= 0) {
+-                                            this.discard();
+-                                            return;
++                                    // CraftBukkit start
++                                    entities.add((org.bukkit.entity.LivingEntity) livingentity.getBukkitEntity());
++                                }
++                            }
++                        }
++                        {
++                            org.bukkit.event.entity.AreaEffectCloudApplyEvent event = org.bukkit.craftbukkit.event.CraftEventFactory.callAreaEffectCloudApplyEvent(this, entities);
++                            if (!event.isCancelled()) {
++                                for (org.bukkit.entity.LivingEntity entity : event.getAffectedEntities()) {
++                                    if (entity instanceof org.bukkit.craftbukkit.entity.CraftLivingEntity) {
++                                        LivingEntity livingentity = ((org.bukkit.craftbukkit.entity.CraftLivingEntity) entity).getHandle();
++                                        // CraftBukkit end
++
++                                        this.victims.put(livingentity, this.tickCount + this.reapplicationDelay);
++
++                                        for (MobEffectInstance mobeffectinstance : list) {
++                                            if (mobeffectinstance.getEffect().value().isInstantenous()) {
++                                                mobeffectinstance.getEffect()
++                                                        .value()
++                                                        .applyInstantenousEffect(this, this.getOwner(), livingentity, mobeffectinstance.getAmplifier(), 0.5);
++                                            } else {
++                                                livingentity.addEffect(new MobEffectInstance(mobeffectinstance), this, org.bukkit.event.entity.EntityPotionEffectEvent.Cause.AREA_EFFECT_CLOUD); // CraftBukkit
++                                            }
++                                        }
++
++                                        if (this.radiusOnUse != 0.0F) {
++                                            f += this.radiusOnUse;
++                                            if (f < 0.5F) {
++                                                this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++                                                return;
++                                            }
++
++                                            this.setRadius(f);
++                                        }
++
++                                        if (this.durationOnUse != 0) {
++                                            this.duration = this.duration + this.durationOnUse;
++                                            if (this.duration <= 0) {
++                                                this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++                                                return;
++                                            }
+                                         }
+                                     }
+                                 }

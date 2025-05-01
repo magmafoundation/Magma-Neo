@@ -95,20 +95,25 @@
      @Override
      public void addAdditionalSaveData(CompoundTag p_21484_) {
          super.addAdditionalSaveData(p_21484_);
-@@ -425,6 +_,9 @@
+@@ -425,6 +_,10 @@
          if (this.isNoAi()) {
              p_21484_.putBoolean("NoAI", this.isNoAi());
          }
 +        if (this.spawnType != null) {
 +            p_21484_.putString("neoforge:spawn_type", this.spawnType.name());
 +        }
++        p_21484_.putBoolean("Bukkit.Aware", this.aware); // CraftBukkit
      }
  
      @Override
-@@ -484,6 +_,14 @@
+@@ -484,6 +_,18 @@
          }
  
          this.setNoAi(p_21450_.getBoolean("NoAI"));
++
++        if (p_21450_.contains("Bukkit.Aware")) {
++            this.aware = p_21450_.getBoolean("Bukkit.Aware");
++        }
 +
 +        if (p_21450_.contains("neoforge:spawn_type")) {
 +            try {
@@ -129,7 +134,21 @@
              Vec3i vec3i = this.getPickupReach();
  
              for (ItemEntity itementity : this.level()
-@@ -571,6 +_,12 @@
+@@ -559,18 +_,24 @@
+ 
+     protected void pickUpItem(ItemEntity p_21471_) {
+         ItemStack itemstack = p_21471_.getItem();
+-        ItemStack itemstack1 = this.equipItemIfPossible(itemstack.copy());
++        ItemStack itemstack1 = this.equipItemIfPossible(itemstack.copy(), p_21471_); // CraftBukkit - add item
+         if (!itemstack1.isEmpty()) {
+             this.onItemPickup(p_21471_);
+             this.take(p_21471_, itemstack1.getCount());
+             itemstack.shrink(itemstack1.getCount());
+             if (itemstack.isEmpty()) {
+-                p_21471_.discard();
++                p_21471_.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.PICKUP); // CraftBukkit - add Bukkit remove cause
+             }
+         }
      }
  
      public ItemStack equipItemIfPossible(ItemStack p_255842_) {
@@ -173,14 +192,41 @@
          return itemattributemodifiers.compute(this.getAttributeBaseValue(Attributes.ATTACK_DAMAGE), EquipmentSlot.MAINHAND);
      }
  
-@@ -701,6 +_,7 @@
+@@ -701,8 +_,9 @@
  
      @Override
      public void checkDespawn() {
 +        if (net.neoforged.neoforge.event.EventHooks.checkMobDespawn(this)) return;
          if (this.level().getDifficulty() == Difficulty.PEACEFUL && this.shouldDespawnInPeaceful()) {
-             this.discard();
+-            this.discard();
++            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
          } else if (!this.isPersistenceRequired() && !this.requiresCustomPersistence()) {
+             Entity entity = this.level().getNearestPlayer(this, -1.0);
+             if (entity != null) {
+@@ -710,13 +_,13 @@
+                 int i = this.getType().getCategory().getDespawnDistance();
+                 int j = i * i;
+                 if (d0 > (double)j && this.removeWhenFarAway(d0)) {
+-                    this.discard();
++                    this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
+                 }
+ 
+                 int k = this.getType().getCategory().getNoDespawnDistance();
+                 int l = k * k;
+                 if (this.noActionTime > 600 && this.random.nextInt(800) == 0 && d0 > (double)l && this.removeWhenFarAway(d0)) {
+-                    this.discard();
++                    this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
+                 } else if (d0 < (double)l) {
+                     this.noActionTime = 0;
+                 }
+@@ -729,6 +_,7 @@
+     @Override
+     protected final void serverAiStep() {
+         this.noActionTime++;
++        if (!this.aware) return; // CraftBukkit
+         ProfilerFiller profilerfiller = this.level().getProfiler();
+         profilerfiller.push("sensing");
+         this.sensing.tick();
 @@ -1133,6 +_,11 @@
          }
      }
@@ -239,6 +285,14 @@
                  return t;
              }
          }
+@@ -1351,6 +_,7 @@
+     public boolean startRiding(Entity p_21396_, boolean p_21397_) {
+         boolean flag = super.startRiding(p_21396_, p_21397_);
+         if (flag && this.isLeashed()) {
++            this.level().getCraftServer().getPluginManager().callEvent(new org.bukkit.event.entity.EntityUnleashEvent(this.getBukkitEntity(), org.bukkit.event.entity.EntityUnleashEvent.UnleashReason.UNKNOWN)); // CraftBukkit
+             this.dropLeash(true, true);
+         }
+ 
 @@ -1470,14 +_,24 @@
      }
  
