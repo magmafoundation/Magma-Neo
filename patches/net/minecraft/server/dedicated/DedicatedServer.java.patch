@@ -27,14 +27,84 @@
          this.textFilterClient = TextFilterClient.createFromConfig(p_214793_.getProperties().textFilteringConfig);
          this.serverLinks = createServerLinks(p_214793_);
      }
-@@ -103,6 +_,7 @@
+@@ -103,18 +_,74 @@
          Thread thread = new Thread("Server console handler") {
              @Override
              public void run() {
+-                BufferedReader bufferedreader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
 +                if (net.neoforged.neoforge.server.console.TerminalHandler.handleCommands(DedicatedServer.this)) return;
-                 BufferedReader bufferedreader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
++
++                // CraftBukkit start
++                if (!org.bukkit.craftbukkit.Main.useConsole) {
++                    return;
++                }
++                jline.console.ConsoleReader bufferedreader = reader;
++                // MC-33041, SPIGOT-5538: if System.in is not valid due to javaw, then return
++                try {
++                    System.in.available();
++                } catch (IOException ex) {
++                    return;
++                }
++                // CraftBukkit end
  
                  String s1;
+                 try {
+-                    while (!DedicatedServer.this.isStopped() && DedicatedServer.this.isRunning() && (s1 = bufferedreader.readLine()) != null) {
+-                        DedicatedServer.this.handleConsoleInput(s1, DedicatedServer.this.createCommandSourceStack());
++                    // CraftBukkit start - JLine disabling compatibility
++                    while (!DedicatedServer.this.isStopped() && DedicatedServer.this.isRunning()) {
++                        if (org.bukkit.craftbukkit.Main.useJline) {
++                            s1 = bufferedreader.readLine(">", null);
++                        } else {
++                            s1 = bufferedreader.readLine();
++                        }
++
++                        // SPIGOT-5220: Throttle if EOF (ctrl^d) or stdin is /dev/null
++                        if (s1 == null) {
++                            try {
++                                Thread.sleep(50L);
++                            } catch (InterruptedException ex) {
++                                Thread.currentThread().interrupt();
++                            }
++                            continue;
++                        }
++                        if (s1.trim().length() > 0) { // Trim to filter lines which are just spaces
++                            DedicatedServer.this.handleConsoleInput(s1, DedicatedServer.this.createCommandSourceStack());
++                        }
++                        // CraftBukkit end
+                     }
+                 } catch (IOException ioexception1) {
+                     DedicatedServer.LOGGER.error("Exception handling console input", (Throwable)ioexception1);
+                 }
+             }
+         };
++
++        // CraftBukkit start - TODO: handle command-line logging arguments
++        java.util.logging.Logger global = java.util.logging.Logger.getLogger("");
++        global.setUseParentHandlers(false);
++        for (java.util.logging.Handler handler : global.getHandlers()) {
++            global.removeHandler(handler);
++        }
++        global.addHandler(new org.bukkit.craftbukkit.util.ForwardLogHandler());
++
++        final org.apache.logging.log4j.core.Logger logger = ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager.getRootLogger());
++        for (org.apache.logging.log4j.core.Appender appender : logger.getAppenders().values()) {
++            if (appender instanceof org.apache.logging.log4j.core.appender.ConsoleAppender) {
++                logger.removeAppender(appender);
++            }
++        }
++
++        org.bukkit.craftbukkit.util.TerminalConsoleWriterThread writerThread = new org.bukkit.craftbukkit.util.TerminalConsoleWriterThread(System.out, this.reader);
++        this.reader.setCompletionHandler(new org.bukkit.craftbukkit.util.TerminalCompletionHandler(writerThread, this.reader.getCompletionHandler()));
++        writerThread.start();
++
++        System.setOut(org.apache.logging.log4j.io.IoBuilder.forLogger(logger).setLevel(org.apache.logging.log4j.Level.INFO).buildPrintStream());
++        System.setErr(org.apache.logging.log4j.io.IoBuilder.forLogger(logger).setLevel(org.apache.logging.log4j.Level.WARN).buildPrintStream());
++        // CraftBukkit end
++
+         thread.setDaemon(true);
+         thread.setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandler(LOGGER));
+         thread.start();
 @@ -161,6 +_,12 @@
              return false;
          }
@@ -88,7 +158,7 @@
              return true;
          }
      }
-@@ -295,6 +_,10 @@
+@@ -295,6 +_,12 @@
          if (this.queryThreadGs4 != null) {
              this.queryThreadGs4.stop();
          }
@@ -96,9 +166,27 @@
 +            this.dediLanPinger.interrupt();
 +            this.dediLanPinger = null;
 +        }
++
++        System.exit(0); // CraftBukkit
      }
  
      @Override
+@@ -315,7 +_,14 @@
+     public void handleConsoleInputs() {
+         while (!this.consoleInput.isEmpty()) {
+             ConsoleInput consoleinput = this.consoleInput.remove(0);
+-            this.getCommands().performPrefixedCommand(consoleinput.source, consoleinput.msg);
++            // CraftBukkit start - ServerCommand for preprocessing
++            org.bukkit.event.server.ServerCommandEvent event = new org.bukkit.event.server.ServerCommandEvent(console, consoleinput.msg);
++            server.getPluginManager().callEvent(event);
++            if (event.isCancelled()) continue;
++            consoleinput = new ConsoleInput(event.getCommand(), consoleinput.source);
++            // this.getCommands().performPrefixedCommand(servercommand.source, servercommand.msg); // Called in dispatchServerCommand
++            server.dispatchServerCommand(console, consoleinput);
++            // CraftBukkit end
+         }
+     }
+ 
 @@ -532,14 +_,52 @@
  
      @Override

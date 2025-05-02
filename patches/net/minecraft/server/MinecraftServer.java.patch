@@ -434,6 +434,14 @@
                  this.onServerExit();
              }
          }
+@@ -892,6 +_,7 @@
+     }
+ 
+     public void onServerExit() {
++        System.exit(0); // Magma
+     }
+ 
+     public boolean isPaused() {
 @@ -901,11 +_,13 @@
      public void tickServer(BooleanSupplier p_129871_) {
          long i = Util.getNanos();

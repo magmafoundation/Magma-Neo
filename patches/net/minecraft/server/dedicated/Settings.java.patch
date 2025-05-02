@@ -1,5 +1,28 @@
 --- a/net/minecraft/server/dedicated/Settings.java
 +++ b/net/minecraft/server/dedicated/Settings.java
+@@ -26,6 +_,22 @@
+ public abstract class Settings<T extends Settings<T>> {
+     private static final Logger LOGGER = LogUtils.getLogger();
+     public final Properties properties;
++    // Magma - Start
++    private joptsimple.OptionSet options = null;
++
++    public Settings(Properties properties, joptsimple.OptionSet options) {
++        this.properties = properties;
++        this.options = options;
++    }
++
++    private String getOverride(String name, String value) {
++        if ((this.options != null) && (this.options.has(name))) {
++            return String.valueOf(this.options.valueOf(name));
++        }
++        return value;
++        // CraftBukkit end
++    }
++    // Magma - End
+ 
+     public Settings(Properties p_139801_) {
+         this.properties = p_139801_;
 @@ -66,7 +_,7 @@
  
      public void store(Path p_139877_) {
@@ -9,3 +32,12 @@
          } catch (IOException ioexception) {
              LOGGER.error("Failed to store properties to file: {}", p_139877_);
          }
+@@ -94,7 +_,7 @@
+ 
+     @Nullable
+     private String getStringRaw(String p_139879_) {
+-        return (String)this.properties.get(p_139879_);
++        return (String) getOverride(p_139879_, this.properties.getProperty(p_139879_)); // CraftBukkit
+     }
+ 
+     @Nullable

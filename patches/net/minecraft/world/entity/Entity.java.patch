@@ -863,6 +863,21 @@
      public boolean isPushedByFluid() {
          return true;
      }
+@@ -2708,6 +_,14 @@
+         return this.entityData.get(DATA_CUSTOM_NAME_VISIBLE);
+     }
+ 
++    // CraftBukkit start
++    // Magma - this is how its done in the original code but why does it not use the
++    // cause parameter? did they forget to add it? or does spigot add it later as this is just craftbukkit rn
++    public boolean teleportTo(ServerLevel worldserver, double d0, double d1, double d2, Set<RelativeMovement> set, float f, float f1, org.bukkit.event.player.PlayerTeleportEvent.TeleportCause cause) {
++        return this.teleportTo(worldserver, d0, d1, d2, set, f, f1);
++    }
++    // CraftBukkit end
++
+     public boolean teleportTo(
+         ServerLevel p_265257_, double p_265407_, double p_265727_, double p_265410_, Set<RelativeMovement> p_265083_, float p_265573_, float p_265094_
+     ) {
 @@ -2783,6 +_,8 @@
          EntityDimensions entitydimensions = this.dimensions;
          Pose pose = this.getPose();
