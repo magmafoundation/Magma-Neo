@@ -1,56 +1,28 @@
-![NeoForged Logo](./assets/neoforged_logo.png)
+![Magma Logo](https://i.imgur.com/zTCTCWG.png)
 
-NeoForge
+Magma Neo
 =============
-[![Discord](https://img.shields.io/discord/313125603924639766.svg?color=%237289da&label=Discord&logo=discord&logoColor=%237289da)][Discord] 
+[![Forge](https://img.shields.io/badge/Neo%20Forge-1.21.1-orange.svg?style=flat)](https://projects.neoforged.net/neoforged/neoforge)[![Spigot](https://img.shields.io/badge/Paper/Spigot-1.21.1-yellow.svg)](https://github.com/PaperMC/Paper/tree/ver/1.12.2)[![Discord](https://img.shields.io/discord/612695539729039411.svg?color=%237289da&label=Discord&logo=discord&logoColor=%237289da)][Discord] 
 
 
-NeoForge is a free, open-source, community-oriented modding API for Minecraft.
+Magma is the next generation of hybrid minecraft server softwares.
 
 | Version | Support |
 |---------|---------|
-| 1.20.x  | Active  |
+| 1.21.1  | Active  |
+
+## ❓ About
+
+Magma is based on **NeoForge and Spigot**, meaning it can run both **Craftbukkit/Spigot plugins and NeoForge mods**.
 
 * [Download]
 * [Discord]
 * [Documentation]
 
-## Installing NeoForge
+## Installing Magma
 
-Go to the [Download] page, select the Minecraft version and installer, and run it.
-The installer will attempt to install NeoForge into your vanilla launcher environment,
-where you can then create a new profile using that version and play the game!
- 
-For support and questions, visit [the NeoForged Discord server][Discord].
+Coming soon we will have a full guide on how to install Magma once we have a ready release.
 
-## Creating Mods
-
-[See the "Getting Started" section in the NeoForged Documentation][Getting-Started].
-
-## Contribute to NeoForge
-
-If you wish to actually inspect NeoForge, submit PRs or otherwise work
-with NeoForge itself, you're in the right place!
-
-Check the [contribution workflow][Contributing] for details.
-
-### Translations
-
-Translations are done on [Crowdin][Crowdin].
-
-### Pull requests
-
-Please read the contributing guidelines found [here][Contributing] before making a pull request.
-
-### Contributor License Agreement
-We require all contributors to acknowledge the [NeoForged Contributor License Agreement][CLA]. 
-Please ensure you have a valid email address associated with your GitHub account to do this. If you have previously 
- signed it, you should be OK.
-
-[CLA]: https://cla-assistant.io/neoforged/NeoForge
-[Crowdin]: https://crowdin.neoforged.net/neoforge
-[Contributing]: ../docs/CONTRIBUTING.md
-[Discord]: https://discord.neoforged.net/
-[Documentation]: https://docs.neoforged.net/
-[Download]: https://neoforged.net/
-[Getting-Started]: https://docs.neoforged.net/docs/gettingstarted/
+[Discord]: https://discord.gg/magma
+[Documentation]: https://docs.magmafoundation.org
+[Download]: https://magmafoundation.org
