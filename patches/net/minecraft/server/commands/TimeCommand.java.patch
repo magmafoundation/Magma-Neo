@@ -1,0 +1,32 @@
+--- a/net/minecraft/server/commands/TimeCommand.java
++++ b/net/minecraft/server/commands/TimeCommand.java
+@@ -60,7 +_,13 @@
+ 
+     public static int setTime(CommandSourceStack p_139078_, int p_139079_) {
+         for (ServerLevel serverlevel : p_139078_.getServer().getAllLevels()) {
+-            serverlevel.setDayTime((long)p_139079_);
++            // CraftBukkit start
++            org.bukkit.event.world.TimeSkipEvent event = new org.bukkit.event.world.TimeSkipEvent(serverlevel.getWorld(), org.bukkit.event.world.TimeSkipEvent.SkipReason.COMMAND, p_139079_ - serverlevel.getDayTime());
++            org.bukkit.Bukkit.getPluginManager().callEvent(event);
++            if (!event.isCancelled()) {
++                serverlevel.setDayTime((long) serverlevel.getDayTime() + event.getSkipAmount());
++            }
++            // CraftBukkit end
+         }
+ 
+         p_139078_.sendSuccess(() -> Component.translatable("commands.time.set", p_139079_), true);
+@@ -69,7 +_,13 @@
+ 
+     public static int addTime(CommandSourceStack p_139083_, int p_139084_) {
+         for (ServerLevel serverlevel : p_139083_.getServer().getAllLevels()) {
+-            serverlevel.setDayTime(serverlevel.getDayTime() + (long)p_139084_);
++            // CraftBukkit start
++            org.bukkit.event.world.TimeSkipEvent event = new org.bukkit.event.world.TimeSkipEvent(serverlevel.getWorld(), org.bukkit.event.world.TimeSkipEvent.SkipReason.COMMAND, p_139084_);
++            org.bukkit.Bukkit.getPluginManager().callEvent(event);
++            if (!event.isCancelled()) {
++                serverlevel.setDayTime(serverlevel.getDayTime() + event.getSkipAmount());
++            }
++            // CraftBukkit end
+         }
+ 
+         int i = getDayTime(p_139083_.getLevel());
