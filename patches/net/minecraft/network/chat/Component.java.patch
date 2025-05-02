@@ -20,3 +20,12 @@
      Style getStyle();
  
      ComponentContents getContents();
+@@ -145,7 +_,7 @@
+         return (Component)(p_130675_ != null ? literal(p_130675_) : CommonComponents.EMPTY);
+     }
+ 
+-    static MutableComponent literal(String p_237114_) {
++    public static MutableComponent literal(String p_237114_) {
+         return MutableComponent.create(PlainTextContents.create(p_237114_));
+     }
+ 
