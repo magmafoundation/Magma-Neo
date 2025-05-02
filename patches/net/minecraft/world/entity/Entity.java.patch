@@ -316,10 +316,10 @@
 +                        bl = bl.getRelative(org.bukkit.block.BlockFace.NORTH);
 +                    }
 +
-+                    if (!bl.getType().isAir()) {
-+                        org.bukkit.event.vehicle.VehicleBlockCollisionEvent event = new org.bukkit.event.vehicle.VehicleBlockCollisionEvent(vehicle, bl);
-+                        level.getCraftServer().getPluginManager().callEvent(event);
-+                    }
++//                    if (!bl.getType().isAir()) {
++//                        org.bukkit.event.vehicle.VehicleBlockCollisionEvent event = new org.bukkit.event.vehicle.VehicleBlockCollisionEvent(vehicle, bl);
++//                        level.getCraftServer().getPluginManager().callEvent(event);
++//                    }
 +                }
 +                // CraftBukkit end
 +

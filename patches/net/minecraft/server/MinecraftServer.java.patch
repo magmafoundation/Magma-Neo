@@ -389,6 +389,16 @@
                      serverlevel2.close();
                  } catch (IOException ioexception1) {
                      LOGGER.error("Exception closing the level", (Throwable)ioexception1);
+@@ -635,6 +_,9 @@
+         } catch (IOException ioexception) {
+             LOGGER.error("Failed to unlock level {}", this.storageSource.getLevelId(), ioexception);
+         }
++
++        Util.shutdownExecutors();
++        this.onServerExit();
+     }
+ 
+     public String getLocalIp() {
 @@ -666,9 +_,11 @@
                  throw new IllegalStateException("Failed to initialize server");
              }

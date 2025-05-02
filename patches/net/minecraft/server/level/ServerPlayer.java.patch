@@ -194,7 +194,7 @@
          return this.isReachableBedBlock(p_9117_) || this.isReachableBedBlock(p_9117_.relative(p_9118_.getOpposite()));
      }
  
-@@ -1068,17 +_,26 @@
+@@ -1068,21 +_,49 @@
          this.connection.send(new ClientboundOpenSignEditorPacket(p_277909_.getBlockPos(), p_277495_));
      }
  
@@ -222,6 +222,29 @@
              }
  
              this.nextContainerCounter();
+             AbstractContainerMenu abstractcontainermenu = p_9033_.createMenu(this.containerCounter, this.getInventory(), this);
++
++            // CraftBukkit start - Inventory open hook
++            if (abstractcontainermenu != null) {
++                abstractcontainermenu.setTitle(p_9033_.getDisplayName());
++                boolean cancelled = false;
++                abstractcontainermenu = org.bukkit.craftbukkit.event.CraftEventFactory.callInventoryOpenEvent(this, abstractcontainermenu, cancelled);
++                if (abstractcontainermenu == null && !cancelled) { // Let pre-cancelled events fall through
++                    // SPIGOT-5263 - close chest if cancelled
++                    if (p_9033_ instanceof Container) {
++                        ((Container) p_9033_).stopOpen(this);
++                    } else if (p_9033_ instanceof net.minecraft.world.level.block.ChestBlock.DoubleInventory) {
++                        // SPIGOT-5355 - double chests too :(
++                        ((net.minecraft.world.level.block.ChestBlock.DoubleInventory) p_9033_).inventorylargechest.stopOpen(this);
++                    }
++                    return OptionalInt.empty();
++                }
++            }
++            // CraftBukkit end
++
+             if (abstractcontainermenu == null) {
+                 if (this.isSpectator()) {
+                     this.displayClientMessage(Component.translatable("container.spectatorCantOpen").withStyle(ChatFormatting.RED), true);
 @@ -1090,10 +_,16 @@
  
                  return OptionalInt.empty();
