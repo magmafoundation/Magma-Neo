@@ -1,0 +1,11 @@
+--- a/net/minecraft/world/level/block/EndPortalBlock.java
++++ b/net/minecraft/world/level/block/EndPortalBlock.java
+@@ -85,7 +_,7 @@
+                 }
+             } else {
+                 if (p_350274_ instanceof ServerPlayer serverplayer) {
+-                    return serverplayer.findRespawnPositionAndUseSpawnBlock(false, DimensionTransition.DO_NOTHING);
++                    return serverplayer.findRespawnPositionAndUseSpawnBlock(false, DimensionTransition.DO_NOTHING, org.bukkit.event.player.PlayerRespawnEvent.RespawnReason.END_PORTAL); // CraftBukkit
+                 }
+ 
+                 vec3 = p_350274_.adjustSpawnLocation(serverlevel, blockpos).getBottomCenter();
