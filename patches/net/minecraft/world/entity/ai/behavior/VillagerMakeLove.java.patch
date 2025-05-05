@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/entity/ai/behavior/VillagerMakeLove.java
 +++ b/net/minecraft/world/entity/ai/behavior/VillagerMakeLove.java
-@@ -107,11 +_,17 @@
+@@ -107,11 +_,19 @@
          if (villager == null) {
              return Optional.empty();
          } else {
@@ -18,6 +18,8 @@
 +            p_24658_.setAge(6000);
 +            p_24656_.addFreshEntityWithPassengers(villager, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.BREEDING);
 +            // CraftBukkit end
++            // Neo: If villager is blocked from spawning (e.g., FinalizeSpawnEvent), then breed should be unsuccessful
++            if (!villager.isAddedToLevel()) return Optional.empty();
              p_24656_.broadcastEntityEvent(villager, (byte)12);
              return Optional.of(villager);
          }

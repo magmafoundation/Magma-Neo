@@ -36,12 +36,12 @@
 +        }
 +
 +        if (p_295727_.payload() instanceof net.neoforged.neoforge.network.payload.CommonVersionPayload commonVersionPayload) {
-+            net.neoforged.neoforge.network.registration.NetworkRegistry.checkCommonVersion(this.getConnection(), commonVersionPayload);
++            net.neoforged.neoforge.network.registration.NetworkRegistry.checkCommonVersion(this, commonVersionPayload);
 +            return;
 +        }
 +
 +        if (p_295727_.payload() instanceof net.neoforged.neoforge.network.payload.CommonRegisterPayload commonRegisterPayload) {
-+            net.neoforged.neoforge.network.registration.NetworkRegistry.onCommonRegister(this.getConnection(), commonRegisterPayload);
++            net.neoforged.neoforge.network.registration.NetworkRegistry.onCommonRegister(this, commonRegisterPayload);
 +            return;
 +        }
 +
@@ -61,16 +61,6 @@
 +        // Neo: Validate modded payloads before sending.
 +        net.neoforged.neoforge.network.registration.NetworkRegistry.checkPacket(p_295097_, this);
          this.connection.send(p_295097_);
-     }
- 
-@@ -292,6 +_,9 @@
-     public void onDisconnect(DisconnectionDetails p_350760_) {
-         this.telemetryManager.onDisconnect();
-         this.minecraft.disconnect(this.createDisconnectScreen(p_350760_), this.isTransferring);
-+        if (!this.connection.isMemoryConnection()) {
-+            net.neoforged.neoforge.registries.RegistryManager.revertToFrozen();
-+        }
-         LOGGER.warn("Client disconnected with reason: {}", p_350760_.reason().getString());
      }
  
 @@ -415,5 +_,10 @@

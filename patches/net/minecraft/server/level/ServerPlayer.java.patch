@@ -539,16 +539,33 @@
              if (abstractcontainermenu == null) {
                  if (this.isSpectator()) {
                      this.displayClientMessage(Component.translatable("container.spectatorCantOpen").withStyle(ChatFormatting.RED), true);
-@@ -1090,10 +_,16 @@
+@@ -1090,10 +_,33 @@
  
                  return OptionalInt.empty();
              } else {
-+                if (extraDataWriter == null) {
++                // Neo: Support sending additional arbitrary data to menu factories on the client-side
++                AbstractContainerMenu finalAbstractcontainermenu = abstractcontainermenu;
++                var extraData = net.neoforged.neoforge.common.util.FriendlyByteBufUtil.writeCustomData(
++                        buffer -> {
++                            p_9033_.writeClientSideData(finalAbstractcontainermenu, buffer);
++                            if (extraDataWriter != null) {
++                                extraDataWriter.accept(buffer);
++                            }
++                        },
++                        registryAccess()
++                );
++                if (extraData.length != 0) {
++                    this.connection.send(
++                        new net.neoforged.neoforge.network.payload.AdvancedOpenScreenPayload(
++                            abstractcontainermenu.containerId,
++                            abstractcontainermenu.getType(),
++                            p_9033_.getDisplayName(),
++                            extraData
++                        )
++                    );
++                } else {
                  this.connection
                      .send(new ClientboundOpenScreenPacket(abstractcontainermenu.containerId, abstractcontainermenu.getType(), p_9033_.getDisplayName()));
-+                } else {
-+                    this.connection
-+                        .send(new net.neoforged.neoforge.network.payload.AdvancedOpenScreenPayload(abstractcontainermenu.containerId, abstractcontainermenu.getType(), p_9033_.getDisplayName(), net.neoforged.neoforge.common.util.FriendlyByteBufUtil.writeCustomData(extraDataWriter, registryAccess())));
 +                }
                  this.initMenu(abstractcontainermenu);
                  this.containerMenu = abstractcontainermenu;
@@ -868,7 +885,7 @@
          this.awardStat(Stats.ITEM_BROKEN.get(p_348565_));
      }
  
--    static record RespawnPosAngle(Vec3 position, float yaw) {
+-    public static record RespawnPosAngle(Vec3 position, float yaw) {
 -        public static ServerPlayer.RespawnPosAngle of(Vec3 p_348670_, BlockPos p_348504_) {
 -            return new ServerPlayer.RespawnPosAngle(p_348670_, calculateLookAtYaw(p_348670_, p_348504_));
 +    public static record RespawnPosAngle(Vec3 position, float yaw, boolean isBedSpawn, boolean isAnchorSpawn) {

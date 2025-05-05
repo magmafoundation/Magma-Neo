@@ -2,9 +2,9 @@ import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 plugins {
-    id 'net.neoforged.gradleutils' version '3.0.0'
-    id 'com.diffplug.spotless' version '6.22.0' apply false
-    id 'net.neoforged.licenser' version '0.7.2'
+    id 'net.neoforged.gradleutils' version '4.0.1'
+    id 'dev.lukebemish.immaculate' version '0.1.6' apply false
+    id 'net.neoforged.licenser' version '0.7.5'
     id 'neoforge.formatting-conventions'
     id 'neoforge.versioning'
 }
@@ -21,28 +21,24 @@ if (isPreReleaseVersion) {
 System.out.println("Magma Neo version ${project.version}")
 
 allprojects {
-    version rootProject.version
+    version = rootProject.version
     group 'org.magmafoundation'
-    repositories {
-        mavenLocal()
-    }
 
-    gradle.projectsEvaluated {
-        tasks.withType(JavaCompile) {
-            options.compilerArgs << "-Xmaxerrs" << "10000"
-        }
-    }
-
-}
-
-subprojects {
     apply plugin: 'java'
 
     java.toolchain.languageVersion.set(JavaLanguageVersion.of(project.java_version))
 }
 
-repositories {
-    mavenCentral()
+// Remove src/ sources from the root project. They are used in the neoforge subproject.
+sourceSets {
+    main {
+        java {
+            srcDirs = []
+        }
+        resources {
+            srcDirs = []
+        }
+    }
 }
 
 // Put licenser here otherwise it tries to license all source sets including decompiled MC sources
@@ -60,14 +56,14 @@ license {
 }
 
 // Put spotless here because it wants the files to live inside the project root
-spotless {
-    java {
-        target rootProject.fileTree("src", {
+immaculate {
+    workflows.named("java") {
+        files.from rootProject.fileTree("src", {
             include "**/*.java"
         })
     }
-    format 'patches', {
-        target rootProject.fileTree("patches")
+    workflows.register("patches") {
+        files.from(rootProject.fileTree("patches"))
 
         custom 'noImportChanges', { String fileContents ->
             if (fileContents.contains('+import') || fileContents.contains('-import')) {
@@ -156,7 +152,5 @@ spotless {
         custom 'jetbrainsNullablePatches', { String fileContents ->
             fileContents.replace('@javax.annotation.Nullable', '@org.jetbrains.annotations.Nullable')
         }
-
-        bumpThisNumberIfACustomStepChanges(5)
     }
 }

@@ -207,11 +207,14 @@
                  p_8644_.progressStartNoAbort(Component.translatable("menu.savingLevel"));
              }
  
-@@ -807,7 +_,15 @@
+@@ -807,7 +_,18 @@
              } else {
                  this.entityManager.autoSave();
              }
 +            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.level.LevelEvent.Save(this));
++            if (p_8645_) {
++                net.neoforged.neoforge.common.IOUtilities.waitUntilIOWorkerComplete();
++            }
          }
 +
 +        // CraftBukkit start - moved from MinecraftServer.saveChunks

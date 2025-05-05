@@ -10,6 +10,7 @@ import net.minecraft.data.PackOutput;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.common.Tags;
 import net.neoforged.neoforge.common.data.LanguageProvider;
 import org.apache.commons.lang3.StringUtils;
@@ -21,6 +22,11 @@ public final class NeoForgeLanguageProvider extends LanguageProvider {
 
     @Override
     protected void addTranslations() {
+        // Vanilla Dimensions
+        addDimension(Level.OVERWORLD, "Overworld");
+        addDimension(Level.NETHER, "The Nether");
+        addDimension(Level.END, "The End");
+
         // Blocks
         add(Tags.Blocks.BARRELS, "Barrels");
         add(Tags.Blocks.BARRELS_WOODEN, "Wooden Barrels");
@@ -63,6 +69,8 @@ public final class NeoForgeLanguageProvider extends LanguageProvider {
         add(Tags.Blocks.NEEDS_GOLD_TOOL, "Needs Gold Tools");
         add(Tags.Blocks.NEEDS_NETHERITE_TOOL, "Needs Netherite Tools");
         add(Tags.Blocks.OBSIDIANS, "Obsidians");
+        add(Tags.Blocks.OBSIDIANS_NORMAL, "Normal Obsidians");
+        add(Tags.Blocks.OBSIDIANS_CRYING, "Crying Obsidians");
         add(Tags.Blocks.ORE_BEARING_GROUND_DEEPSLATE, "Deepslate Ore Bearing Ground");
         add(Tags.Blocks.ORE_BEARING_GROUND_NETHERRACK, "Netherrack Ore Bearing Ground");
         add(Tags.Blocks.ORE_BEARING_GROUND_STONE, "Stone Ore Bearing Ground");
@@ -85,6 +93,10 @@ public final class NeoForgeLanguageProvider extends LanguageProvider {
         add(Tags.Blocks.ORES_IN_GROUND_STONE, "Stone Ores In Ground");
         add(Tags.Blocks.PLAYER_WORKSTATIONS_CRAFTING_TABLES, "Crafting Tables");
         add(Tags.Blocks.PLAYER_WORKSTATIONS_FURNACES, "Furnaces");
+        add(Tags.Blocks.PUMPKINS, "Pumpkins");
+        add(Tags.Blocks.PUMPKINS_NORMAL, "Normal Pumpkins");
+        add(Tags.Blocks.PUMPKINS_CARVED, "Carved Pumpkins");
+        add(Tags.Blocks.PUMPKINS_JACK_O_LANTERNS, "Jack o'Lanterns");
         add(Tags.Blocks.RELOCATION_NOT_SUPPORTED, "Relocation Not Supported");
         add(Tags.Blocks.ROPES, "Ropes");
         add(Tags.Blocks.SANDS, "Sands");
@@ -117,6 +129,8 @@ public final class NeoForgeLanguageProvider extends LanguageProvider {
         add(Tags.Blocks.STORAGE_BLOCKS_REDSTONE, "Redstone Storage Blocks");
         add(Tags.Blocks.STORAGE_BLOCKS_SLIME, "Slime Storage Blocks");
         add(Tags.Blocks.STORAGE_BLOCKS_WHEAT, "Wheat Storage Blocks");
+        add(Tags.Blocks.STRIPPED_LOGS, "Stripped Logs");
+        add(Tags.Blocks.STRIPPED_WOODS, "Stripped Woods");
         add(Tags.Blocks.VILLAGER_JOB_SITES, "Villager Job Sites");
         add(Tags.Blocks.VILLAGER_FARMLANDS, "Villager Farmlands");
 
@@ -161,6 +175,16 @@ public final class NeoForgeLanguageProvider extends LanguageProvider {
         add(Tags.Items.CROPS_PUMPKIN, "Pumpkin Crops");
         add(Tags.Items.CROPS_SUGAR_CANE, "Sugar Cane Crops");
         add(Tags.Items.CROPS_WHEAT, "Wheat Crops");
+        add(Tags.Items.DRINKS, "Drinks");
+        add(Tags.Items.DRINKS_WATER, "Water");
+        add(Tags.Items.DRINKS_WATERY, "Watery Drinks");
+        add(Tags.Items.DRINKS_MILK, "Milk");
+        add(Tags.Items.DRINKS_HONEY, "Honey");
+        add(Tags.Items.DRINKS_MAGIC, "Magical Drinks");
+        add(Tags.Items.DRINKS_OMINOUS, "Ominous Drinks");
+        add(Tags.Items.DRINKS_JUICE, "Juice");
+        add(Tags.Items.DRINK_CONTAINING_BUCKET, "Drink Containing Buckets");
+        add(Tags.Items.DRINK_CONTAINING_BOTTLE, "Drink Containing Bottles");
         add(Tags.Items.DUSTS, "Dusts");
         add(Tags.Items.DUSTS_GLOWSTONE, "Glowstone Dusts");
         add(Tags.Items.DUSTS_REDSTONE, "Redstone Dusts");
@@ -198,6 +222,7 @@ public final class NeoForgeLanguageProvider extends LanguageProvider {
         add(Tags.Items.FOODS_BERRY, "Berries");
         add(Tags.Items.FOODS_BREAD, "Breads");
         add(Tags.Items.FOODS_CANDY, "Candies");
+        add(Tags.Items.FOODS_PIE, "Pies");
         add(Tags.Items.FOODS_COOKED_FISH, "Cooked Fishes");
         add(Tags.Items.FOODS_COOKED_MEAT, "Cooked Meats");
         add(Tags.Items.FOODS_COOKIE, "Cookies");
@@ -209,6 +234,7 @@ public final class NeoForgeLanguageProvider extends LanguageProvider {
         add(Tags.Items.FOODS_RAW_MEAT, "Raw Meats");
         add(Tags.Items.FOODS_SOUP, "Soups");
         add(Tags.Items.FOODS_VEGETABLE, "Vegetables");
+        add(Tags.Items.ANIMAL_FOODS, "Animal Foods");
         add(Tags.Items.GEMS, "Gems");
         add(Tags.Items.GEMS_AMETHYST, "Amethyst Gems");
         add(Tags.Items.GEMS_DIAMOND, "Diamond Gems");
@@ -240,6 +266,8 @@ public final class NeoForgeLanguageProvider extends LanguageProvider {
         add(Tags.Items.NUGGETS_IRON, "Iron Nuggets");
         add(Tags.Items.NUGGETS_GOLD, "Gold Nuggets");
         add(Tags.Items.OBSIDIANS, "Obsidians");
+        add(Tags.Items.OBSIDIANS_NORMAL, "Normal Obsidians");
+        add(Tags.Items.OBSIDIANS_CRYING, "Crying Obsidians");
         add(Tags.Items.ORE_BEARING_GROUND_DEEPSLATE, "Deepslate Ore Bearing Ground");
         add(Tags.Items.ORE_BEARING_GROUND_NETHERRACK, "Netherrack Ore Bearing Ground");
         add(Tags.Items.ORE_BEARING_GROUND_STONE, "Stone Ore Bearing Ground");
@@ -262,6 +290,12 @@ public final class NeoForgeLanguageProvider extends LanguageProvider {
         add(Tags.Items.ORES_IN_GROUND_STONE, "Stone Ores In Ground");
         add(Tags.Items.PLAYER_WORKSTATIONS_CRAFTING_TABLES, "Crafting Tables");
         add(Tags.Items.PLAYER_WORKSTATIONS_FURNACES, "Furnaces");
+        add(Tags.Items.POTIONS, "Potions");
+        add(Tags.Items.POTION_BOTTLE, "Bottled Potions");
+        add(Tags.Items.PUMPKINS, "Pumpkins");
+        add(Tags.Items.PUMPKINS_NORMAL, "Normal Pumpkins");
+        add(Tags.Items.PUMPKINS_CARVED, "Carved Pumpkins");
+        add(Tags.Items.PUMPKINS_JACK_O_LANTERNS, "Jack o'Lanterns");
         add(Tags.Items.RAW_MATERIALS, "Raw Materials");
         add(Tags.Items.RAW_MATERIALS_COPPER, "Copper Raw Materials");
         add(Tags.Items.RAW_MATERIALS_GOLD, "Gold Raw Materials");
@@ -287,6 +321,7 @@ public final class NeoForgeLanguageProvider extends LanguageProvider {
         add(Tags.Items.SEEDS_BEETROOT, "Beetroot Seeds");
         add(Tags.Items.SEEDS_MELON, "Melon Seeds");
         add(Tags.Items.SEEDS_PUMPKIN, "Pumpkin Seeds");
+        add(Tags.Items.SEEDS_TORCHFLOWER, "Torchflower Seeds");
         add(Tags.Items.SEEDS_WHEAT, "Wheat Seeds");
         add(Tags.Items.SHULKER_BOXES, "Shulker Boxes");
         add(Tags.Items.SLIME_BALLS, "Slimeballs");
@@ -310,6 +345,8 @@ public final class NeoForgeLanguageProvider extends LanguageProvider {
         add(Tags.Items.STORAGE_BLOCKS_SLIME, "Slime Storage Blocks");
         add(Tags.Items.STORAGE_BLOCKS_WHEAT, "Wheat Storage Blocks");
         add(Tags.Items.STRINGS, "Strings");
+        add(Tags.Items.STRIPPED_LOGS, "Stripped Log Blocks");
+        add(Tags.Items.STRIPPED_WOODS, "Stripped Wood Blocks");
         add(Tags.Items.VILLAGER_JOB_SITES, "Villager Job Sites");
         add(Tags.Items.TOOLS_SHEAR, "Shears");
         add(Tags.Items.TOOLS_SHIELD, "Shields");
@@ -320,6 +357,7 @@ public final class NeoForgeLanguageProvider extends LanguageProvider {
         add(Tags.Items.TOOLS_MACE, "Maces");
         add(Tags.Items.TOOLS_SPEAR, "Spears");
         add(Tags.Items.TOOLS_IGNITER, "Igniters");
+        add(Tags.Items.TOOLS_WRENCH, "Wrenches");
         add(Tags.Items.MELEE_WEAPON_TOOLS, "Melee Weapons");
         add(Tags.Items.RANGED_WEAPON_TOOLS, "Ranged Weapons");
         add(Tags.Items.MINING_TOOL_TOOLS, "Mining Tools");
@@ -333,6 +371,7 @@ public final class NeoForgeLanguageProvider extends LanguageProvider {
         add(Tags.Fluids.MILK, "Milk");
         add(Tags.Fluids.GASEOUS, "Gaseous");
         add(Tags.Fluids.HONEY, "Honey");
+        add(Tags.Fluids.EXPERIENCE, "Experience");
         add(Tags.Fluids.POTION, "Potion");
         add(Tags.Fluids.SUSPICIOUS_STEW, "Suspicious Stew");
         add(Tags.Fluids.MUSHROOM_STEW, "Mushroom Stew");
@@ -372,6 +411,10 @@ public final class NeoForgeLanguageProvider extends LanguageProvider {
         add(Tags.Biomes.IS_COLD_OVERWORLD, "Cold Overworld");
         add(Tags.Biomes.IS_COLD_NETHER, "Cold Nether");
         add(Tags.Biomes.IS_COLD_END, "Cold End");
+        add(Tags.Biomes.IS_TEMPERATE, "Temperate");
+        add(Tags.Biomes.IS_TEMPERATE_OVERWORLD, "Temperate Overworld");
+        add(Tags.Biomes.IS_TEMPERATE_NETHER, "Temperate Nether");
+        add(Tags.Biomes.IS_TEMPERATE_END, "Temperate End");
         add(Tags.Biomes.IS_SPARSE_VEGETATION, "Sparse Vegetation");
         add(Tags.Biomes.IS_SPARSE_VEGETATION_OVERWORLD, "Sparse Overworld Vegetation");
         add(Tags.Biomes.IS_SPARSE_VEGETATION_NETHER, "Sparse Nether Vegetation");

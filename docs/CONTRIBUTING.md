@@ -20,9 +20,9 @@ Contributing to NeoForge
    - Run the game (Runs are available in the IDE)
    - Run `gradlew :tests:runGameTestServer` or `Tests: GameTestServer` from IDE
    - Run `gradlew :tests:runGameTestClient` or `Tests: GameTestClient` from IDE
-9. Run `gradlew unpackSourcePatches` to generate patch-files from the patched sources
+9. Run `gradlew genPatches` to generate patch-files from the patched sources
 10. Run `gradlew applyAllFormatting` to automatically format sources
-11. Check correct formatting with `gradlew spotlessCheck`
+11. Check correct formatting with `gradlew checkFormatting`
 12. Commit & Push
 13. Make PR
 

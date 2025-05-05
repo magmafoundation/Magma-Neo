@@ -34,20 +34,6 @@
      }
  
      protected abstract void rewardTradeXp(MerchantOffer p_35299_);
-@@ -185,13 +_,6 @@
-         this.readInventoryFromTag(p_35290_, this.registryAccess());
-     }
- 
--    @Nullable
--    @Override
--    public Entity changeDimension(DimensionTransition p_350994_) {
--        this.stopTrading();
--        return super.changeDimension(p_350994_);
--    }
--
-     protected void stopTrading() {
-         this.setTradingPlayer(null);
-     }
 @@ -236,7 +_,16 @@
          while (i < p_35280_ && !arraylist.isEmpty()) {
              MerchantOffer merchantoffer = arraylist.remove(this.random.nextInt(arraylist.size())).getOffer(this, this.random);
