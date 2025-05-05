@@ -316,7 +316,18 @@
              int i = p_9264_.getCount();
              int j = p_9264_.getDamageValue();
              InteractionResultHolder<ItemStack> interactionresultholder = p_9264_.use(p_9263_, p_9262_, p_9265_);
-@@ -309,7 +_,10 @@
+@@ -304,12 +_,21 @@
+         }
+     }
+ 
++    // CraftBukkit start - whole method
++    public boolean interactResult = false;
++    public boolean firedInteract = false;
++    public BlockPos interactPosition;
++    public InteractionHand interactHand;
++    public ItemStack interactItemStack;
+     public InteractionResult useItemOn(ServerPlayer p_9266_, Level p_9267_, ItemStack p_9268_, InteractionHand p_9269_, BlockHitResult p_9270_) {
+         BlockPos blockpos = p_9270_.getBlockPos();
          BlockState blockstate = p_9267_.getBlockState(blockpos);
          if (!blockstate.getBlock().isEnabled(p_9267_.enabledFeatures())) {
              return InteractionResult.FAIL;

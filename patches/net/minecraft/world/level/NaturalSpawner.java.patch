@@ -106,7 +106,7 @@
                                      flag = true;
                                  }
                              }
-@@ -517,8 +_,20 @@
+@@ -517,8 +_,19 @@
          }
  
          boolean canSpawnForCategory(MobCategory p_186549_, ChunkPos p_186550_) {
@@ -127,4 +127,3 @@
 +        // CraftBukkit end
      }
  }
-+
