@@ -136,7 +136,7 @@
          ContainerHelper.saveAllItems(p_187452_, this.items, p_323656_);
          CompoundTag compoundtag = new CompoundTag();
          this.recipesUsed.forEach((p_187449_, p_187450_) -> compoundtag.putInt(p_187449_.toString(), p_187450_));
-@@ -269,28 +_,50 @@
+@@ -269,28 +_,51 @@
              }
  
              int i = p_155017_.getMaxStackSize();
@@ -153,6 +153,7 @@
 +                    return;
 +                }
 +
++                p_155017_.litTime = furnaceBurnEvent.getBurnTime();
                  p_155017_.litDuration = p_155017_.litTime;
 -                if (p_155017_.isLit()) {
 +                if (p_155017_.isLit() && furnaceBurnEvent.isBurning()) {
