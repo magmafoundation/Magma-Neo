@@ -1,5 +1,14 @@
 --- a/net/minecraft/world/level/block/MushroomBlock.java
 +++ b/net/minecraft/world/level/block/MushroomBlock.java
+@@ -48,7 +_,7 @@
+ 
+     @Override
+     protected void randomTick(BlockState p_221784_, ServerLevel p_221785_, BlockPos p_221786_, RandomSource p_221787_) {
+-        if (p_221787_.nextInt(25) == 0) {
++        if (p_221787_.nextFloat() < (p_221785_.spigotConfig.mushroomModifier / (100.0f * 25))) { // Spigot - SPIGOT-7159: Better modifier resolution
+             int i = 5;
+             int j = 4;
+ 
 @@ -71,7 +_,7 @@
              }
  

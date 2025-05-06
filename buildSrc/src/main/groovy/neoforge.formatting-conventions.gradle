@@ -13,7 +13,21 @@ abstract class GeneratePackageInfos extends DefaultTask {
             def packageInfoFile = new File(javaFile.parent, 'package-info.java')
             if (!packageInfoFile.exists()) {
                 def pkgName = javaFile.toString().replaceAll(Matcher.quoteReplacement(File.separator), '/')
-                pkgName = pkgName.substring(pkgName.indexOf('net/neoforged/'), pkgName.lastIndexOf('/'))
+                if(pkgName.contains("net/neoforged/")) {
+                    pkgName = pkgName.substring(pkgName.indexOf('net/neoforged/'), pkgName.lastIndexOf('/'))
+                }
+                else if (pkgName.contains("org/bukkit/")) {
+                    pkgName = pkgName.substring(pkgName.indexOf('org/bukkit/'), pkgName.lastIndexOf('/'))
+                }
+                else if (pkgName.contains("com/mojang/")) {
+                    pkgName = pkgName.substring(pkgName.indexOf('com/mojang/'), pkgName.lastIndexOf('/'))
+                }
+                else if(pkgName.contains("org/spigotmc/")) {
+                    pkgName = pkgName.substring(pkgName.indexOf('org/spigotmc/'), pkgName.lastIndexOf('/'))
+                }
+                else if (pkgName.contains("org/magmafoundation/")) {
+                    pkgName = pkgName.substring(pkgName.indexOf('org/magmafoundation/'), pkgName.lastIndexOf('/'))
+                }
                 pkgName = pkgName.replaceAll('/', '.')
 
                 def pkgInfoText = """

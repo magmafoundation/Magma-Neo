@@ -2324,4 +2324,14 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
     public boolean isAllowingServerListings() {
         return getHandle().allowsListing();
     }
+
+    // Spigot start
+    private final Player.Spigot spigot = new Player.Spigot() {
+
+    };
+
+    public Player.Spigot spigot() {
+        return spigot;
+    }
+    // Spigot end
 }

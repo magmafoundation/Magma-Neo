@@ -105,12 +105,24 @@
          thread.setDaemon(true);
          thread.setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandler(LOGGER));
          thread.start();
+@@ -132,6 +_,11 @@
+             this.setPreventProxyConnections(dedicatedserverproperties.preventProxyConnections);
+             this.setLocalIp(dedicatedserverproperties.serverIp);
+         }
++        // Spigot start
++        this.setPlayerList(new DedicatedPlayerList(this, this.registries(), this.playerDataStorage));
++        org.spigotmc.SpigotConfig.init((java.io.File) options.valueOf("spigot-settings"));
++        org.spigotmc.SpigotConfig.registerCommands();
++        // Spigot end
+ 
+         this.setPvpAllowed(dedicatedserverproperties.pvp);
+         this.setFlightAllowed(dedicatedserverproperties.allowFlight);
 @@ -161,6 +_,12 @@
              return false;
          }
  
 +        // CraftBukkit start
-+        this.setPlayerList(new DedicatedPlayerList(this, this.registries(), this.playerDataStorage));
++        // this.setPlayerList(new DedicatedPlayerList(this, this.registries(), this.playerDataStorage)); // Spigot - moved up
 +        server.loadPlugins();
 +        server.enablePlugins(org.bukkit.plugin.PluginLoadOrder.STARTUP);
 +        // CraftBukkit end

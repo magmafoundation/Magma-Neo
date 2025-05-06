@@ -15,7 +15,7 @@
 -            float f = CropBlock.getGrowthSpeed(this, p_222539_, p_222540_);
 -            if (p_222541_.nextInt((int)(25.0F / f) + 1) == 0) {
 +            float f = CropBlock.getGrowthSpeed(p_222538_, p_222539_, p_222540_);
-+            if (net.neoforged.neoforge.common.CommonHooks.canCropGrow(p_222539_, p_222540_, p_222538_, p_222541_.nextInt((int)(25.0F / f) + 1) == 0)) {
++            if (net.neoforged.neoforge.common.CommonHooks.canCropGrow(p_222539_, p_222540_, p_222538_, p_222541_.nextFloat() < ((this == Blocks.PUMPKIN_STEM ? p_222539_.spigotConfig.pumpkinModifier : p_222539_.spigotConfig.melonModifier) / (100.0f * (Math.floor((25.0F / f) + 1)))))) { // Spigot - SPIGOT-7159: Better modifier resolution
                  int i = p_222538_.getValue(AGE);
                  if (i < 7) {
 -                    p_222538_ = p_222538_.setValue(AGE, Integer.valueOf(i + 1));

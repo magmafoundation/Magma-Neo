@@ -130,4 +130,11 @@ public class ProxiedNativeCommandSender implements ProxiedCommandSender {
     public void setOp(boolean value) {
         getCaller().setOp(value);
     }
+
+    // Spigot start
+    @Override
+    public org.bukkit.command.CommandSender.Spigot spigot() {
+        return getCaller().spigot();
+    }
+    // Spigot end
 }

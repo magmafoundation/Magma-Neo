@@ -884,4 +884,14 @@ public abstract class CraftEntity implements org.bukkit.entity.Entity {
         }
         return perm;
     }
+
+    // Spigot start
+    private final org.bukkit.entity.Entity.Spigot spigot = new org.bukkit.entity.Entity.Spigot() {
+
+    };
+
+    public org.bukkit.entity.Entity.Spigot spigot() {
+        return spigot;
+    }
+    // Spigot end
 }

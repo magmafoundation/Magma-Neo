@@ -127,7 +127,7 @@
      public boolean dropFromExplosion(Explosion p_49826_) {
          return true;
      }
-@@ -485,9 +_,50 @@
+@@ -485,17 +_,70 @@
          return this.stateDefinition.getPossibleStates().stream().collect(ImmutableMap.toImmutableMap(Function.identity(), p_152459_));
      }
  
@@ -171,10 +171,30 @@
      @Deprecated
      public Holder.Reference<Block> builtInRegistryHolder() {
          return this.builtInRegistryHolder;
-+    }
-+
-+    public int getExpDrop(BlockState p_220827_, ServerLevel p_220828_, BlockPos p_220829_, ItemStack p_220830_, boolean flag) {
-+        return 0;
      }
  
++    public int getExpDrop(BlockState p_220827_, ServerLevel p_220828_, BlockPos p_220829_, ItemStack p_220830_, boolean flag) {
++        return 0;
++    }
++
      protected void tryDropExperience(ServerLevel p_220823_, BlockPos p_220824_, ItemStack p_220825_, IntProvider p_220826_) {
+         int i = EnchantmentHelper.processBlockExperience(p_220823_, p_220825_, p_220826_.sample(p_220823_.getRandom()));
+         if (i > 0) {
+             this.popExperience(p_220823_, p_220824_, i);
+         }
+     }
++
++    // Spigot start
++    public static float range(float min, float value, float max) {
++        if (value < min) {
++            return min;
++        }
++        if (value > max) {
++            return max;
++        }
++        return value;
++    }
++    // Spigot end
+ 
+     public static final class BlockStatePairKey {
+         private final BlockState first;

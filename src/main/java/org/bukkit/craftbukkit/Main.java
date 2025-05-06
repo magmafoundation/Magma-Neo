@@ -134,6 +134,14 @@ public class Main {
                 acceptsAll(asList("demo"), "Demo mode");
 
                 acceptsAll(asList("initSettings"), "Only create configuration files and then exit"); // SPIGOT-5761: Add initSettings option
+
+                // Spigot Start
+                acceptsAll(asList("S", "spigot-settings"), "File for spigot settings")
+                        .withRequiredArg()
+                        .ofType(File.class)
+                        .defaultsTo(new File("spigot.yml"))
+                        .describedAs("Yml file");
+                // Spigot End
             }
         };
 
