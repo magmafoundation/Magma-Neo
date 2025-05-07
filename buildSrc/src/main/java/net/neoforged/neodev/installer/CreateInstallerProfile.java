@@ -165,7 +165,7 @@ public abstract class CreateInstallerProfile extends DefaultTask {
 
         var universalJar = getUniversalJar().getAsFile().get().toPath();
         libraries.add(new Library(
-                "org.magmafoundation:magma:%s:universal".formatted(getNeoForgeVersion().get()),
+                "net.neoforged:neoforge:%s:universal".formatted(getNeoForgeVersion().get()),
                 new LibraryDownload(new LibraryArtifact(
                         LibraryCollector.sha1Hash(universalJar),
                         Files.size(universalJar),
