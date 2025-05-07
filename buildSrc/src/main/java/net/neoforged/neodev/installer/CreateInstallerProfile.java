@@ -165,27 +165,27 @@ public abstract class CreateInstallerProfile extends DefaultTask {
 
         var universalJar = getUniversalJar().getAsFile().get().toPath();
         libraries.add(new Library(
-                "net.neoforged:neoforge:%s:universal".formatted(getNeoForgeVersion().get()),
+                "org.magmafoundation:magma:%s:universal".formatted(getNeoForgeVersion().get()),
                 new LibraryDownload(new LibraryArtifact(
                         LibraryCollector.sha1Hash(universalJar),
                         Files.size(universalJar),
-                        "https://maven.neoforged.net/releases/net/neoforged/neoforge/%s/neoforge-%s-universal.jar".formatted(
+                        "https://repo.magmafoundation.org/releases/org/magmafoundation/magma/%s/magma-%s-universal.jar".formatted(
                                 getNeoForgeVersion().get(),
                                 getNeoForgeVersion().get()),
-                        "net/neoforged/neoforge/%s/neoforge-%s-universal.jar".formatted(
+                        "org/magmafoundation/magma/%s/magma-%s-universal.jar".formatted(
                                 getNeoForgeVersion().get(),
                                 getNeoForgeVersion().get())
                 ))));
 
         var profile = new InstallerProfile(
                 1,
-                "NeoForge",
-                "neoforge-%s".formatted(getNeoForgeVersion().get()),
+                "MagmaNeo",
+                "magma-%s".formatted(getNeoForgeVersion().get()),
                 icon,
                 getMinecraftVersion().get(),
                 "/version.json",
                 "/big_logo.png",
-                "Welcome to the simple NeoForge installer",
+                "Welcome to the simple MagmaNeo installer",
                 "https://mirrors.neoforged.net",
                 true,
                 data,
