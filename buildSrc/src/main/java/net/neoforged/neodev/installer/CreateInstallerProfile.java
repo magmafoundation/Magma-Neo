@@ -172,7 +172,7 @@ public abstract class CreateInstallerProfile extends DefaultTask {
                         "https://repo.magmafoundation.org/releases/org/magmafoundation/magma/%s/magma-%s-universal.jar".formatted(
                                 getNeoForgeVersion().get(),
                                 getNeoForgeVersion().get()),
-                        "org/magmafoundation/magma/%s/magma-%s-universal.jar".formatted(
+                        "net/neoforged/neoforge/%s/neoforge-%s-universal.jar".formatted(
                                 getNeoForgeVersion().get(),
                                 getNeoForgeVersion().get())
                 ))));
