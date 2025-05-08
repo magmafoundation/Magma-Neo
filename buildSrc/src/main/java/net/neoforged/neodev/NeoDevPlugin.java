@@ -226,7 +226,7 @@ public class NeoDevPlugin implements Plugin<Project> {
                                 "Specification-Vendor", "NeoForge",
                                 "Specification-Version", project.getVersion().toString().substring(0, project.getVersion().toString().lastIndexOf(".")),
                                 "Implementation-Title", project.getGroup(),
-                                "Implementation-Version", project.getVersion(),
+                                "Implementation-Version", neoForgeVersion,
                                 "Implementation-Vendor", "NeoForged"),
                         "net/neoforged/neoforge/internal/versions/neoforge/");
                 manifest.attributes(
@@ -238,6 +238,16 @@ public class NeoDevPlugin implements Plugin<Project> {
                                 "Implementation-Version", mcAndNeoFormVersion,
                                 "Implementation-Vendor", "NeoForged"),
                         "net/neoforged/neoforge/versions/neoform/");
+                manifest.attributes(
+                        Map.of(
+                                "Specification-Title", "Magma",
+                                "Specification-Vendor", "Magma Development Limited",
+                                "Specification-Version", project.getVersion().toString().substring(0, project.getVersion().toString().lastIndexOf(".")),
+                                "Implementation-Title", "Magma",
+                                "Implementation-Version", project.getVersion(),
+                                "Implementation-Vendor", "Magma Development Limited"),
+                        "org/magmafoundation/magma/");
+
             });
         });
 

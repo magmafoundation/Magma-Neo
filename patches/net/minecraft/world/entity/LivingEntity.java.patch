@@ -9,7 +9,7 @@
      private static final Logger LOGGER = LogUtils.getLogger();
      private static final String TAG_ACTIVE_EFFECTS = "active_effects";
      private static final ResourceLocation SPEED_MODIFIER_POWDER_SNOW_ID = ResourceLocation.withDefaultNamespace("powder_snow");
-@@ -254,11 +_,35 @@
+@@ -254,11 +_,42 @@
      public boolean skipDropExperience;
      private final Reference2ObjectMap<Enchantment, Set<EnchantmentLocationBasedEffect>> activeLocationDependentEnchantments = new Reference2ObjectArrayMap<>();
      protected float appliedScale = 1.0F;
@@ -35,6 +35,13 @@
 +        return getYHeadRot();
 +    }
 +    // CraftBukkit end
++    // Spigot start
++    public void inactiveTick()
++    {
++        super.inactiveTick();
++        ++this.noActionTime; // Above all the floats
++    }
++    // Spigot end
  
      protected LivingEntity(EntityType<? extends LivingEntity> p_20966_, Level p_20967_) {
          super(p_20966_, p_20967_);
@@ -288,7 +295,7 @@
                  iterator.remove();
              }
  
-@@ -924,23 +_,54 @@
+@@ -924,23 +_,55 @@
          return this.activeEffects.get(p_316375_);
      }
  
@@ -308,6 +315,7 @@
 +    }
 +
 +    public boolean addEffect(MobEffectInstance p_147208_, @Nullable Entity p_147209_, org.bukkit.event.entity.EntityPotionEffectEvent.Cause cause) {
++        org.spigotmc.AsyncCatcher.catchOp("effect add"); // Spigot
 +        if (isTickingEffects) {
 +            effectsToProcess.add(new ProcessableEffect(p_147208_, cause));
 +            return true;
@@ -701,6 +709,15 @@
          if (!this.isRemoved() && !this.dead) {
              Entity entity = p_21014_.getEntity();
              LivingEntity livingentity = this.getKillCredit();
+@@ -1338,7 +_,7 @@
+             }
+ 
+             if (!this.level().isClientSide && this.hasCustomName()) {
+-                LOGGER.info("Named entity {} died: {}", this, this.getCombatTracker().getDeathMessage().getString());
++                if (org.spigotmc.SpigotConfig.logNamedDeaths) LOGGER.info("Named entity {} died: {}", this, this.getCombatTracker().getDeathMessage().getString());
+             }
+ 
+             this.dead = true;
 @@ -1361,46 +_,75 @@
          if (!this.level().isClientSide) {
              boolean flag = false;
@@ -1275,6 +1292,32 @@
                  d2 = 0.0;
              }
  
+@@ -2317,6 +_,7 @@
+ 
+     @Override
+     public void tick() {
++        org.bukkit.craftbukkit.SpigotTimings.timerEntityBaseTick.startTiming(); // Spigot
+         super.tick();
+         this.updatingUsingItem();
+         this.updateSwimAmount();
+@@ -2356,7 +_,9 @@
+         }
+ 
+         if (!this.isRemoved()) {
++            org.bukkit.craftbukkit.SpigotTimings.timerEntityBaseTick.stopTiming(); // Spigot
+             this.aiStep();
++            org.bukkit.craftbukkit.SpigotTimings.timerEntityTickRest.startTiming(); // Spigot
+         }
+ 
+         double d1 = this.getX() - this.xo;
+@@ -2442,6 +_,7 @@
+             this.appliedScale = f6;
+             this.refreshDimensions();
+         }
++        org.bukkit.craftbukkit.SpigotTimings.timerEntityTickRest.stopTiming(); // Spigot
+     }
+ 
+     public void detectEquipmentUpdates() {
 @@ -2466,6 +_,7 @@
              };
              ItemStack itemstack1 = this.getItemBySlot(equipmentslot);
@@ -1283,7 +1326,21 @@
                  if (map == null) {
                      map = Maps.newEnumMap(EquipmentSlot.class);
                  }
-@@ -2637,6 +_,9 @@
+@@ -2623,6 +_,7 @@
+ 
+         this.setDeltaMovement(d0, d1, d2);
+         this.level().getProfiler().push("ai");
++        org.bukkit.craftbukkit.SpigotTimings.timerEntityAI.startTiming(); // Spigot
+         if (this.isImmobile()) {
+             this.jumping = false;
+             this.xxa = 0.0F;
+@@ -2632,11 +_,15 @@
+             this.serverAiStep();
+             this.level().getProfiler().pop();
+         }
++        org.bukkit.craftbukkit.SpigotTimings.timerEntityAI.stopTiming(); // Spigot
+ 
+         this.level().getProfiler().pop();
          this.level().getProfiler().push("jump");
          if (this.jumping && this.isAffectedByFluids()) {
              double d3;
@@ -1313,6 +1370,32 @@
              }
          } else {
              this.noJumpDelay = 0;
+@@ -2672,6 +_,7 @@
+             this.resetFallDistance();
+         }
+ 
++        org.bukkit.craftbukkit.SpigotTimings.timerEntityAIMove.startTiming(); // Spigot
+         label104: {
+             if (this.getControllingPassenger() instanceof Player player && this.isAlive()) {
+                 this.travelRidden(player, vec31);
+@@ -2680,6 +_,7 @@
+ 
+             this.travel(vec31);
+         }
++        org.bukkit.craftbukkit.SpigotTimings.timerEntityAIMove.stopTiming(); // Spigot
+ 
+         this.level().getProfiler().pop();
+         this.level().getProfiler().push("freezing");
+@@ -2705,7 +_,9 @@
+             this.checkAutoSpinAttack(aabb, this.getBoundingBox());
+         }
+ 
++        org.bukkit.craftbukkit.SpigotTimings.timerEntityAICollision.startTiming(); // Spigot
+         this.pushEntities();
++        org.bukkit.craftbukkit.SpigotTimings.timerEntityAICollision.stopTiming(); // Spigot
+         this.level().getProfiler().pop();
+         if (!this.level().isClientSide && this.isSensitiveToWater() && this.isInWaterRainOrBubble()) {
+             this.hurt(this.damageSources().drown(), 1.0F);
 @@ -2720,6 +_,8 @@
          boolean flag = this.getSharedFlag(7);
          if (flag && !this.onGround() && !this.isPassenger() && !this.hasEffect(MobEffects.LEVITATION)) {

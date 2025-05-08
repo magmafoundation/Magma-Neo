@@ -187,7 +187,7 @@
 +        net.neoforged.neoforge.network.registration.NetworkRegistry.checkPacket(p_295099_, this);
 +
 +        // CraftBukkit start
-+        if (p_295099_ == null) {
++        if (p_295099_ == null || this.processedDisconnect) { // Spigot
 +            return;
 +        } else if (p_295099_ instanceof net.minecraft.network.protocol.game.ClientboundSetDefaultSpawnPositionPacket) {
 +            net.minecraft.network.protocol.game.ClientboundSetDefaultSpawnPositionPacket packet6 = (net.minecraft.network.protocol.game.ClientboundSetDefaultSpawnPositionPacket) p_295099_;

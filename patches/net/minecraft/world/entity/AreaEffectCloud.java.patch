@@ -1,5 +1,23 @@
 --- a/net/minecraft/world/entity/AreaEffectCloud.java
 +++ b/net/minecraft/world/entity/AreaEffectCloud.java
+@@ -128,6 +_,17 @@
+         this.duration = p_19735_;
+     }
+ 
++    // Spigot start - copied from below
++    @Override
++    public void inactiveTick() {
++        super.inactiveTick();
++        if (this.tickCount >= this.waitTime + this.duration) {
++            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++            return;
++        }
++    }
++    // Spigot end
++
+     @Override
+     public void tick() {
+         super.tick();
 @@ -165,14 +_,14 @@
                      this.level().addAlwaysVisibleParticle(particleoptions, d0, d2, d4, 0.0, 0.0, 0.0);
                  } else {

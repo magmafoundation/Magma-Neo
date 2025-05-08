@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/level/chunk/ChunkGenerator.java
 +++ b/net/minecraft/world/level/chunk/ChunkGenerator.java
-@@ -92,11 +_,16 @@
+@@ -92,19 +_,24 @@
      public ChunkGenerator(BiomeSource p_255838_, Function<Holder<Biome>, BiomeGenerationSettings> p_256216_) {
          this.biomeSource = p_255838_;
          this.generationSettingsGetter = p_256216_;
@@ -18,6 +18,16 @@
      public void validate() {
          this.featuresPerStep.get();
      }
+ 
+     protected abstract MapCodec<? extends ChunkGenerator> codec();
+ 
+-    public ChunkGeneratorStructureState createState(HolderLookup<StructureSet> p_256405_, RandomState p_256101_, long p_256018_) {
+-        return ChunkGeneratorStructureState.createForNormal(p_256101_, p_256018_, this.biomeSource, p_256405_);
++    public ChunkGeneratorStructureState createState(HolderLookup<StructureSet> p_256405_, RandomState p_256101_, long p_256018_, org.spigotmc.SpigotWorldConfig conf) { // Spigot
++        return ChunkGeneratorStructureState.createForNormal(p_256101_, p_256018_, this.biomeSource, p_256405_, conf); // Spigot
+     }
+ 
+     public Optional<ResourceKey<MapCodec<? extends ChunkGenerator>>> getTypeNameForDataFixer() {
 @@ -313,7 +_,7 @@
          }
      }

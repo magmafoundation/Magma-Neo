@@ -167,7 +167,7 @@
      @Override
      protected void tickDeath() {
          if (this.dragonFight != null) {
-@@ -561,15 +_,21 @@
+@@ -561,33 +_,56 @@
                  .addParticle(ParticleTypes.EXPLOSION_EMITTER, this.getX() + (double)f, this.getY() + 2.0 + (double)f1, this.getZ() + (double)f2, 0.0, 0.0, 0.0);
          }
  
@@ -191,7 +191,26 @@
              }
  
              if (this.dragonDeathTime == 1 && !this.isSilent()) {
-@@ -579,15 +_,16 @@
+-                this.level().globalLevelEvent(1028, this.blockPosition(), 0);
++                // CraftBukkit start - Use relative location for far away sounds
++                int viewDistance = ((net.minecraft.server.level.ServerLevel) this.level()).getCraftServer().getViewDistance() * 16;
++                for (net.minecraft.server.level.ServerPlayer player : this.level().getServer().getPlayerList().players) {
++                    double deltaX = this.getX() - player.getX();
++                    double deltaZ = this.getZ() - player.getZ();
++                    double distanceSquared = deltaX * deltaX + deltaZ * deltaZ;
++                    if ( this.level().spigotConfig.dragonDeathSoundRadius > 0 && distanceSquared > this.level().spigotConfig.dragonDeathSoundRadius * this.level().spigotConfig.dragonDeathSoundRadius ) continue; // Spigot
++                    if (distanceSquared > viewDistance * viewDistance) {
++                        double deltaLength = Math.sqrt(distanceSquared);
++                        double relativeX = player.getX() + (deltaX / deltaLength) * viewDistance;
++                        double relativeZ = player.getZ() + (deltaZ / deltaLength) * viewDistance;
++                        player.connection.send(new net.minecraft.network.protocol.game.ClientboundLevelEventPacket(1028, new BlockPos((int) relativeX, (int) this.getY(), (int) relativeZ), 0, true));
++                    } else {
++                        player.connection.send(new net.minecraft.network.protocol.game.ClientboundLevelEventPacket(1028, new BlockPos((int) this.getX(), (int) this.getY(), (int) this.getZ()), 0, true));
++                    }
++                }
++                // CraftBukkit end
+             }
+         }
  
          this.move(MoverType.SELF, new Vec3(0.0, 0.1F, 0.0));
          if (this.dragonDeathTime == 200 && this.level() instanceof ServerLevel) {

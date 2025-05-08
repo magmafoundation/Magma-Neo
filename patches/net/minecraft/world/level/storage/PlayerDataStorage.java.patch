@@ -1,5 +1,13 @@
 --- a/net/minecraft/world/level/storage/PlayerDataStorage.java
 +++ b/net/minecraft/world/level/storage/PlayerDataStorage.java
+@@ -31,6 +_,7 @@
+     }
+ 
+     public void save(Player p_78434_) {
++        if (org.spigotmc.SpigotConfig.disablePlayerDataSaving) return; // Spigot
+         try {
+             CompoundTag compoundtag = p_78434_.saveWithoutId(new CompoundTag());
+             Path path = this.playerDir.toPath();
 @@ -39,31 +_,34 @@
              Path path2 = path.resolve(p_78434_.getStringUUID() + ".dat");
              Path path3 = path.resolve(p_78434_.getStringUUID() + ".dat_old");

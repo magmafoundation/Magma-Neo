@@ -28,7 +28,7 @@
      public ChunkMap(
          ServerLevel p_214836_,
          LevelStorageSource.LevelStorageAccess p_214837_,
-@@ -168,7 +_,14 @@
+@@ -168,13 +_,20 @@
          this.level = p_214836_;
          RegistryAccess registryaccess = p_214836_.registryAccess();
          long i = p_214836_.getSeed();
@@ -44,6 +44,13 @@
              this.randomState = RandomState.create(noisebasedchunkgenerator.generatorSettings().value(), registryaccess.lookupOrThrow(Registries.NOISE), i);
          } else {
              this.randomState = RandomState.create(NoiseGeneratorSettings.dummy(), registryaccess.lookupOrThrow(Registries.NOISE), i);
+         }
+ 
+-        this.chunkGeneratorState = p_214843_.createState(registryaccess.lookupOrThrow(Registries.STRUCTURE_SET), this.randomState, i);
++        this.chunkGeneratorState = p_214843_.createState(registryaccess.lookupOrThrow(Registries.STRUCTURE_SET), this.randomState, i, p_214836_.spigotConfig); // Spigot
+         this.mainThreadExecutor = p_214841_;
+         ProcessorMailbox<Runnable> processormailbox1 = ProcessorMailbox.create(p_214840_, "worldgen");
+         ProcessorHandle<Runnable> processorhandle = ProcessorHandle.of("main", p_214841_::tell);
 @@ -395,6 +_,7 @@
                  this.modified = true;
              }
@@ -84,7 +91,7 @@
          p_294215_.connection.chunkSender.dropChunk(p_294215_, p_294758_);
      }
  
-@@ -907,12 +_,14 @@
+@@ -907,19 +_,31 @@
      }
  
      private CompletableFuture<Optional<CompoundTag>> readChunk(ChunkPos p_214964_) {
@@ -101,7 +108,49 @@
 +    // CraftBukkit end
  
      boolean anyPlayerCloseEnoughForSpawning(ChunkPos p_183880_) {
++        // Spigot start
++        return anyPlayerCloseEnoughForSpawning(p_183880_, false);
++    }
++
++    boolean anyPlayerCloseEnoughForSpawning(ChunkPos p_183880_, boolean reducedRange) {
++        int chunkRange = level.spigotConfig.mobSpawnRange;
++        chunkRange = (chunkRange > level.spigotConfig.viewDistance) ? (byte) level.spigotConfig.viewDistance : chunkRange;
++        chunkRange = (chunkRange > 8) ? 8 : chunkRange;
++        double blockRange = (reducedRange) ? Math.pow(chunkRange << 4, 2) : 16384.0D;
++        // Spigot end
          if (!this.distanceManager.hasPlayersNearby(p_183880_.toLong())) {
+             return false;
+         } else {
+             for (ServerPlayer serverplayer : this.playerMap.getAllPlayers()) {
+-                if (this.playerIsCloseEnoughForSpawning(serverplayer, p_183880_)) {
++                if (this.playerIsCloseEnoughForSpawning(serverplayer, p_183880_, blockRange)) {
+                     return true;
+                 }
+             }
+@@ -936,7 +_,7 @@
+             Builder<ServerPlayer> builder = ImmutableList.builder();
+ 
+             for (ServerPlayer serverplayer : this.playerMap.getAllPlayers()) {
+-                if (this.playerIsCloseEnoughForSpawning(serverplayer, p_183889_)) {
++                if (this.playerIsCloseEnoughForSpawning(serverplayer, p_183889_, 16384.0D)) { // Spigot
+                     builder.add(serverplayer);
+                 }
+             }
+@@ -945,12 +_,12 @@
+         }
+     }
+ 
+-    private boolean playerIsCloseEnoughForSpawning(ServerPlayer p_183752_, ChunkPos p_183753_) {
++    private boolean playerIsCloseEnoughForSpawning(ServerPlayer p_183752_, ChunkPos p_183753_, double range) { // Spigot
+         if (p_183752_.isSpectator()) {
+             return false;
+         } else {
+             double d0 = euclideanDistanceSquared(p_183753_, p_183752_);
+-            return d0 < 16384.0;
++            return d0 < range; // Spigot
+         }
+     }
+ 
 @@ -1018,6 +_,7 @@
                  this.playerMap.unIgnorePlayer(p_140185_);
              }
@@ -110,15 +159,27 @@
              this.updateChunkTracking(p_140185_);
          }
      }
-@@ -1069,7 +_,7 @@
+@@ -1069,9 +_,11 @@
      }
  
      protected void addEntity(Entity p_140200_) {
 -        if (!(p_140200_ instanceof EnderDragonPart)) {
++        org.spigotmc.AsyncCatcher.catchOp("entity track"); // Spigot
 +        if (!(p_140200_ instanceof net.neoforged.neoforge.entity.PartEntity)) {
              EntityType<?> entitytype = p_140200_.getType();
              int i = entitytype.clientTrackingRange() * 16;
++            i = org.spigotmc.TrackingRange.getEntityTrackingRange(p_140200_, i); // Spigot
              if (i != 0) {
+                 int j = entitytype.updateInterval();
+                 if (this.entityMap.containsKey(p_140200_.getId())) {
+@@ -1095,6 +_,7 @@
+     }
+ 
+     protected void removeEntity(Entity p_140332_) {
++        org.spigotmc.AsyncCatcher.catchOp("entity untrack"); // Spigot
+         if (p_140332_ instanceof ServerPlayer serverplayer) {
+             this.updatePlayerStatus(serverplayer, false);
+ 
 @@ -1230,7 +_,7 @@
          public final Set<ServerPlayerConnection> seenBy = Sets.newIdentityHashSet();
  
@@ -128,6 +189,21 @@
              this.entity = p_140478_;
              this.range = p_140479_;
              this.lastSectionPos = SectionPos.of(p_140478_);
+@@ -1266,12 +_,14 @@
+         }
+ 
+         public void removePlayer(ServerPlayer p_140486_) {
++            org.spigotmc.AsyncCatcher.catchOp("player tracker clear"); // Spigot
+             if (this.seenBy.remove(p_140486_.connection)) {
+                 this.serverEntity.removePairing(p_140486_);
+             }
+         }
+ 
+         public void updatePlayer(ServerPlayer p_140498_) {
++            org.spigotmc.AsyncCatcher.catchOp("player tracker update"); // Spigot
+             if (p_140498_ != this.entity) {
+                 Vec3 vec3 = p_140498_.position().subtract(this.entity.position());
+                 int i = ChunkMap.this.getPlayerViewDistance(p_140498_);
 @@ -1281,6 +_,13 @@
                  boolean flag = d1 <= d2
                      && this.entity.broadcastToPlayer(p_140498_)

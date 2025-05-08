@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
+import net.neoforged.neoforge.internal.versions.neoforge.NeoForgeVersion;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -25,6 +26,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.util.StringUtil;
 import org.jetbrains.annotations.NotNull;
+import org.magmafoundation.magma.Magma;
 
 public class VersionCommand extends BukkitCommand {
     public VersionCommand(@NotNull String name) {
@@ -41,8 +43,7 @@ public class VersionCommand extends BukkitCommand {
         if (!testPermission(sender)) return true;
 
         if (args.length == 0) {
-            sender.sendMessage("This server is running " + Bukkit.getName() + " version " + Bukkit.getVersion() + " (Implementing API version " + Bukkit.getBukkitVersion() + ")");
-            // sendVersion(sender); Magma todo: Implement this for getting the version of the server
+            sender.sendMessage("This server is running " + Bukkit.getName() + " version " + Magma.getVersion() + " (Implementing API version " + Bukkit.getBukkitVersion() + ", NeoForge Version " + NeoForgeVersion.getVersion() + ")");
         } else {
             StringBuilder name = new StringBuilder();
 

@@ -26,7 +26,7 @@
      public ThreadedLevelLightEngine getLightEngine() {
          return this.lightEngine;
      }
-@@ -150,6 +_,10 @@
+@@ -150,9 +_,15 @@
                  }
              }
  
@@ -35,8 +35,13 @@
 +                return chunkholder.currentlyLoading; // Neo: If the requested chunk is loading, bypass the future chain to prevent a deadlock.
 +
              profilerfiller.incrementCounter("getChunkCacheMiss");
++            level.timings.syncChunkLoadTimer.startTiming(); // Spigot
              CompletableFuture<ChunkResult<ChunkAccess>> completablefuture = this.getChunkFutureMainThread(p_8360_, p_8361_, p_330876_, p_8363_);
              this.mainThreadProcessor.managedBlock(completablefuture::isDone);
++            level.timings.syncChunkLoadTimer.stopTiming(); // Spigot
+             ChunkResult<ChunkAccess> chunkresult = completablefuture.join();
+             ChunkAccess chunkaccess1 = chunkresult.orElse(null);
+             if (chunkaccess1 == null && p_8363_) {
 @@ -184,6 +_,7 @@
              if (chunkholder == null) {
                  return null;
@@ -45,7 +50,7 @@
                  ChunkAccess chunkaccess1 = chunkholder.getChunkIfPresent(ChunkStatus.FULL);
                  if (chunkaccess1 != null) {
                      this.storeInCache(i, chunkaccess1, ChunkStatus.FULL);
-@@ -298,11 +_,31 @@
+@@ -298,27 +_,53 @@
  
      @Override
      public void close() throws IOException {
@@ -77,16 +82,49 @@
 +
      @Override
      public void tick(BooleanSupplier p_201913_, boolean p_201914_) {
++        this.level.timings.doChunkMap.startTiming(); // Spigot
          this.level.getProfiler().push("purge");
-@@ -356,7 +_,7 @@
+-        if (this.level.tickRateManager().runsNormally() || !p_201914_) {
++        if (this.level.tickRateManager().runsNormally() || !p_201914_ || this.level.spigotConfig.unloadFrozenChunks) { // Spigot
+             this.distanceManager.purgeStaleTickets();
+         }
+ 
+         this.runDistanceManagerUpdates();
++        this.level.timings.doChunkMap.stopTiming(); // Spigot
+         this.level.getProfiler().popPush("chunks");
+         if (p_201914_) {
+             this.tickChunks();
++            this.level.timings.tracker.startTiming(); // Spigot
+             this.chunkMap.tick();
++            this.level.timings.tracker.stopTiming(); // Spigot
+         }
+ 
++        this.level.timings.doChunkUnload.startTiming(); // Spigot
+         this.level.getProfiler().popPush("unload");
+         this.chunkMap.tick(p_201913_);
++        this.level.timings.doChunkUnload.stopTiming(); // Spigot
+         this.level.getProfiler().pop();
+         this.clearCache();
+     }
+@@ -356,14 +_,16 @@
                  for (ServerChunkCache.ChunkAndHolder serverchunkcache$chunkandholder : list) {
                      LevelChunk levelchunk1 = serverchunkcache$chunkandholder.chunk;
                      ChunkPos chunkpos = levelchunk1.getPos();
 -                    if (this.level.isNaturalSpawningAllowed(chunkpos) && this.chunkMap.anyPlayerCloseEnoughForSpawning(chunkpos)) {
 +                    if ((this.level.isNaturalSpawningAllowed(chunkpos) && this.chunkMap.anyPlayerCloseEnoughForSpawning(chunkpos)) || this.distanceManager.shouldForceTicks(chunkpos.toLong())) {
                          levelchunk1.incrementInhabitedTime(j);
-                         if (flag1 && (this.spawnEnemies || this.spawnFriendlies) && this.level.getWorldBorder().isWithinBounds(chunkpos)) {
+-                        if (flag1 && (this.spawnEnemies || this.spawnFriendlies) && this.level.getWorldBorder().isWithinBounds(chunkpos)) {
++                        if (flag1 && (this.spawnEnemies || this.spawnFriendlies) && this.level.getWorldBorder().isWithinBounds(chunkpos) && this.chunkMap.anyPlayerCloseEnoughForSpawning(chunkpos, true)) { // Spigot
                              NaturalSpawner.spawnForChunk(this.level, levelchunk1, naturalspawner$spawnstate, this.spawnFriendlies, this.spawnEnemies, flag);
+                         }
+ 
+                         if (this.level.shouldTickBlocksAt(chunkpos.toLong())) {
++                            this.level.timings.doTickTiles.startTiming(); // Spigot
+                             this.level.tickChunk(levelchunk1, k);
++                            this.level.timings.doTickTiles.stopTiming(); // Spigot
+                         }
+                     }
+                 }
 @@ -435,11 +_,17 @@
      }
  

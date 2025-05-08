@@ -40,7 +40,7 @@
      public Vec3 getPosition() {
          return this.worldPosition;
      }
-@@ -496,7 +_,7 @@
+@@ -496,13 +_,13 @@
          Component component = Component.translatable("chat.type.admin", this.getDisplayName(), p_81367_).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC);
          if (this.server.getGameRules().getBoolean(GameRules.RULE_SENDCOMMANDFEEDBACK)) {
              for (ServerPlayer serverplayer : this.server.getPlayerList().getPlayers()) {
@@ -49,6 +49,13 @@
                      serverplayer.sendSystemMessage(component);
                  }
              }
+         }
+ 
+-        if (this.source != this.server && this.server.getGameRules().getBoolean(GameRules.RULE_LOGADMINCOMMANDS)) {
++        if (this.source != this.server && this.server.getGameRules().getBoolean(GameRules.RULE_LOGADMINCOMMANDS) && !org.spigotmc.SpigotConfig.silentCommandBlocks) { // Spigot
+             this.server.sendSystemMessage(component);
+         }
+     }
 @@ -591,4 +_,10 @@
      public boolean isSilent() {
          return this.silent;

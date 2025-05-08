@@ -17,12 +17,14 @@
              if (mobcategory != MobCategory.MISC) {
                  BlockPos blockpos = entity.blockPosition();
                  p_186527_.query(
-@@ -104,11 +_,27 @@
+@@ -103,16 +_,34 @@
+         ServerLevel p_47030_, LevelChunk p_47031_, NaturalSpawner.SpawnState p_47032_, boolean p_47033_, boolean p_47034_, boolean p_47035_
      ) {
          p_47030_.getProfiler().push("spawner");
- 
-+        net.minecraft.world.level.storage.LevelData leveldata = p_47030_.getLevelData(); // CraftBukkit - Other mob type spawn tick rate
++        p_47030_.timings.mobSpawn.startTiming(); // Spigot
 +
++        net.minecraft.world.level.storage.LevelData leveldata = p_47030_.getLevelData(); // CraftBukkit - Other mob type spawn tick rate
+ 
          for (MobCategory mobcategory : SPAWNING_CATEGORIES) {
 +            // CraftBukkit start - Use per-world spawn limits
 +            boolean spawnThisTick = true;
@@ -46,6 +48,11 @@
                  spawnCategoryForChunk(mobcategory, p_47030_, p_47031_, p_47032_::canSpawn, p_47032_::afterSpawn);
              }
          }
+ 
++        p_47030_.timings.mobSpawn.stopTiming(); // Spigot
+         p_47030_.getProfiler().pop();
+     }
+ 
 @@ -197,9 +_,14 @@
                                      );
                                      j++;

@@ -52,14 +52,23 @@
  
          try {
              OptionSet optionset = optionparser.parse(p_129699_);
-@@ -90,6 +_,13 @@
+@@ -90,6 +_,22 @@
                  optionparser.printHelpOn(System.err);
                  return;
              }
 +            Path path2 = Paths.get("eula.txt");
 +            Eula eula = new Eula(path2);
 +
-+            if (!eula.hasAgreedToEULA()) {
++            // Spigot Start
++            boolean eulaAgreed = Boolean.getBoolean( "com.mojang.eula.agree" );
++            if ( eulaAgreed )
++            {
++                System.err.println( "You have used the Spigot command line EULA agreement flag." );
++                System.err.println( "By using this setting you are indicating your agreement to Mojang's EULA (https://account.mojang.com/documents/minecraft_eula)." );
++                System.err.println( "If you do not agree to the above EULA please stop your server and remove this flag immediately." );
++            }
++            // Spigot End
++            if (!eula.hasAgreedToEULA() && !eulaAgreed) { // Spigot
 +                LOGGER.info("You need to agree to the EULA in order to run the server. Go to eula.txt for more info.");
 +                return;
 +            }

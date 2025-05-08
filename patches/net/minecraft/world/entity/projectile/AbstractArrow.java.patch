@@ -1,5 +1,24 @@
 --- a/net/minecraft/world/entity/projectile/AbstractArrow.java
 +++ b/net/minecraft/world/entity/projectile/AbstractArrow.java
+@@ -72,6 +_,18 @@
+     @Nullable
+     public ItemStack firedFromWeapon = null;
+ 
++    // Spigot Start
++    @Override
++    public void inactiveTick()
++    {
++        if ( this.inGround )
++        {
++            this.life += 1;
++        }
++        super.inactiveTick();
++    }
++    // Spigot End
++
+     protected AbstractArrow(EntityType<? extends AbstractArrow> p_331098_, Level p_331626_) {
+         super(p_331098_, p_331626_);
+     }
 @@ -85,7 +_,23 @@
          ItemStack p_309031_,
          @Nullable ItemStack p_345487_
@@ -56,11 +75,13 @@
                      this.hasImpulse = true;
                      if (projectiledeflection != ProjectileDeflection.NONE) {
                          break;
-@@ -320,7 +_,7 @@
+@@ -319,8 +_,8 @@
+ 
      protected void tickDespawn() {
          this.life++;
-         if (this.life >= 1200) {
+-        if (this.life >= 1200) {
 -            this.discard();
++        if (this.life >= ((this instanceof ThrownTrident) ? this.level().spigotConfig.tridentDespawnRate : this.level().spigotConfig.arrowDespawnRate)) { // Spigot
 +            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
          }
      }

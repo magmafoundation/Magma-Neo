@@ -8,8 +8,8 @@ public class Magma {
 
     private static String version = "";
 
-    public Magma() {
-        version = this.getClass().getPackage().getImplementationVersion();
+    static {
+        version = Magma.class.getPackage().getImplementationVersion();
     }
 
     public static String getVersion() {

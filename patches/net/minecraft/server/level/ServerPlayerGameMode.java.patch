@@ -52,7 +52,7 @@
          if (!this.player.canInteractWithBlock(p_215120_, 1.0)) {
              this.debugLogging(p_215120_, false, p_215124_, "too far");
          } else if (p_215120_.getY() >= p_215123_) {
-@@ -141,10 +_,32 @@
+@@ -141,16 +_,46 @@
          } else {
              if (p_215121_ == ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK) {
                  if (!this.level.mayInteract(this.player, p_215120_)) {
@@ -87,6 +87,20 @@
  
                  if (this.isCreative()) {
                      this.destroyAndAck(p_215120_, p_215124_, "creative destroy");
+                     return;
+                 }
+ 
++                // Spigot start - handle debug stick left click for non-creative
++                if (this.player.getMainHandItem().is(net.minecraft.world.item.Items.DEBUG_STICK)
++                        && ((net.minecraft.world.item.DebugStickItem) net.minecraft.world.item.Items.DEBUG_STICK).handleInteraction(this.player, this.level.getBlockState(p_215120_), this.level, p_215120_, false, this.player.getMainHandItem())) {
++                    this.player.connection.send(new ClientboundBlockUpdatePacket(this.level, p_215120_));
++                    return;
++                }
++                // Spigot end
++
+                 if (this.player.blockActionRestricted(this.level, p_215120_, this.gameModeForPlayer)) {
+                     this.player.connection.send(new ClientboundBlockUpdatePacket(p_215120_, this.level.getBlockState(p_215120_)));
+                     this.debugLogging(p_215120_, false, p_215124_, "block action restricted");
 @@ -160,7 +_,19 @@
                  this.destroyProgressStart = this.gameTicks;
                  float f = 1.0F;

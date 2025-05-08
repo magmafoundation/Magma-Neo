@@ -1,5 +1,23 @@
 --- a/net/minecraft/world/entity/npc/Villager.java
 +++ b/net/minecraft/world/entity/npc/Villager.java
+@@ -268,6 +_,17 @@
+         return this.assignProfessionWhenSpawned;
+     }
+ 
++    // Spigot Start
++    @Override
++    public void inactiveTick() {
++        // SPIGOT-3874, SPIGOT-3894, SPIGOT-3846, SPIGOT-5286 :(
++        if (this.level().spigotConfig.tickInactiveVillagers && this.isEffectiveAi()) {
++            this.customServerAiStep();
++        }
++        super.inactiveTick();
++    }
++    // Spigot End
++
+     @Override
+     protected void customServerAiStep() {
+         this.level().getProfiler().push("villagerBrain");
 @@ -285,7 +_,7 @@
                      this.increaseProfessionLevelOnUpdate = false;
                  }
@@ -48,6 +66,15 @@
              }
          }
  
+@@ -636,7 +_,7 @@
+ 
+     @Override
+     public void die(DamageSource p_35419_) {
+-        LOGGER.info("Villager {} died, message: '{}'", this, p_35419_.getLocalizedDeathMessage(this).getString());
++        if (org.spigotmc.SpigotConfig.logVillagerDeaths) LOGGER.info("Villager {} died, message: '{}'", this, p_35419_.getLocalizedDeathMessage(this).getString());
+         Entity entity = p_35419_.getEntity();
+         if (entity != null) {
+             this.tellWitnessesThatIWasMurdered(entity);
 @@ -742,8 +_,9 @@
  
      @Override

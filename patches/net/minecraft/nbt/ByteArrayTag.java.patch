@@ -1,0 +1,10 @@
+--- a/net/minecraft/nbt/ByteArrayTag.java
++++ b/net/minecraft/nbt/ByteArrayTag.java
+@@ -22,6 +_,7 @@
+         private static byte[] readAccounted(DataInput p_302389_, NbtAccounter p_302320_) throws IOException {
+             p_302320_.accountBytes(24L);
+             int i = p_302389_.readInt();
++            com.google.common.base.Preconditions.checkArgument( i < 1 << 24); // Spigot
+             p_302320_.accountBytes(1L, (long)i);
+             byte[] abyte = new byte[i];
+             p_302389_.readFully(abyte);

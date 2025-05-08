@@ -80,7 +80,7 @@
  
              this.hasImpulse = this.hasImpulse | this.updateInWaterStateAndDoFluidPushing();
              if (!this.level().isClientSide) {
-@@ -185,7 +_,21 @@
+@@ -185,11 +_,46 @@
                  }
              }
  
@@ -103,6 +103,53 @@
                  this.discard();
              }
          }
+     }
++
++    // Spigot start - copied from above
++    @Override
++    public void inactiveTick() {
++        // CraftBukkit start - Use wall time for pickup and despawn timers
++        int elapsedTicks = net.minecraft.server.MinecraftServer.currentTick - this.lastTick;
++        if (this.pickupDelay != 32767) this.pickupDelay -= elapsedTicks;
++        if (this.age != -32768) this.age += elapsedTicks;
++        this.lastTick = net.minecraft.server.MinecraftServer.currentTick;
++        // CraftBukkit end
++        if (!this.level().isClientSide && this.age >= this.level().spigotConfig.itemDespawnRate) { // Spigot
++            // CraftBukkit start - fire ItemDespawnEvent
++            if (org.bukkit.craftbukkit.event.CraftEventFactory.callItemDespawnEvent(this).isCancelled()) {
++                this.age = 0;
++                return;
++            }
++            // CraftBukkit end
++            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++        }
++    }
++    // Spigot end
+ 
+     @Override
+     public BlockPos getBlockPosBelowThatAffectsMyMovement() {
+@@ -208,8 +_,11 @@
+ 
+     private void mergeWithNeighbours() {
+         if (this.isMergable()) {
++            // Spigot start
++            double radius = this.level().spigotConfig.itemMerge;
+             for (ItemEntity itementity : this.level()
+-                .getEntitiesOfClass(ItemEntity.class, this.getBoundingBox().inflate(0.5, 0.0, 0.5), p_186268_ -> p_186268_ != this && p_186268_.isMergable())) {
++                .getEntitiesOfClass(ItemEntity.class, this.getBoundingBox().inflate(radius, radius - 0.5D, radius), p_186268_ -> p_186268_ != this && p_186268_.isMergable())) {
++                // Spigot end
+                 if (itementity.isMergable()) {
+                     this.tryToMerge(itementity);
+                     if (this.isRemoved()) {
+@@ -229,7 +_,7 @@
+         ItemStack itemstack = this.getItem();
+         ItemStack itemstack1 = p_32016_.getItem();
+         if (Objects.equals(this.target, p_32016_.target) && areMergable(itemstack, itemstack1)) {
+-            if (itemstack1.getCount() < itemstack.getCount()) {
++            if (true || itemstack1.getCount() < itemstack.getCount()) { // Spigot
+                 merge(this, itemstack, p_32016_, itemstack1);
+             } else {
+                 merge(p_32016_, itemstack1, this, itemstack);
 @@ -254,11 +_,16 @@
      }
  

@@ -17,7 +17,7 @@
      }
  
      private boolean isNearPlayer(Level p_151344_, BlockPos p_151345_) {
-@@ -151,20 +_,24 @@
+@@ -151,20 +_,29 @@
  
                          entity.moveTo(entity.getX(), entity.getY(), entity.getZ(), randomsource.nextFloat() * 360.0F, 0.0F);
                          if (entity instanceof Mob mob) {
@@ -36,6 +36,11 @@
 +                            net.neoforged.neoforge.event.EventHooks.finalizeMobSpawnSpawner(mob, p_151312_, p_151312_.getCurrentDifficultyAt(entity.blockPosition()), MobSpawnType.SPAWNER, null, this, flag1);
  
                              spawndata.getEquipment().ifPresent(mob::equip);
++                            // Spigot Start
++                            if (mob.level().spigotConfig.nerfSpawnerMobs) {
++                                mob.aware = false;
++                            }
++                            // Spigot End
                          }
  
 -                        if (!p_151312_.tryAddFreshEntityWithPassengers(entity)) {

@@ -1,5 +1,27 @@
 --- a/net/minecraft/world/entity/projectile/FireworkRocketEntity.java
 +++ b/net/minecraft/world/entity/projectile/FireworkRocketEntity.java
+@@ -83,6 +_,21 @@
+         this.setOwner(p_37052_);
+     }
+ 
++    // Spigot Start - copied from tick
++    @Override
++    public void inactiveTick() {
++        this.life += 1;
++        if (!this.level().isClientSide && this.life > this.lifetime) {
++            // CraftBukkit start
++            if (!org.bukkit.craftbukkit.event.CraftEventFactory.callFireworkExplodeEvent(this).isCancelled()) {
++                this.explode();
++            }
++            // CraftBukkit end
++        }
++        super.inactiveTick();
++    }
++    // Spigot End
++
+     @Override
+     protected void defineSynchedData(SynchedEntityData.Builder p_326171_) {
+         p_326171_.define(DATA_ID_FIREWORKS_ITEM, getDefaultItem());
 @@ -149,7 +_,7 @@
  
          HitResult hitresult = ProjectileUtil.getHitResultOnMoveVector(this, this::canHitEntity);

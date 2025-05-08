@@ -1,5 +1,13 @@
 --- a/net/minecraft/server/PlayerAdvancements.java
 +++ b/net/minecraft/server/PlayerAdvancements.java
+@@ -129,6 +_,7 @@
+     }
+ 
+     public void save() {
++        if (org.spigotmc.SpigotConfig.disableAdvancementSaving) return; // Spigot
+         JsonElement jsonelement = this.codec.encodeStart(JsonOps.INSTANCE, this.asData()).getOrThrow();
+ 
+         try {
 @@ -146,6 +_,7 @@
          p_301198_.forEach((p_300732_, p_300733_) -> {
              AdvancementHolder advancementholder = p_301166_.get(p_300732_);

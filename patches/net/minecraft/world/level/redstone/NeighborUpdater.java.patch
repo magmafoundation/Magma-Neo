@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/level/redstone/NeighborUpdater.java
 +++ b/net/minecraft/world/level/redstone/NeighborUpdater.java
-@@ -40,6 +_,17 @@
+@@ -40,7 +_,22 @@
  
      static void executeUpdate(Level p_230764_, BlockState p_230765_, BlockPos p_230766_, Block p_230767_, BlockPos p_230768_, boolean p_230769_) {
          try {
@@ -16,5 +16,10 @@
 +            }
 +            // CraftBukkit end
              p_230765_.handleNeighborChanged(p_230764_, p_230766_, p_230767_, p_230768_, p_230769_);
++            // Spigot Start
++        } catch (StackOverflowError ex) {
++            p_230764_.lastPhysicsProblem = new net.minecraft.core.BlockPos(p_230766_);
++            // Spigot End
          } catch (Throwable throwable) {
              CrashReport crashreport = CrashReport.forThrowable(throwable, "Exception while updating neighbours");
+             CrashReportCategory crashreportcategory = crashreport.addCategory("Block being updated");

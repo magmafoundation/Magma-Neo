@@ -1,7 +1,11 @@
 --- a/net/minecraft/world/entity/decoration/BlockAttachedEntity.java
 +++ b/net/minecraft/world/entity/decoration/BlockAttachedEntity.java
-@@ -38,7 +_,25 @@
-             if (this.checkInterval++ == 100) {
+@@ -35,10 +_,28 @@
+     public void tick() {
+         if (!this.level().isClientSide) {
+             this.checkBelowWorld();
+-            if (this.checkInterval++ == 100) {
++            if (this.checkInterval++ == this.level().spigotConfig.hangingTickFrequency) { // Spigot
                  this.checkInterval = 0;
                  if (!this.isRemoved() && !this.survives()) {
 -                    this.discard();

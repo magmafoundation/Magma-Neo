@@ -9,7 +9,7 @@
      private AdvancementTree tree = new AdvancementTree();
      private final HolderLookup.Provider registries;
  
-@@ -39,18 +_,22 @@
+@@ -39,18 +_,27 @@
      }
  
      protected void apply(Map<ResourceLocation, JsonElement> p_136034_, ResourceManager p_136035_, ProfilerFiller p_136036_) {
@@ -17,6 +17,11 @@
 +        RegistryOps<JsonElement> registryops = this.makeConditionalOps(); // Neo: add condition context
          Builder<ResourceLocation, AdvancementHolder> builder = ImmutableMap.builder();
          p_136034_.forEach((p_337529_, p_337530_) -> {
++            // Spigot start
++            if (org.spigotmc.SpigotConfig.disabledAdvancements != null && (org.spigotmc.SpigotConfig.disabledAdvancements.contains("*") || org.spigotmc.SpigotConfig.disabledAdvancements.contains(p_337529_.toString()) || org.spigotmc.SpigotConfig.disabledAdvancements.contains(p_337529_.getNamespace()))) {
++                return;
++            }
++            // Spigot end
              try {
 -                Advancement advancement = Advancement.CODEC.parse(registryops, p_337530_).getOrThrow(JsonParseException::new);
 +                Advancement advancement = net.neoforged.neoforge.common.conditions.ICondition.getWithWithConditionsCodec(Advancement.CONDITIONAL_CODEC, registryops, p_337530_).orElse(null);

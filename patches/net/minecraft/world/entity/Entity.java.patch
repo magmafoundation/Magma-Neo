@@ -60,7 +60,7 @@
      private final Set<TagKey<Fluid>> fluidOnEyes = new HashSet<>();
      public int invulnerableTime;
      protected boolean firstTick = true;
-@@ -244,6 +_,31 @@
+@@ -244,6 +_,39 @@
      @Nullable
      private BlockState inBlockState = null;
  
@@ -79,6 +79,14 @@
 +    // Marks an entity, that it was removed by a plugin via Entity#remove
 +    // Main use case currently is for SPIGOT-7487, preventing dropping of leash when leash is removed
 +    public boolean pluginRemoved = false;
++    public org.spigotmc.CustomTimingsHandler tickTimer = org.bukkit.craftbukkit.SpigotTimings.getEntityTimings(this); // Spigot
++
++    // Spigot start
++    public final org.spigotmc.ActivationRange.ActivationType activationType = org.spigotmc.ActivationRange.initializeEntityActivationType(this);
++    public final boolean defaultActivationState;
++    public long activatedTick = Integer.MIN_VALUE;
++    public void inactiveTick() { }
++    // Spigot end
 +
 +    public float getBukkitYaw() {
 +        return this.yRot;
@@ -92,6 +100,20 @@
      public Entity(EntityType<?> p_19870_, Level p_19871_) {
          this.type = p_19870_;
          this.level = p_19871_;
+@@ -251,6 +_,13 @@
+         this.position = Vec3.ZERO;
+         this.blockPosition = BlockPos.ZERO;
+         this.chunkPosition = ChunkPos.ZERO;
++        // Spigot start
++        if (p_19871_ != null) {
++            this.defaultActivationState = org.spigotmc.ActivationRange.initializeEntityActivationState(this, p_19871_.spigotConfig);
++        } else {
++            this.defaultActivationState = false;
++        }
++        // Spigot end
+         SynchedEntityData.Builder synchedentitydata$builder = new SynchedEntityData.Builder(this);
+         synchedentitydata$builder.define(DATA_SHARED_FLAGS_ID, (byte)0);
+         synchedentitydata$builder.define(DATA_AIR_SUPPLY_ID, this.getMaxAirSupply());
 @@ -263,7 +_,10 @@
          this.defineSynchedData(synchedentitydata$builder);
          this.entityData = synchedentitydata$builder.build();
@@ -297,6 +319,14 @@
      }
  
      public boolean isFree(double p_20230_, double p_20231_, double p_20232_) {
+@@ -599,6 +_,7 @@
+     }
+ 
+     public void move(MoverType p_19973_, Vec3 p_19974_) {
++        org.bukkit.craftbukkit.SpigotTimings.entityMoveTimer.startTiming(); // Spigot
+         if (this.noPhysics) {
+             this.setPos(this.getX() + p_19974_.x, this.getY() + p_19974_.y, this.getZ() + p_19974_.z);
+         } else {
 @@ -664,6 +_,28 @@
                      block.updateEntityAfterFallOn(this.level(), this);
                  }
@@ -335,7 +365,7 @@
                      BlockPos blockpos1 = this.getOnPos();
                      BlockState blockstate1 = this.level().getBlockState(blockpos1);
                      boolean flag1 = this.isStateClimbable(blockstate1);
-@@ -717,16 +_,16 @@
+@@ -717,18 +_,19 @@
                          this.setRemainingFireTicks(-this.getFireImmuneTicks());
                      }
  
@@ -354,7 +384,10 @@
 +                this.level.getProfiler().pop();
              }
          }
++        org.bukkit.craftbukkit.SpigotTimings.entityMoveTimer.stopTiming(); // Spigot
      }
+ 
+     private boolean isStateClimbable(BlockState p_286733_) {
 @@ -812,9 +_,7 @@
                  return blockpos;
              } else {
@@ -575,7 +608,7 @@
              p_20241_.put("Rotation", this.newFloatList(this.getYRot(), this.getXRot()));
              p_20241_.putFloat("FallDistance", this.fallDistance);
              p_20241_.putShort("Fire", (short)this.remainingFireTicks);
-@@ -1663,7 +_,33 @@
+@@ -1663,7 +_,34 @@
              p_20241_.putBoolean("OnGround", this.onGround());
              p_20241_.putBoolean("Invulnerable", this.invulnerable);
              p_20241_.putInt("PortalCooldown", this.portalCooldown);
@@ -606,6 +639,7 @@
 +            if (maxAirTicks != getDefaultMaxAirSupply()) {
 +                p_20241_.putInt("Bukkit.MaxAirSupply", getMaxAirSupply());
 +            }
++            p_20241_.putInt("Spigot.ticksLived", this.tickCount);
 +            // CraftBukkit end
              Component component = this.getCustomName();
              if (component != null) {
@@ -630,13 +664,59 @@
                  if (p_20259_.contains("Tags", 9)) {
                      this.tags.clear();
                      ListTag listtag3 = p_20259_.getList("Tags", 8);
+@@ -1801,6 +_,45 @@
+             } else {
+                 throw new IllegalStateException("Entity has invalid rotation");
+             }
++
++            // CraftBukkit start
++            // Spigot start
++            if (this instanceof LivingEntity) {
++                this.tickCount = p_20259_.getInt("Spigot.ticksLived");
++            }
++            // Spigot end
++            this.persist = !p_20259_.contains("Bukkit.persist") || p_20259_.getBoolean("Bukkit.persist");
++            this.visibleByDefault = !p_20259_.contains("Bukkit.visibleByDefault") || p_20259_.getBoolean("Bukkit.visibleByDefault");
++            // SPIGOT-6907: re-implement LivingEntity#setMaximumAir()
++            if (p_20259_.contains("Bukkit.MaxAirSupply")) {
++                maxAirTicks = p_20259_.getInt("Bukkit.MaxAirSupply");
++            }
++            // CraftBukkit end
++            // CraftBukkit start - Reset world
++            if (this instanceof ServerPlayer) {
++                org.bukkit.Server server = org.bukkit.Bukkit.getServer();
++                org.bukkit.World bworld = null;
++                // TODO: Remove World related checks, replaced with WorldUID
++                String worldName = p_20259_.getString("world");
++                if (p_20259_.contains("WorldUUIDMost") && p_20259_.contains("WorldUUIDLeast")) {
++                    UUID uid = new UUID(p_20259_.getLong("WorldUUIDMost"), p_20259_.getLong("WorldUUIDLeast"));
++                    bworld = server.getWorld(uid);
++                } else {
++                    bworld = server.getWorld(worldName);
++                }
++                if (bworld == null) {
++                    bworld = ((org.bukkit.craftbukkit.CraftServer) server).getServer().getLevel(Level.OVERWORLD).getWorld();
++                }
++                ((ServerPlayer) this).setLevel(bworld == null ? null : ((org.bukkit.craftbukkit.CraftWorld) bworld).getHandle());
++            }
++            this.getBukkitEntity().readBukkitValues(p_20259_);
++            if (p_20259_.contains("Bukkit.invisible")) {
++                boolean bukkitInvisible = p_20259_.getBoolean("Bukkit.invisible");
++                this.setInvisible(bukkitInvisible);
++                this.persistentInvisibility = bukkitInvisible;
++            }
++            // CraftBukkit end
++
+         } catch (Throwable throwable) {
+             CrashReport crashreport = CrashReport.forThrowable(throwable, "Loading entity NBT");
+             CrashReportCategory crashreportcategory = crashreport.addCategory("Entity being loaded");
 @@ -1820,6 +_,12 @@
          return entitytype.canSerialize() && resourcelocation != null ? resourcelocation.toString() : null;
      }
  
 +    // CraftBukkit start - allow excluding certain data when saving
-+    protected void addAdditionalSaveData(CompoundTag nbttagcompound, boolean includeAll) {
-+        addAdditionalSaveData(nbttagcompound);
++    protected void addAdditionalSaveData(CompoundTag p_20259_, boolean includeAll) {
++        addAdditionalSaveData(p_20259_);
 +    }
 +    // CraftBukkit end
 +

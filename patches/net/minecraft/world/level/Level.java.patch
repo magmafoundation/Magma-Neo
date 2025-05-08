@@ -9,7 +9,7 @@
      public static final Codec<ResourceKey<Level>> RESOURCE_KEY_CODEC = ResourceKey.codec(Registries.DIMENSION);
      public static final ResourceKey<Level> OVERWORLD = ResourceKey.create(Registries.DIMENSION, ResourceLocation.withDefaultNamespace("overworld"));
      public static final ResourceKey<Level> NETHER = ResourceKey.create(Registries.DIMENSION, ResourceLocation.withDefaultNamespace("the_nether"));
-@@ -114,6 +_,47 @@
+@@ -114,6 +_,53 @@
      private final RegistryAccess registryAccess;
      private final DamageSources damageSources;
      private long subTickCount;
@@ -32,6 +32,12 @@
 +    public final it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<org.bukkit.entity.SpawnCategory> ticksPerSpawnCategory = new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>();
 +    public boolean populating;
 +    public final org.spigotmc.SpigotWorldConfig spigotConfig; // Spigot
++
++    public final org.bukkit.craftbukkit.SpigotTimings.WorldTimingsHandler timings; // Spigot
++    public static BlockPos lastPhysicsProblem; // Spigot
++    private org.spigotmc.TickLimiter entityLimiter; // Spigot
++    private org.spigotmc.TickLimiter tileLimiter; // Spigot
++    private int tileTickPosition; // Spigot
 +
 +    public org.bukkit.craftbukkit.CraftWorld getWorld() {
 +        return this.world;
@@ -91,7 +97,7 @@
                  }
              };
          } else {
-@@ -154,6 +_,36 @@
+@@ -154,6 +_,39 @@
          this.neighborUpdater = new CollectingNeighborUpdater(this, p_270466_);
          this.registryAccess = p_270200_;
          this.damageSources = new DamageSources(p_270200_);
@@ -125,6 +131,9 @@
 +            public void onBorderSetDamageSafeZOne(WorldBorder worldborder, double d0) {}
 +        });
 +        // CraftBukkit end
++        timings = new org.bukkit.craftbukkit.SpigotTimings.WorldTimingsHandler(this); // Spigot - code below can generate new world and access timings
++        this.entityLimiter = new org.spigotmc.TickLimiter(spigotConfig.entityMaxTickTime);
++        this.tileLimiter = new org.spigotmc.TickLimiter(spigotConfig.tileMaxTickTime);
      }
  
      @Override
@@ -148,7 +157,7 @@
          if (this.isOutsideBuildHeight(p_46605_)) {
              return false;
          } else if (!this.isClientSide && this.isDebug()) {
-@@ -216,11 +_,54 @@
+@@ -216,11 +_,60 @@
          } else {
              LevelChunk levelchunk = this.getChunkAt(p_46605_);
              Block block = p_46606_.getBlock();
@@ -187,7 +196,13 @@
                  BlockState blockstate1 = this.getBlockState(p_46605_);
 +
 +                if (blockSnapshot == null && !this.captureBlockStates) { // Don't notify clients or update physics while capturing blockstates
-+                    this.markAndNotifyBlock(p_46605_, levelchunk, blockstate, p_46606_, p_46607_, p_46608_);
++                    // Spigot start
++                    try {
++                        this.markAndNotifyBlock(p_46605_, levelchunk, blockstate, p_46606_, p_46607_, p_46608_);
++                    } catch (StackOverflowError ex) {
++                        lastPhysicsProblem = new net.minecraft.core.BlockPos(p_46605_);
++                    }
++                    // Spigot end
 +                }
 +
 +                return true;
@@ -294,7 +309,7 @@
          if (this.isOutsideBuildHeight(p_46732_)) {
              return Blocks.VOID_AIR.defaultBlockState();
          } else {
-@@ -489,10 +_,26 @@
+@@ -489,39 +_,78 @@
          (this.tickingBlockEntities ? this.pendingBlockEntityTickers : this.blockEntityTickers).add(p_151526_);
      }
  
@@ -309,6 +324,7 @@
      protected void tickBlockEntities() {
          ProfilerFiller profilerfiller = this.getProfiler();
          profilerfiller.push("blockEntities");
++        timings.tileEntityPending.startTiming(); // Spigot
 +        if (!this.pendingFreshBlockEntities.isEmpty()) {
 +            this.freshBlockEntities.addAll(this.pendingFreshBlockEntities);
 +            this.pendingFreshBlockEntities.clear();
@@ -321,12 +337,47 @@
          if (!this.pendingBlockEntityTickers.isEmpty()) {
              this.blockEntityTickers.addAll(this.pendingBlockEntityTickers);
              this.pendingBlockEntityTickers.clear();
-@@ -516,12 +_,19 @@
+         }
++        timings.tileEntityPending.stopTiming(); // Spigot
+ 
+-        Iterator<TickingBlockEntity> iterator = this.blockEntityTickers.iterator();
++        timings.tileEntityTick.startTiming(); // Spigot
++        // Spigot start
++        //Iterator<TickingBlockEntity> iterator = this.blockEntityTickers.iterator();
+         boolean flag = this.tickRateManager().runsNormally();
+ 
+-        while (iterator.hasNext()) {
+-            TickingBlockEntity tickingblockentity = iterator.next();
++        int tilesThisCycle = 0;
++        for (tileLimiter.initTick();
++                tilesThisCycle < blockEntityTickers.size() && (tilesThisCycle % 10 != 0 || tileLimiter.shouldContinue());
++                tileTickPosition++, tilesThisCycle++) {
++            tileTickPosition = (tileTickPosition < blockEntityTickers.size()) ? tileTickPosition : 0;
++            TickingBlockEntity tickingblockentity = (TickingBlockEntity) this.blockEntityTickers.get(tileTickPosition);
++            // Spigot end
+             if (tickingblockentity.isRemoved()) {
+-                iterator.remove();
++                // Spigot start
++                tilesThisCycle--;
++                this.blockEntityTickers.remove(tileTickPosition--);
++                // Spigot end
+             } else if (flag && this.shouldTickBlocksAt(tickingblockentity.getPos())) {
+                 tickingblockentity.tick();
+             }
+         }
+ 
++        timings.tileEntityTick.stopTiming(); // Spigot
+         this.tickingBlockEntities = false;
+         profilerfiller.pop();
++        spigotConfig.currentPrimedTnt = 0; // Spigot
+     }
  
      public <T extends Entity> void guardEntityTick(Consumer<T> p_46654_, T p_46655_) {
          try {
 +            net.neoforged.neoforge.server.timings.TimeTracker.ENTITY_UPDATE.trackStart(p_46655_);
++            org.bukkit.craftbukkit.SpigotTimings.tickEntityTimer.startTiming(); // Spigot
              p_46654_.accept(p_46655_);
++            org.bukkit.craftbukkit.SpigotTimings.tickEntityTimer.stopTiming(); // Spigot
          } catch (Throwable throwable) {
              CrashReport crashreport = CrashReport.forThrowable(throwable, "Ticking entity");
              CrashReportCategory crashreportcategory = crashreport.addCategory("Entity being ticked");

@@ -1,5 +1,17 @@
 --- a/net/minecraft/network/Connection.java
 +++ b/net/minecraft/network/Connection.java
+@@ -89,6 +_,11 @@
+     private final Queue<Consumer<Connection>> pendingActions = Queues.newConcurrentLinkedQueue();
+     public Channel channel;
+     public SocketAddress address;
++    // Spigot Start
++    public java.util.UUID spoofedUUID;
++    public com.mojang.authlib.properties.Property[] spoofedProfile;
++    public boolean preparing = true;
++    // Spigot End
+     @Nullable
+     private volatile PacketListener disconnectListener;
+     @Nullable
 @@ -107,6 +_,9 @@
      private volatile DisconnectionDetails delayedDisconnect;
      @Nullable
@@ -10,7 +22,13 @@
  
      public Connection(PacketFlow p_129482_) {
          this.receiving = p_129482_;
-@@ -120,11 +_,13 @@
+@@ -117,14 +_,19 @@
+         super.channelActive(p_129525_);
+         this.channel = p_129525_.channel();
+         this.address = this.channel.remoteAddress();
++        // Spigot Start
++        this.preparing = false;
++        // Spigot End
          if (this.delayedDisconnect != null) {
              this.disconnect(this.delayedDisconnect);
          }
@@ -38,6 +56,14 @@
                      DisconnectionDetails disconnectiondetails;
                      if (packetlistener != null) {
                          disconnectiondetails = packetlistener.createDisconnectionInfo(component, p_129534_);
+@@ -167,6 +_,7 @@
+                 }
+             }
+         }
++        if (net.minecraft.server.MinecraftServer.getServer().isDebugging()) p_129534_.printStackTrace(); // Spigot
+     }
+ 
+     protected void channelRead0(ChannelHandlerContext p_129487_, Packet<?> p_129488_) {
 @@ -226,6 +_,7 @@
          if (p_320903_.flow() != this.getReceiving()) {
              throw new IllegalStateException("Invalid inbound protocol: " + p_320903_.id());
@@ -69,7 +95,15 @@
          }
      }
  
-@@ -441,7 +_,7 @@
+@@ -436,12 +_,15 @@
+     }
+ 
+     public void disconnect(DisconnectionDetails p_350867_) {
++        // Spigot Start
++        this.preparing = false;
++        // Spigot End
+         if (this.channel == null) {
+             this.delayedDisconnect = p_350867_;
          }
  
          if (this.isConnected()) {
@@ -86,6 +120,14 @@
          Class<? extends SocketChannel> oclass;
          EventLoopGroup eventloopgroup;
          if (Epoll.isAvailable() && p_290035_) {
+@@ -624,6 +_,7 @@
+                     );
+                     packetlistener1.onDisconnect(disconnectiondetails);
+                 }
++                this.pendingActions.clear(); // Free up packet queue.
+             }
+         }
+     }
 @@ -638,5 +_,17 @@
  
      public void setBandwidthLogger(LocalSampleLogger p_323799_) {

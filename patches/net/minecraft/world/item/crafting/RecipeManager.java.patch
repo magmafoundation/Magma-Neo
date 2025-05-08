@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/item/crafting/RecipeManager.java
 +++ b/net/minecraft/world/item/crafting/RecipeManager.java
-@@ -50,26 +_,47 @@
+@@ -50,26 +_,48 @@
          this.hasErrors = false;
          Builder<RecipeType<?>, RecipeHolder<?>> builder = ImmutableMultimap.builder();
          com.google.common.collect.ImmutableMap.Builder<ResourceLocation, RecipeHolder<?>> builder1 = ImmutableMap.builder();
@@ -38,6 +38,7 @@
  
 +    // CraftBukkit start
 +    public void addRecipe(RecipeHolder<?> irecipe) {
++        org.spigotmc.AsyncCatcher.catchOp("Recipe Add"); // Spigot
 +        Collection<RecipeHolder<?>> map = this.byType.get(irecipe.value().getType()); // CraftBukkit
 +
 +        if (byName.containsKey(irecipe.id())) {

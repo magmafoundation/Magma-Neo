@@ -68,6 +68,17 @@
          boolean flag = p_214999_.forceSynchronousWrites();
          DataFixer datafixer = p_214999_.getFixerUpper();
          EntityPersistentStorage<Entity> entitypersistentstorage = new EntityStorage(
+@@ -256,8 +_,8 @@
+             p_214999_.getStructureManager(),
+             p_215000_,
+             chunkgenerator,
+-            p_214999_.getPlayerList().getViewDistance(),
+-            p_214999_.getPlayerList().getSimulationDistance(),
++            this.spigotConfig.viewDistance, // Spigot
++            this.spigotConfig.simulationDistance, // Spigot
+             flag,
+             p_215005_,
+             this.entityManager::updateChunkStatus,
 @@ -298,6 +_,12 @@
          this.randomSequences = Objects.requireNonNullElseGet(
              p_288977_, () -> this.getDataStorage().computeIfAbsent(RandomSequences.factory(i), "random_sequences")
@@ -90,7 +101,30 @@
              }
  
              this.wakeUpAllPlayers();
-@@ -380,7 +_,7 @@
+@@ -357,6 +_,7 @@
+         }
+ 
+         profilerfiller.popPush("tickPending");
++        timings.doTickPending.startTiming(); // Spigot
+         if (!this.isDebug() && flag) {
+             long k = this.getGameTime();
+             profilerfiller.push("blockTicks");
+@@ -365,6 +_,7 @@
+             this.fluidTicks.tick(k, 65536, this::tickFluid);
+             profilerfiller.pop();
+         }
++        timings.doTickPending.stopTiming(); // Spigot
+ 
+         profilerfiller.popPush("raid");
+         if (flag) {
+@@ -375,24 +_,29 @@
+         this.getChunkSource().tick(p_8794_, true);
+         profilerfiller.popPush("blockEvents");
+         if (flag) {
++            timings.doSounds.startTiming(); // Spigot
+             this.runBlockEvents();
++            timings.doSounds.stopTiming(); // Spigot
+         }
  
          this.handlingTick = false;
          profilerfiller.pop();
@@ -99,7 +133,22 @@
          if (flag1) {
              this.resetEmptyTime();
          }
-@@ -412,7 +_,9 @@
+ 
+         if (flag1 || this.emptyTime++ < 300) {
+             profilerfiller.push("entities");
++            timings.tickEntities.startTiming(); // Spigot
+             if (this.dragonFight != null && flag) {
+                 profilerfiller.push("dragonFight");
+                 this.dragonFight.tick();
+                 profilerfiller.pop();
+             }
+ 
++            org.spigotmc.ActivationRange.activateEntities(this); // Spigot
++            timings.entityTick.startTiming(); // Spigot
+             this.entityTickList.forEach(p_308566_ -> {
+                 if (!p_308566_.isRemoved()) {
+                     if (this.shouldDiscardEntity(p_308566_)) {
+@@ -412,12 +_,16 @@
                              }
  
                              profilerfiller.push("tick");
@@ -110,6 +159,13 @@
                              profilerfiller.pop();
                          }
                      }
+                 }
+             });
++            timings.entityTick.stopTiming(); // Spigot
++            timings.tickEntities.stopTiming(); // Spigot
+             profilerfiller.pop();
+             this.tickBlockEntities();
+         }
 @@ -438,7 +_,7 @@
              this.serverLevelData.setGameTime(i);
              this.serverLevelData.getScheduledEvents().tick(this.server, i);
@@ -119,6 +175,15 @@
              }
          }
      }
+@@ -471,7 +_,7 @@
+         int j = chunkpos.getMinBlockZ();
+         ProfilerFiller profilerfiller = this.getProfiler();
+         profilerfiller.push("thunder");
+-        if (flag && this.isThundering() && this.random.nextInt(100000) == 0) {
++        if (flag && this.isThundering() && this.spigotConfig.thunderChance > 0 && this.random.nextInt(this.spigotConfig.thunderChance) == 0) { // Spigot
+             BlockPos blockpos = this.findLightningTargetAround(this.getBlockRandomPos(i, 0, j, 15));
+             if (this.isRainingAt(blockpos)) {
+                 DifficultyInstance difficultyinstance = this.getCurrentDifficultyAt(blockpos);
 @@ -484,7 +_,7 @@
                          skeletonhorse.setTrap(true);
                          skeletonhorse.setAge(0);
@@ -185,7 +250,20 @@
          }
      }
  
-@@ -758,7 +_,12 @@
+@@ -753,17 +_,31 @@
+     }
+ 
+     public void tickNonPassenger(Entity p_8648_) {
++        // Spigot start
++        if (!org.spigotmc.ActivationRange.checkIfActive(p_8648_)) {
++            p_8648_.tickCount++;
++            p_8648_.inactiveTick();
++            return;
++        }
++        // Spigot end
++        p_8648_.tickTimer.startTiming(); // Spigot
+         p_8648_.setOldPosAndRot();
+         ProfilerFiller profilerfiller = this.getProfiler();
          p_8648_.tickCount++;
          this.getProfiler().push(() -> BuiltInRegistries.ENTITY_TYPE.getKey(p_8648_.getType()).toString());
          profilerfiller.incrementCounter("tickNonPassenger");
@@ -199,6 +277,12 @@
          this.getProfiler().pop();
  
          for (Entity entity : p_8648_.getPassengers()) {
+             this.tickPassenger(p_8648_, entity);
+         }
++        p_8648_.tickTimer.stopTiming(); // Spigot
+     }
+ 
+     private void tickPassenger(Entity p_8663_, Entity p_8664_) {
 @@ -793,6 +_,7 @@
          ServerChunkCache serverchunkcache = this.getChunkSource();
          if (!p_8646_) {
@@ -278,7 +362,7 @@
          Entity entity = this.getEntities().get(p_8854_.getUUID());
          if (entity != null) {
              LOGGER.warn("Force-added player with duplicate UUID {}", p_8854_.getUUID());
-@@ -903,23 +_,42 @@
+@@ -903,28 +_,57 @@
              this.removePlayerImmediately((ServerPlayer)entity, Entity.RemovalReason.DISCARDED);
          }
  
@@ -290,6 +374,7 @@
 -    private boolean addEntity(Entity p_8873_) {
 +    // CraftBukkit start
 +    private boolean addEntity(Entity p_8873_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason spawnReason) {
++        org.spigotmc.AsyncCatcher.catchOp("entity add"); // Spigot
          if (p_8873_.isRemoved()) {
 -            LOGGER.warn("Tried to add entity {} but it was marked as removed already", EntityType.getKey(p_8873_.getType()));
 +            // LOGGER.warn("Tried to add entity {} but it was marked as removed already", EntityType.getKey(p_8873_.getType())); // CraftBukkit
@@ -325,6 +410,20 @@
 +            this.addFreshEntityWithPassengers(p_8861_, reason); // CraftBukkit
              return true;
          }
+     }
+ 
+     public void unload(LevelChunk p_8713_) {
++        // Spigot Start
++        for (net.minecraft.world.level.block.entity.BlockEntity tileentity : p_8713_.getBlockEntities().values()) {
++            if (tileentity instanceof net.minecraft.world.Container) {
++                for (org.bukkit.entity.HumanEntity h : Lists.newArrayList(((net.minecraft.world.Container) tileentity).getViewers())) {
++                    h.closeInventory();
++                }
++            }
++        }
++        // Spigot End
+         p_8713_.clearAllBlockEntities();
+         p_8713_.unregisterTickContainerFromLevel(this);
      }
 @@ -933,13 +_,41 @@
          p_143262_.remove(p_143263_);
@@ -491,7 +590,23 @@
              this.updateNeighborsAt(p_8743_, p_8744_);
          }
      }
-@@ -1713,13 +_,15 @@
+@@ -1600,6 +_,7 @@
+ 
+     @Override
+     public LevelEntityGetter<Entity> getEntities() {
++        org.spigotmc.AsyncCatcher.catchOp("Chunk getEntities call"); // Spigot
+         return this.entityManager.getEntityGetter();
+     }
+ 
+@@ -1696,6 +_,7 @@
+         }
+ 
+         public void onTrackingStart(Entity p_143371_) {
++            org.spigotmc.AsyncCatcher.catchOp("entity register"); // Spigot
+             ServerLevel.this.getChunkSource().addEntity(p_143371_);
+             if (p_143371_ instanceof ServerPlayer serverplayer) {
+                 ServerLevel.this.players.add(serverplayer);
+@@ -1713,16 +_,49 @@
                  ServerLevel.this.navigatingMobs.add(mob);
              }
  
@@ -509,6 +624,40 @@
          }
  
          public void onTrackingEnd(Entity p_143375_) {
++            org.spigotmc.AsyncCatcher.catchOp("entity unregister"); // Spigot
++            // Spigot start
++            if ( p_143375_ instanceof Player )
++            {
++                com.google.common.collect.Streams.stream( getServer().getAllLevels() ).map( ServerLevel::getDataStorage ).forEach( (worldData) ->
++                {
++                    for (Object o : worldData.cache.values() )
++                    {
++                        if ( o instanceof MapItemSavedData )
++                        {
++                            MapItemSavedData map = (MapItemSavedData) o;
++                            map.carriedByPlayers.remove( (Player) p_143375_ );
++                            for ( java.util.Iterator<net.minecraft.world.level.saveddata.maps.MapItemSavedData.HoldingPlayer> iter = (java.util.Iterator<net.minecraft.world.level.saveddata.maps.MapItemSavedData.HoldingPlayer>) map.carriedBy.iterator(); iter.hasNext(); )
++                            {
++                                if ( iter.next().player == p_143375_ )
++                                {
++                                    iter.remove();
++                                }
++                            }
++                        }
++                    }
++                } );
++            }
++            // Spigot end
++            // Spigot Start
++            if (p_143375_.getBukkitEntity() instanceof org.bukkit.inventory.InventoryHolder && (!(p_143375_ instanceof ServerPlayer) || p_143375_.getRemovalReason() != Entity.RemovalReason.KILLED)) { // SPIGOT-6876: closeInventory clears death message
++                for (org.bukkit.entity.HumanEntity h : Lists.newArrayList(((org.bukkit.inventory.InventoryHolder) p_143375_.getBukkitEntity()).getInventory().getViewers())) {
++                    h.closeInventory();
++                }
++            }
++            // Spigot End
+             ServerLevel.this.getChunkSource().removeEntity(p_143375_);
+             if (p_143375_ instanceof ServerPlayer serverplayer) {
+                 ServerLevel.this.players.remove(serverplayer);
 @@ -1733,24 +_,115 @@
                  if (ServerLevel.this.isUpdatingNavigations) {
                      String s = "onTrackingStart called during navigation iteration";

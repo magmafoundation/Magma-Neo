@@ -1,6 +1,6 @@
 --- a/net/minecraft/server/MinecraftServer.java
 +++ b/net/minecraft/server/MinecraftServer.java
-@@ -262,9 +_,22 @@
+@@ -262,9 +_,33 @@
      private volatile boolean isSaving;
      private static final AtomicReference<RuntimeException> fatalException = new AtomicReference<>();
  
@@ -17,6 +17,17 @@
 +    private boolean forceTicks;
 +    // CraftBukkit end
 +
++    // Spigot start
++    public static final int TPS = 20;
++    public static final int TICK_TIME = 1000000000 / TPS;
++    private static final int SAMPLE_INTERVAL = 100;
++    public final double[] recentTps = new double[ 3 ];
++    // Spigot end
++
++    // Magma start
++    private static org.magmafoundation.magma.Metrics metrics;
++    // Magma end
++
      public static <S extends MinecraftServer> S spin(Function<Thread, S> p_129873_) {
          AtomicReference<S> atomicreference = new AtomicReference<>();
 -        Thread thread = new Thread(() -> atomicreference.get().runServer(), "Server thread");
@@ -24,7 +35,16 @@
          thread.setUncaughtExceptionHandler((p_177909_, p_177910_) -> LOGGER.error("Uncaught exception in server thread", p_177910_));
          if (Runtime.getRuntime().availableProcessors() > 4) {
              thread.setPriority(8);
-@@ -315,8 +_,35 @@
+@@ -300,7 +_,7 @@
+                 p_236729_.profileCache().setExecutor(this);
+             }
+ 
+-            this.connection = new ServerConnectionListener(this);
++            // this.connection = new ServerConnectionListener(this); // Spigot
+             this.tickRateManager = new ServerTickRateManager(this);
+             this.progressListenerFactory = p_236730_;
+             this.storageSource = p_236724_;
+@@ -315,8 +_,39 @@
              this.structureTemplateManager = new StructureTemplateManager(p_236726_.resourceManager(), p_236724_, p_236728_, holdergetter);
              this.serverThread = p_236723_;
              this.executor = Util.backgroundExecutor();
@@ -41,6 +61,10 @@
 +            System.setProperty("jline.terminal", "jline.UnsupportedTerminal");
 +            org.bukkit.craftbukkit.Main.useJline = false;
 +        }
++
++        // Magma start
++        metrics = new org.magmafoundation.magma.Metrics();
++        // Magma end
 +
 +        try {
 +            reader = new jline.console.ConsoleReader(System.in, System.out);
@@ -431,17 +455,36 @@
                      serverlevel2.close();
                  } catch (IOException ioexception1) {
                      LOGGER.error("Exception closing the level", (Throwable)ioexception1);
-@@ -635,6 +_,9 @@
+@@ -635,6 +_,15 @@
          } catch (IOException ioexception) {
              LOGGER.error("Failed to unlock level {}", this.storageSource.getLevelId(), ioexception);
          }
++        // Spigot start
++        if (org.spigotmc.SpigotConfig.saveUserCacheOnStopOnly) {
++            LOGGER.info("Saving usercache.json");
++            this.getProfileCache().save();
++        }
++        // Spigot end
 +
 +        Util.shutdownExecutors();
 +        this.onServerExit();
      }
  
      public String getLocalIp() {
-@@ -666,9 +_,11 @@
+@@ -660,16 +_,28 @@
+         }
+     }
+ 
++    // Spigot Start
++    private static double calcTps(double avg, double exp, double tps)
++    {
++        return ( avg * exp ) + ( tps * ( 1 - exp ) );
++    }
++    // Spigot End
++
+     protected void runServer() {
+         try {
+             if (!this.initServer()) {
                  throw new IllegalStateException("Failed to initialize server");
              }
  
@@ -451,9 +494,13 @@
              this.status = this.buildServerStatus();
 +            resetStatusCache(status);
  
++            // Spigot start
++            Arrays.fill( recentTps, 20 );
++            long tickSection = Util.getMillis(), tickCount = 1;
              while (this.running) {
                  long i;
-@@ -682,6 +_,7 @@
+                 if (!this.isPaused() && this.tickRateManager.isSprinting() && this.tickRateManager.checkShouldSprintThisTick()) {
+@@ -682,11 +_,23 @@
                      if (k > OVERLOADED_THRESHOLD_NANOS + 20L * i
                          && this.nextTickTimeNanos - this.lastOverloadWarningNanos >= OVERLOADED_WARNING_INTERVAL_NANOS + 100L * i) {
                          long j = k / i;
@@ -461,6 +508,22 @@
                          LOGGER.warn("Can't keep up! Is the server overloaded? Running {}ms or {} ticks behind", k / TimeUtil.NANOSECONDS_PER_MILLISECOND, j);
                          this.nextTickTimeNanos += j * i;
                          this.lastOverloadWarningNanos = this.nextTickTimeNanos;
+                     }
+                 }
++                // Spigot start
++                if ( tickCount++ % SAMPLE_INTERVAL == 0 )
++                {
++                    long curTime = Util.getMillis();
++                    double currentTps = 1E3 / ( curTime - tickSection ) * SAMPLE_INTERVAL;
++                    recentTps[0] = calcTps( recentTps[0], 0.92, currentTps ); // 1/exp(5sec/1min)
++                    recentTps[1] = calcTps( recentTps[1], 0.9835, currentTps ); // 1/exp(5sec/5min)
++                    recentTps[2] = calcTps( recentTps[2], 0.9945, currentTps ); // 1/exp(5sec/15min)
++                    tickSection = curTime;
++                }
++                // Spigot end
+ 
+                 boolean flag = i == 0L;
+                 if (this.debugCommandProfilerDelayStart) {
 @@ -694,6 +_,7 @@
                      this.debugCommandProfiler = new MinecraftServer.TimeProfiler(Util.getNanos(), this.tickCount);
                  }
@@ -486,11 +549,12 @@
              this.onServerCrash(crashreport);
          } finally {
              try {
-@@ -737,6 +_,13 @@
+@@ -737,6 +_,14 @@
                      this.services.profileCache().clearExecutor();
                  }
  
 +                net.neoforged.neoforge.server.ServerLifecycleHooks.handleServerStopped(this);
++                org.spigotmc.WatchdogThread.doStop(); // Spigot
 +                // CraftBukkit start - Restore terminal to original settings
 +                try {
 +                    reader.getTerminal().restore();
@@ -525,8 +589,11 @@
      }
  
      public boolean isPaused() {
-@@ -901,11 +_,13 @@
+@@ -899,23 +_,28 @@
+     }
+ 
      public void tickServer(BooleanSupplier p_129871_) {
++        org.bukkit.craftbukkit.SpigotTimings.serverTickTimer.startTiming(); // Spigot
          long i = Util.getNanos();
          this.tickCount++;
 +        net.neoforged.neoforge.event.EventHooks.fireServerTickPre(p_129871_, this);
@@ -539,11 +606,25 @@
          }
  
          this.ticksUntilAutosave--;
-@@ -927,6 +_,7 @@
+         if (this.ticksUntilAutosave <= 0) {
+             this.ticksUntilAutosave = this.computeNextAutosaveInterval();
++            org.bukkit.craftbukkit.SpigotTimings.worldSaveTimer.startTiming(); // Spigot
+             LOGGER.debug("Autosave started");
+             this.profiler.push("save");
+             this.saveEverything(true, false, false);
+             this.profiler.pop();
+             LOGGER.debug("Autosave finished");
++            org.bukkit.craftbukkit.SpigotTimings.worldSaveTimer.stopTiming(); // Spigot
+         }
+ 
+         this.profiler.push("tallying");
+@@ -927,6 +_,9 @@
          this.smoothedTickTimeMillis = this.smoothedTickTimeMillis * 0.8F + (float)j / (float)TimeUtil.NANOSECONDS_PER_MILLISECOND * 0.19999999F;
          this.logTickMethodTime(i);
          this.profiler.pop();
++        org.spigotmc.WatchdogThread.tick(); // Spigot
 +        net.neoforged.neoforge.event.EventHooks.fireServerTickPost(p_129871_, this);
++        org.spigotmc.CustomTimingsHandler.tick(); // Spigot
      }
  
      private void logTickMethodTime(long p_321837_) {
@@ -574,21 +655,29 @@
          );
      }
  
-@@ -992,11 +_,26 @@
+@@ -992,11 +_,35 @@
  
      public void tickChildren(BooleanSupplier p_129954_) {
          this.getPlayerList().getPlayers().forEach(p_341570_ -> p_341570_.connection.suspendFlushing());
++        org.bukkit.craftbukkit.SpigotTimings.schedulerTimer.startTiming(); // Spigot
 +        this.server.getScheduler().mainThreadHeartbeat(this.tickCount); // CraftBukkit
++        org.bukkit.craftbukkit.SpigotTimings.schedulerTimer.stopTiming(); // Spigot
          this.profiler.push("commandFunctions");
++        org.bukkit.craftbukkit.SpigotTimings.commandFunctionsTimer.startTiming(); // Spigot
          this.getFunctions().tick();
++        org.bukkit.craftbukkit.SpigotTimings.commandFunctionsTimer.stopTiming(); // Spigot
          this.profiler.popPush("levels");
  
 -        for (ServerLevel serverlevel : this.getAllLevels()) {
 +        // CraftBukkit start
 +        // Run tasks that are waiting on processing
++        org.bukkit.craftbukkit.SpigotTimings.processQueueTimer.startTiming(); // Spigot
 +        while (!processQueue.isEmpty()) {
 +            processQueue.remove().run();
 +        }
++        org.bukkit.craftbukkit.SpigotTimings.processQueueTimer.stopTiming(); // Spigot
++
++        org.bukkit.craftbukkit.SpigotTimings.timeUpdateTimer.startTiming(); // Spigot
 +        // Send time updates to everyone, it will get the right time from the world the player is in.
 +        if (this.tickCount % 20 == 0) {
 +            for (int i = 0; i < this.getPlayerList().players.size(); ++i) {
@@ -596,21 +685,25 @@
 +                entityplayer.connection.send(new ClientboundSetTimePacket(entityplayer.level().getGameTime(), entityplayer.getPlayerTime(), entityplayer.level().getGameRules().getBoolean(GameRules.RULE_DAYLIGHT))); // Add support for per player time
 +            }
 +        }
++        org.bukkit.craftbukkit.SpigotTimings.timeUpdateTimer.stopTiming(); // Spigot
 +
 +        for(ServerLevel serverlevel : this.getWorldArray()) {
 +            long tickStart = Util.getNanos();
              this.profiler.push(() -> serverlevel + " " + serverlevel.dimension().location());
              if (this.tickCount % 20 == 0) {
                  this.profiler.push("timeSync");
-@@ -1005,6 +_,7 @@
+@@ -1005,32 +_,43 @@
              }
  
              this.profiler.push("tick");
 +            net.neoforged.neoforge.event.EventHooks.fireLevelTickPre(serverlevel, p_129954_);
  
              try {
++                serverlevel.timings.doTick.startTiming(); // Spigot
                  serverlevel.tick(p_129954_);
-@@ -1013,16 +_,18 @@
++                serverlevel.timings.doTick.stopTiming(); // Spigot
+             } catch (Throwable throwable) {
+                 CrashReport crashreport = CrashReport.forThrowable(throwable, "Exception ticking world");
                  serverlevel.fillReportDetails(crashreport);
                  throw new ReportedException(crashreport);
              }
@@ -622,13 +715,27 @@
          }
  
          this.profiler.popPush("connection");
++        org.bukkit.craftbukkit.SpigotTimings.connectionTimer.startTiming(); // Spigot
          this.getConnection().tick();
++        org.bukkit.craftbukkit.SpigotTimings.connectionTimer.stopTiming(); // Spigot
          this.profiler.popPush("players");
++        org.bukkit.craftbukkit.SpigotTimings.playerListTimer.startTiming(); // Spigot
          this.playerList.tick();
 -        if (SharedConstants.IS_RUNNING_IN_IDE && this.tickRateManager.runsNormally()) {
++        org.bukkit.craftbukkit.SpigotTimings.playerListTimer.stopTiming(); // Spigot
 +        if (net.neoforged.neoforge.gametest.GameTestHooks.isGametestEnabled() && this.tickRateManager.runsNormally()) {
              GameTestTicker.SINGLETON.tick();
          }
+ 
+         this.profiler.popPush("server gui refresh");
+ 
++        org.bukkit.craftbukkit.SpigotTimings.tickablesTimer.startTiming(); // Spigot
+         for (int i = 0; i < this.tickables.size(); i++) {
+             this.tickables.get(i).run();
+         }
++        org.bukkit.craftbukkit.SpigotTimings.tickablesTimer.stopTiming(); // Spigot
+ 
+         this.profiler.popPush("send chunks");
  
 @@ -1043,11 +_,17 @@
      }
@@ -685,6 +792,15 @@
      }
  
      public SystemReport fillSystemReport(SystemReport p_177936_) {
+@@ -1314,7 +_,7 @@
+     }
+ 
+     public ServerConnectionListener getConnection() {
+-        return this.connection;
++        return this.connection == null ? this.connection = new ServerConnectionListener(this) : this.connection; // Spigot
+     }
+ 
+     public boolean isReady() {
 @@ -1441,7 +_,7 @@
  
      public CompletableFuture<Void> reloadResources(Collection<String> p_129862_) {

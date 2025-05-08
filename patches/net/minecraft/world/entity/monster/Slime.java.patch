@@ -72,6 +72,15 @@
      }
  
      @Override
+@@ -305,7 +_,7 @@
+                 }
+ 
+                 ChunkPos chunkpos = new ChunkPos(p_219116_);
+-                boolean flag = WorldgenRandom.seedSlimeChunk(chunkpos.x, chunkpos.z, ((WorldGenLevel)p_219114_).getSeed(), 987234911L).nextInt(10) == 0;
++                boolean flag = WorldgenRandom.seedSlimeChunk(chunkpos.x, chunkpos.z, ((WorldGenLevel)p_219114_).getSeed(), p_219114_.getMinecraftWorld().spigotConfig.slimeSeed).nextInt(10) == 0; // Spigot
+                 if (p_219117_.nextInt(10) == 0 && flag && p_219116_.getY() < 40) {
+                     return checkMobSpawnRules(p_219113_, p_219114_, p_219115_, p_219116_, p_219117_);
+                 }
 @@ -334,6 +_,7 @@
          Vec3 vec3 = this.getDeltaMovement();
          this.setDeltaMovement(vec3.x, (double)this.getJumpPower(), vec3.z);

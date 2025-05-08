@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/entity/boss/wither/WitherBoss.java
 +++ b/net/minecraft/world/entity/boss/wither/WitherBoss.java
-@@ -263,15 +_,36 @@
+@@ -263,15 +_,37 @@
              int j = this.getInvulnerableTicks() - 1;
              this.bossEvent.setProgress(1.0F - (float)j / 220.0F);
              if (j <= 0) {
@@ -20,6 +20,7 @@
 +                        double deltaX = this.getX() - player.getX();
 +                        double deltaZ = this.getZ() - player.getZ();
 +                        double distanceSquared = deltaX * deltaX + deltaZ * deltaZ;
++                        if ( this.level().spigotConfig.witherSpawnSoundRadius > 0 && distanceSquared > this.level().spigotConfig.witherSpawnSoundRadius * this.level().spigotConfig.witherSpawnSoundRadius ) continue; // Spigot
 +                        if (distanceSquared > viewDistance * viewDistance) {
 +                            double deltaLength = Math.sqrt(distanceSquared);
 +                            double relativeX = player.getX() + (deltaX / deltaLength) * viewDistance;
