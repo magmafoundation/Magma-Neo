@@ -258,6 +258,7 @@ import org.bukkit.structure.StructureManager;
 import org.bukkit.util.StringUtil;
 import org.bukkit.util.permissions.DefaultPermissions;
 import org.magmafoundation.magma.Magma;
+import org.magmafoundation.magma.neoforge.NeoInject;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.SafeConstructor;
@@ -328,6 +329,8 @@ public final class CraftServer implements Server {
         Bukkit.setServer(this);
 
         CraftRegistry.setMinecraftRegistry(console.registryAccess());
+
+        NeoInject.init();
 
         if (!Main.useConsole) {
             getLogger().info("Console input is disabled due to --noconsole command argument");

@@ -62,8 +62,8 @@
 +            org.bukkit.craftbukkit.Main.useJline = false;
 +        }
 +
-+        // Magma start
-+        metrics = new org.magmafoundation.magma.Metrics();
++        // Magma start todo - when fully implemented, uncomment this
++        // metrics = new org.magmafoundation.magma.Metrics();
 +        // Magma end
 +
 +        try {

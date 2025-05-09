@@ -1305,7 +1305,7 @@
                  this.player.containerMenu.sendAllDataToRemote();
              } else if (!this.player.containerMenu.stillValid(this.player)) {
                  LOGGER.debug("Player {} interacted with invalid menu {}", this.player, this.player.containerMenu);
-@@ -1643,7 +_,274 @@
+@@ -1643,7 +_,280 @@
                  } else {
                      boolean flag = p_9856_.getStateId() != this.player.containerMenu.getStateId();
                      this.player.containerMenu.suppressRemoteUpdates();
@@ -1315,7 +1315,13 @@
 +                    if (p_9856_.getSlotNum() < -1 && p_9856_.getSlotNum() != -999) {
 +                        return;
 +                    }
++
++                    //Magma start - capture container owner
++                    org.magmafoundation.magma.util.InventoryViewHelper.captureContainerOwner(this.player);
 +                    org.bukkit.inventory.InventoryView inventory = this.player.containerMenu.getBukkitView();
++                    org.magmafoundation.magma.util.InventoryViewHelper.resetContainerOwner();
++                    //Magma end
++
 +                    org.bukkit.event.inventory.InventoryType.SlotType type = inventory.getSlotType(p_9856_.getSlotNum());
 +                    org.bukkit.event.inventory.InventoryClickEvent event;
 +                    org.bukkit.event.inventory.ClickType click = org.bukkit.event.inventory.ClickType.UNKNOWN;

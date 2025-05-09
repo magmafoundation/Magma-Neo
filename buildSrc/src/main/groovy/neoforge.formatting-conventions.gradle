@@ -28,6 +28,9 @@ abstract class GeneratePackageInfos extends DefaultTask {
                 else if (pkgName.contains("org/magmafoundation/")) {
                     pkgName = pkgName.substring(pkgName.indexOf('org/magmafoundation/'), pkgName.lastIndexOf('/'))
                 }
+                else if(pkgName.contains("io/izzel/arclight")) {
+                    pkgName = pkgName.substring(pkgName.indexOf('io/izzel/arclight'), pkgName.lastIndexOf('/'))
+                }
                 pkgName = pkgName.replaceAll('/', '.')
 
                 def pkgInfoText = """

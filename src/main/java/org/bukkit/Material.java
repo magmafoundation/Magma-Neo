@@ -3,10 +3,13 @@ package org.bukkit;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import io.izzel.arclight.api.EnumHelper;
 import java.lang.reflect.Constructor;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
+import net.minecraft.resources.ResourceLocation;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.block.Block;
@@ -114,6 +117,7 @@ import org.bukkit.block.data.type.Vault;
 import org.bukkit.block.data.type.Wall;
 import org.bukkit.block.data.type.WallHangingSign;
 import org.bukkit.block.data.type.WallSign;
+import org.bukkit.craftbukkit.util.CraftNamespacedKey;
 import org.bukkit.inventory.CreativeCategory;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -4617,7 +4621,18 @@ public enum Material implements Keyed, Translatable {
     private final short durability;
     public final Class<?> data;
     private final boolean legacy;
-    private final NamespacedKey key;
+    private NamespacedKey key;
+
+    // Magma start
+    public boolean isNeoBlock = false;
+    public boolean isNeoItem = false;
+
+    private Material(final int id, final int stack, boolean isNeoBlock, boolean isNeoItem) {
+        this(id, stack);
+        this.isNeoBlock = isNeoBlock;
+        this.isNeoItem = isNeoItem;
+    }
+    // Magma end
 
     private Material(final int id) {
         this(id, 64);
@@ -5515,4 +5530,18 @@ public enum Material implements Keyed, Translatable {
         }
         return Registry.BLOCK.get(material.key);
     }
+
+    // Magma - start
+    public static Material addMaterial(String name, int id, int stack, ResourceLocation key, boolean block, boolean item) {
+        try {
+            var material = EnumHelper.makeEnum(Material.class, name, id, List.of(Integer.TYPE, Integer.TYPE, Boolean.TYPE, Boolean.TYPE), List.of(id, stack, block, item));
+            BY_NAME.put(name, material);
+            material.key = CraftNamespacedKey.fromMinecraft(key);
+            return material;
+        } catch (Throwable e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+    // Magma - end
 }

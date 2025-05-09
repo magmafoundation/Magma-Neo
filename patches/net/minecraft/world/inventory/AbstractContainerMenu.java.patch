@@ -1,18 +1,36 @@
 --- a/net/minecraft/world/inventory/AbstractContainerMenu.java
 +++ b/net/minecraft/world/inventory/AbstractContainerMenu.java
-@@ -62,6 +_,27 @@
+@@ -62,6 +_,45 @@
      private ContainerSynchronizer synchronizer;
      private boolean suppressRemoteUpdates;
  
 +    // CraftBukkit start
 +    public boolean checkReachable = true;
-+    public abstract org.bukkit.inventory.InventoryView getBukkitView();
++    private org.bukkit.inventory.InventoryView bukkitView = null;
++
++    // Magma start - this should not be abstract
++    public org.bukkit.inventory.InventoryView getBukkitView() {
++        if(bukkitView == null) {
++            bukkitView = org.magmafoundation.magma.util.InventoryViewHelper.createInvView(this);
++        }
++
++        return bukkitView;
++    }
++    // Magma end
 +    public void transferTo(AbstractContainerMenu other, org.bukkit.craftbukkit.entity.CraftHumanEntity player) {
 +        org.bukkit.inventory.InventoryView source = this.getBukkitView(), destination = other.getBukkitView();
-+        ((org.bukkit.craftbukkit.inventory.CraftInventory) source.getTopInventory()).getInventory().onClose(player);
-+        ((org.bukkit.craftbukkit.inventory.CraftInventory) source.getBottomInventory()).getInventory().onClose(player);
-+        ((org.bukkit.craftbukkit.inventory.CraftInventory) destination.getTopInventory()).getInventory().onOpen(player);
-+        ((org.bukkit.craftbukkit.inventory.CraftInventory) destination.getBottomInventory()).getInventory().onOpen(player);
++        // Magma start - catch npe if source or destination is null
++        try{
++            if(source != null) {
++                ((org.bukkit.craftbukkit.inventory.CraftInventory) source.getTopInventory()).getInventory().onClose(player);
++                ((org.bukkit.craftbukkit.inventory.CraftInventory) source.getBottomInventory()).getInventory().onClose(player);
++            }
++            if(destination != null) {
++                ((org.bukkit.craftbukkit.inventory.CraftInventory) destination.getTopInventory()).getInventory().onOpen(player);
++                ((org.bukkit.craftbukkit.inventory.CraftInventory) destination.getBottomInventory()).getInventory().onOpen(player);
++            }
++        } catch (AbstractMethodError ignored){}
++        // Magma end
 +    }
 +    private net.minecraft.network.chat.Component title;
 +    public final net.minecraft.network.chat.Component getTitle() {

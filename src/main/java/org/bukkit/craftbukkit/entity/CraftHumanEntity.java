@@ -261,7 +261,14 @@ public class CraftHumanEntity extends CraftLivingEntity implements HumanEntity {
 
     @Override
     public InventoryView getOpenInventory() {
-        return getHandle().containerMenu.getBukkitView();
+        //Magma start - capture container owner
+        try {
+            org.magmafoundation.magma.util.InventoryViewHelper.captureContainerOwner(this.getHandle());
+            return getHandle().containerMenu.getBukkitView();
+        } finally {
+            org.magmafoundation.magma.util.InventoryViewHelper.resetContainerOwner();
+        }
+        //Magma end
     }
 
     @Override

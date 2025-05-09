@@ -493,7 +493,7 @@
          if (this.isSleeping()) {
              this.serverLevel().getChunkSource().broadcastAndSend(this, new ClientboundAnimatePacket(this, 2));
          }
-@@ -1068,21 +_,49 @@
+@@ -1068,21 +_,53 @@
          this.connection.send(new ClientboundOpenSignEditorPacket(p_277909_.getBlockPos(), p_277495_));
      }
  
@@ -527,7 +527,11 @@
 +            if (abstractcontainermenu != null) {
 +                abstractcontainermenu.setTitle(p_9033_.getDisplayName());
 +                boolean cancelled = false;
++                // Magma start - capture container owner
++                org.magmafoundation.magma.util.InventoryViewHelper.captureContainerOwner(this);
 +                abstractcontainermenu = org.bukkit.craftbukkit.event.CraftEventFactory.callInventoryOpenEvent(this, abstractcontainermenu, cancelled);
++                org.magmafoundation.magma.util.InventoryViewHelper.resetContainerOwner();
++                // Magma end
 +                if (abstractcontainermenu == null && !cancelled) { // Let pre-cancelled events fall through
 +                    // SPIGOT-5263 - close chest if cancelled
 +                    if (p_9033_ instanceof Container) {
@@ -610,11 +614,20 @@
      }
  
      @Override
-@@ -1135,6 +_,7 @@
+@@ -1135,6 +_,16 @@
  
      @Override
      public void closeContainer() {
-+        org.bukkit.craftbukkit.event.CraftEventFactory.handleInventoryCloseEvent(this); // CraftBukkit
++
++        // Magma start - capture container owner
++        if (this.containerMenu != this.inventoryMenu) {
++            Player old = org.magmafoundation.magma.util.InventoryViewHelper.getContainerOwner();
++            org.magmafoundation.magma.util.InventoryViewHelper.captureContainerOwner(this);
++            org.bukkit.craftbukkit.event.CraftEventFactory.handleInventoryCloseEvent(this); // CraftBukkit
++            org.magmafoundation.magma.util.InventoryViewHelper.captureContainerOwner(old);
++        }
++        // Magma end
++
          this.connection.send(new ClientboundContainerClosePacket(this.containerMenu.containerId));
          this.doCloseContainer();
      }

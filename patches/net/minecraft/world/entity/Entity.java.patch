@@ -52,7 +52,7 @@
 +    public RandomSource random = RandomSource.create();
      public int tickCount;
      private int remainingFireTicks = -this.getFireImmuneTicks();
-     protected boolean wasTouchingWater;
+     public boolean wasTouchingWater;
 +    @Deprecated // Forge: Use forgeFluidTypeHeight instead
      protected Object2DoubleMap<TagKey<Fluid>> fluidHeight = new Object2DoubleArrayMap<>(2);
      protected boolean wasEyeInWater;
