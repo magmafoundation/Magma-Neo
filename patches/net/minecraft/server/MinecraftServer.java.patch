@@ -814,7 +814,7 @@
                      this.resources.close();
                      this.resources = p_335203_;
                      this.packRepository.setSelected(p_129862_);
-+                    //this.server.syncCommands(); // SPIGOT-5884: Lost on reload
++                    this.server.syncCommands(); // SPIGOT-5884: Lost on reload
                      WorldDataConfiguration worlddataconfiguration = new WorldDataConfiguration(
                          getSelectedPacks(this.packRepository, true), this.worldData.enabledFeatures()
                      );
