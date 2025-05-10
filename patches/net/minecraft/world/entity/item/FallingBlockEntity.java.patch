@@ -1,18 +1,22 @@
 --- a/net/minecraft/world/entity/item/FallingBlockEntity.java
 +++ b/net/minecraft/world/entity/item/FallingBlockEntity.java
-@@ -80,6 +_,12 @@
+@@ -79,6 +_,16 @@
+         this.setStartPos(this.blockPosition());
      }
  
-     public static FallingBlockEntity fall(Level p_201972_, BlockPos p_201973_, BlockState p_201974_) {
-+        // CraftBukkit start
-+        return fall(p_201972_, p_201973_, p_201974_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT);
++    // Magma start - mixin support
++    static org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason magma$spawnReason = org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT;
++    public static FallingBlockEntity fallCB(Level p_201972_, BlockPos p_201973_, BlockState p_201974_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason spawnReason) {
++        magma$spawnReason = spawnReason; // Magma
++        var block = fall(p_201972_, p_201973_, p_201974_);
++        magma$spawnReason = org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT; // Magma
++        return block;
 +    }
++    // Magma end
 +
-+    public static FallingBlockEntity fall(Level p_201972_, BlockPos p_201973_, BlockState p_201974_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason spawnReason) {
-+        // CraftBukkit end
+     public static FallingBlockEntity fall(Level p_201972_, BlockPos p_201973_, BlockState p_201974_) {
          FallingBlockEntity fallingblockentity = new FallingBlockEntity(
              p_201972_,
-             (double)p_201973_.getX() + 0.5,
 @@ -87,8 +_,9 @@
              (double)p_201973_.getZ() + 0.5,
              p_201974_.hasProperty(BlockStateProperties.WATERLOGGED) ? p_201974_.setValue(BlockStateProperties.WATERLOGGED, Boolean.valueOf(false)) : p_201974_
@@ -20,7 +24,7 @@
 +        if (!org.bukkit.craftbukkit.event.CraftEventFactory.callEntityChangeBlockEvent(fallingblockentity, p_201973_, p_201974_.getFluidState().createLegacyBlock())) return fallingblockentity; // CraftBukkit
          p_201972_.setBlock(p_201973_, p_201974_.getFluidState().createLegacyBlock(), 3);
 -        p_201972_.addFreshEntity(fallingblockentity);
-+        p_201972_.addFreshEntity(fallingblockentity, spawnReason); // CraftBukkit
++        p_201972_.addFreshEntity(fallingblockentity, magma$spawnReason); // CraftBukkit // Magma
          return fallingblockentity;
      }
  

@@ -128,6 +128,7 @@
  
 +    // CraftBukkit start
 +    private void loadWorld0(String s) {
++
 +        LevelStorageSource.LevelStorageAccess worldSession = this.storageSource;
 +
 +        Registry<LevelStem> dimensions = this.registries.compositeAccess().registryOrThrow(Registries.LEVEL_STEM);
@@ -259,9 +260,8 @@
 +            }
 +            worlddata.checkName(name); // CraftBukkit - Migration did not rewrite the level.dat; This forces 1.8 to take the last loaded world as respawn (in this case the end)
 +            if (options.has("forceUpgrade")) {
-+                net.minecraft.server.Main.forceUpgrade(worldSession, net.minecraft.util.datafix.DataFixers.getDataFixer(), options.has("eraseCache"), () -> {
-+                    return true;
-+                }, iregistrycustom_dimension, options.has("recreateRegionFiles"));
++                // Magma - this is a workaround for not increasing the lambda size in the wrong place
++                magma$forceUpgrade(worldSession, iregistrycustom_dimension);
 +            }
 +            net.minecraft.world.level.storage.PrimaryLevelData iworlddataserver = worlddata;
 +            boolean flag = worlddata.isDebugWorld();
@@ -814,7 +814,7 @@
                      this.resources.close();
                      this.resources = p_335203_;
                      this.packRepository.setSelected(p_129862_);
-+                    this.server.syncCommands(); // SPIGOT-5884: Lost on reload
++                    //this.server.syncCommands(); // SPIGOT-5884: Lost on reload
                      WorldDataConfiguration worlddataconfiguration = new WorldDataConfiguration(
                          getSelectedPacks(this.packRepository, true), this.worldData.enabledFeatures()
                      );
@@ -913,15 +913,31 @@
      public RegistryAccess.Frozen registryAccess() {
          return this.registries.compositeAccess();
      }
-@@ -1938,6 +_,11 @@
-             LOGGER.info("{}", s);
+@@ -1939,6 +_,11 @@
          }
      }
-+
+ 
 +    // CraftBukkit start
 +    public final java.util.concurrent.ExecutorService chatExecutor = java.util.concurrent.Executors.newCachedThreadPool(
 +            new com.google.common.util.concurrent.ThreadFactoryBuilder().setDaemon(true).setNameFormat("Async Chat Thread - #%d").build());
 +    // CraftBukkit end
- 
++
      public ChatDecorator getChatDecorator() {
          return ChatDecorator.PLAIN;
+     }
+@@ -2010,6 +_,15 @@
+ 
+     public static record ServerResourcePackInfo(UUID id, String url, String hash, boolean isRequired, @Nullable Component prompt) {
+     }
++
++    // Magma start
++    private static void magma$forceUpgrade(LevelStorageSource.LevelStorageAccess worldSession, RegistryAccess.Frozen iregistrycustom_dimension) {
++
++        Main.forceUpgrade(worldSession, net.minecraft.util.datafix.DataFixers.getDataFixer(), options.has("eraseCache"), () -> {
++            return true;
++        }, iregistrycustom_dimension, options.has("recreateRegionFiles"));
++    }
++    // Magma end
+ 
+     static class TimeProfiler {
+         final long startNanos;
