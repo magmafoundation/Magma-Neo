@@ -765,30 +765,33 @@
          }
      }
  
-@@ -1801,24 +_,30 @@
+@@ -1799,27 +_,38 @@
+         }
+     }
  
++    // Magma start - mixin
      protected void removeEntitiesOnShoulder() {
          if (this.timeEntitySatOnShoulder + 20L < this.level().getGameTime()) {
--            this.respawnEntityOnShoulder(this.getShoulderEntityLeft());
--            this.setShoulderEntityLeft(new CompoundTag());
--            this.respawnEntityOnShoulder(this.getShoulderEntityRight());
--            this.setShoulderEntityRight(new CompoundTag());
 +            // CraftBukkit start
-+            if (this.respawnEntityOnShoulder(this.getShoulderEntityLeft())) {
+             this.respawnEntityOnShoulder(this.getShoulderEntityLeft());
+-            this.setShoulderEntityLeft(new CompoundTag());
++            if (magma$respawnEntityOnShoulderReturn) {
 +                this.setShoulderEntityLeft(new CompoundTag());
 +            }
-+            if (this.respawnEntityOnShoulder(this.getShoulderEntityRight())) {
+             this.respawnEntityOnShoulder(this.getShoulderEntityRight());
+-            this.setShoulderEntityRight(new CompoundTag());
++            if (magma$respawnEntityOnShoulderReturn) {
 +                this.setShoulderEntityRight(new CompoundTag());
 +            }
 +            // CraftBukkit end
          }
      }
  
--    private void respawnEntityOnShoulder(CompoundTag p_36371_) {
-+    private boolean respawnEntityOnShoulder(CompoundTag p_36371_) { // CraftBukkit void->boolean
++    private boolean magma$respawnEntityOnShoulderReturn = false;
+     private void respawnEntityOnShoulder(CompoundTag p_36371_) {
          if (!this.level().isClientSide && !p_36371_.isEmpty()) {
 -            EntityType.create(p_36371_, this.level()).ifPresent(p_352835_ -> {
-+            return EntityType.create(p_36371_, this.level()).map(p_352835_ -> { // CraftBukkit
++            magma$respawnEntityOnShoulderReturn = EntityType.create(p_36371_, this.level()).map(p_352835_ -> { // CraftBukkit
                  if (p_352835_ instanceof TamableAnimal) {
                      ((TamableAnimal)p_352835_).setOwnerUUID(this.uuid);
                  }
@@ -800,10 +803,12 @@
 +            }).orElse(true); // CraftBukkit
          }
 +
-+        return true; // CraftBukkit
++        magma$respawnEntityOnShoulderReturn = true;
      }
++    // Magma end
  
      @Override
+     public abstract boolean isSpectator();
 @@ -1847,7 +_,11 @@
  
      @Override
