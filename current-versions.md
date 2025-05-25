@@ -1,3 +1,3 @@
-- Neo - 1.21.1 (079224a19b9)
+- Neo - 1.21.1 (edad602567b)
 - Bukkit - 1.21.0 (a8e278f03b6)
 - CraftBukkit - 1.21.0 (bed1e3ff686)
