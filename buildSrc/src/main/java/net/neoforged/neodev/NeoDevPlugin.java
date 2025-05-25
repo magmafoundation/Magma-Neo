@@ -420,11 +420,72 @@ public class NeoDevPlugin implements Plugin<Project> {
             task.exclude("mcp/**");
         });
 
+        // Magma launcher jar = contains the Magma launcher code. from the magma-launcher project.
+        var magmaLauncherJar = tasks.register("magmaLauncherJar", Jar.class, task -> {
+            task.setGroup(INTERNAL_GROUP);
+            task.dependsOn(":magma-launcher:jar");
+            task.getArchiveClassifier().set("launcher");
+
+            task.from(project.zipTree(project.getRootProject().file(String.format("magma-launcher/build/libs/magma-launcher-%s.jar", project.getVersion()))));
+
+            task.getDestinationDirectory().convention(project.getExtensions().getByType(BasePluginExtension.class).getLibsDirectory());
+
+            task.from(createUnixServerArgsFile.flatMap(CreateArgsFile::getArgsFile), spec -> {
+                spec.into("data");
+                spec.rename(s -> "unix_args.txt");
+            });
+            task.from(createWindowsServerArgsFile.flatMap(CreateArgsFile::getArgsFile), spec -> {
+                spec.into("data");
+                spec.rename(s -> "win_args.txt");
+            });
+            task.from(binaryPatchOutputs.binaryPatchesForClient(), spec -> {
+                spec.into("data");
+                spec.rename(s -> "client.lzma");
+            });
+            task.from(binaryPatchOutputs.binaryPatchesForServer(), spec -> {
+                spec.into("data");
+                spec.rename(s -> "server.lzma");
+            });
+            var mavenPath = neoForgeVersion.map(v -> "net/neoforged/neoforge/" + v);
+            task.getInputs().property("mavenPath", mavenPath);
+            task.from(project.getRootProject().files("server_files"), spec -> {
+                spec.into("data");
+                spec.exclude("args.txt");
+                spec.filter(s -> {
+                    return s.replaceAll("@MAVEN_PATH@", mavenPath.get());
+                });
+            });
+
+            // This is true by default (see gradle.properties), and needs to be disabled explicitly when building (see release.yml).
+            String installerDebugProperty = "neogradle.runtime.platform.installer.debug";
+            if (project.getProperties().containsKey(installerDebugProperty) && Boolean.parseBoolean(project.getProperties().get(installerDebugProperty).toString())) {
+                task.from(universalJar.flatMap(AbstractArchiveTask::getArchiveFile), spec -> {
+                    spec.into(String.format("/maven/net/neoforged/neoforge/%s/", neoForgeVersion.get()));
+                    spec.rename(name -> String.format("neoforge-%s-universal.jar", neoForgeVersion.get()));
+                });
+            }
+
+            task.manifest(manifest -> {
+                manifest.attributes(Map.of("Main-Class", "org.magmafoundation.magma.launcher.MagmaLauncherKt"));
+                manifest.attributes(
+                        Map.of(
+                                "Specification-Title", "Magma",
+                                "Specification-Vendor", "Magma Development Limited",
+                                "Specification-Version", project.getVersion().toString().substring(0, project.getVersion().toString().lastIndexOf(".")),
+                                "Implementation-Title", "Magma",
+                                "Implementation-Version", project.getVersion(),
+                                "Implementation-Vendor", "Magma Development Limited"),
+                        "org/magmafoundation/magma/launcher/");
+                manifest.attributes(Map.of("NeoForge-Version", project.getProperties().get("neoforgeVersion")));
+            });
+        });
+
         tasks.named("assemble", task -> {
             task.dependsOn(installerJar);
             task.dependsOn(universalJar);
             task.dependsOn(userdevJar);
             task.dependsOn(sourcesJarProvider);
+            task.dependsOn(magmaLauncherJar);
         });
 
         // Set up E2E testing of the produced installer
@@ -444,6 +505,7 @@ public class NeoDevPlugin implements Plugin<Project> {
      * Get the list of Maven repositories that may contain artifacts for the installer.
      */
     private static Provider<List<URI>> getInstallerRepositoryUrls(Project project) {
+
         return project.provider(() -> {
             List<URI> repos = new ArrayList<>();
             var projectRepos = project.getRepositories();

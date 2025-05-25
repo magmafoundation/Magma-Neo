@@ -333,6 +333,20 @@ configurations {
         }
         javaComponent.addVariantsFromConfiguration(it) {}
     }
+    magmaLauncherJar {
+        canBeDeclared = false
+        canBeResolved = false
+        extendsFrom libraries, moduleLibraries, neoFormDependencies
+        attributes {
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.LIBRARY))
+            attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling, Bundling.EXTERNAL))
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+        }
+        outgoing {
+            capability("net.neoforged:neoforge-magma-launcher:${project.version}")
+        }
+        javaComponent.addVariantsFromConfiguration(it) {}
+    }
 }
 
 processResources {
@@ -365,6 +379,9 @@ artifacts {
         builtBy(createChangelog)
         setClassifier("changelog")
         setExtension("txt")
+    }
+    magmaLauncherJar(magmaLauncherJar) {
+        setClassifier("launcher")
     }
 }
 
