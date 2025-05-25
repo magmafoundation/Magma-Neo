@@ -4,6 +4,9 @@ pluginManagement {
         mavenLocal()
         maven { url = 'https://repo.magmafoundation.org/releases' }
     }
+    plugins {
+        id 'org.jetbrains.kotlin.jvm' version '2.1.21'
+    }
 }
 
 plugins {
@@ -31,9 +34,9 @@ if (rootProject.name.toLowerCase() == "magma") {
     rootProject.name = "Magma-Root"
 }
 
-    include ':base'
+include ':base'
 project(':base').projectDir = file('projects/base')
-    include ':magma'
+include ':magma'
 project(':magma').projectDir = file('projects/magma')
 
 include ':testframework'
@@ -48,3 +51,5 @@ project(":coremods").name = "neoforge-coremods"
 gradle.settingsEvaluated {
     gradle.extensions.add("repositoryBaseUrls", dependencyResolutionManagement.repositories.findAll { it instanceof MavenArtifactRepository }.collect { it.url }.toArray(URI[]::new))
 }
+
+include 'magma-launcher'
