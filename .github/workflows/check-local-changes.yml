@@ -26,16 +26,16 @@ jobs:
           cache-read-only: false
 
       - name: Setup with Gradle
-        run: ./gradlew :neoforge:setup
+        run: ./gradlew :magma:setup
 
       - name: Gen package infos
         run: ./gradlew generatePackageInfos
 
       - name: Gen patches
-        run: ./gradlew :neoforge:genPatches
+        run: ./gradlew :magma:genPatches
 
       - name: Run datagen with Gradle
-        run: ./gradlew :neoforge:runData :tests:runData
+        run: ./gradlew :magma:runData
 
       - name: Check no local changes are present
         run: |

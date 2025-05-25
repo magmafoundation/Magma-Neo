@@ -33,7 +33,7 @@ jobs:
           cache-read-only: false
 
       - name: Setup with Gradle
-        run: ./gradlew :neoforge:setup -PvalidateAccessTransformers
+        run: ./gradlew :magma:setup -PvalidateAccessTransformers
 
       - name: Build with Gradle
         run: ./gradlew assemble checkFormatting
@@ -46,5 +46,3 @@ jobs:
         if: ${{ ! startsWith(github.event.pull_request.head.ref, 'refs/heads/port/') }}
         uses: neoforged/action-jar-compatibility/upload@v1
 
-      - name: Publish artifacts
-        uses: neoforged/action-pr-publishing/upload@v1
