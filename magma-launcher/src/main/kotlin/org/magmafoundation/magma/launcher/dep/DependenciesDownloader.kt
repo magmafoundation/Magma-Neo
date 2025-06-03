@@ -70,7 +70,6 @@ class DependenciesDownloader {
 
         ProgressBar.wrap(dependencies.stream(), progressBar).forEach { dep ->
             dep?.let {
-                println("Downloading ${it.getFileName()}...")
                 try {
                     DownloadUtil.downloadDependency(manager, it, repositories)
                     DownloadUtil.loadDependency(manager, it) { path ->
