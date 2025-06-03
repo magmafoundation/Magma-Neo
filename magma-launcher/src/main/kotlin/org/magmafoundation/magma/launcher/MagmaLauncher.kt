@@ -19,6 +19,7 @@
 package org.magmafoundation.magma.launcher
 
 import org.magmafoundation.magma.launcher.dep.DependenciesDownloader
+import org.magmafoundation.magma.launcher.installer.MagmaInstaller
 import java.util.jar.Manifest
 
 
@@ -28,12 +29,12 @@ fun main(args: Array<String>) {
 
     ui = UI(!isArgumentPresent(args, "--no-ui"))
 
-    val version = getVersion()
-
-    ui?.display(version = version, neoForgeVersion = getNeoForgeVersion())
+    ui?.display(version = getVersion(), neoForgeVersion = getNeoForgeVersion())
 
     var dependenciesDownloader: DependenciesDownloader = DependenciesDownloader()
     var libsToLoad = dependenciesDownloader.start()
+
+    val magmaInstaller = MagmaInstaller(version = getVersion(), neoForgeVersion = getNeoForgeVersion())
 
 }
 
