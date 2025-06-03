@@ -18,6 +18,7 @@
 
 package org.magmafoundation.magma.launcher
 
+import org.magmafoundation.magma.launcher.dep.DependenciesDownloader
 import java.util.jar.Manifest
 
 
@@ -30,6 +31,10 @@ fun main(args: Array<String>) {
     val version = getVersion()
 
     ui?.display(version = version, neoForgeVersion = getNeoForgeVersion())
+
+    var dependenciesDownloader: DependenciesDownloader = DependenciesDownloader()
+    var libsToLoad = dependenciesDownloader.start()
+
 }
 
 private fun isArgumentPresent(args: Array<String>, argument: String): Boolean {

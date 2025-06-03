@@ -16,6 +16,8 @@ dependencies {
     compileOnly(platform("net.neoforged:minecraft-dependencies:${project.property("minecraft_version")}"))
     compileOnly("org.slf4j:slf4j-api")
     implementation(kotlin("stdlib-jdk8"))
+    implementation("dev.vankka:dependencydownload-runtime:1.3.1")
+    implementation("me.tongfei:progressbar:0.10.1")
 }
 
 tasks.test {

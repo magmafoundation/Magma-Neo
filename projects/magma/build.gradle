@@ -8,6 +8,7 @@ plugins {
     id 'net.neoforged.jarcompatibilitychecker' version '0.1.12'
     id 'net.neoforged.gradleutils'
     id 'neoforge.versioning'
+    id 'dev.vankka.dependencydownload.plugin' version '1.3.1'
 }
 
 apply plugin: net.neoforged.neodev.NeoDevPlugin
@@ -152,6 +153,12 @@ dependencies {
 
     // Magma - Spigot
     libraries 'net.md-5:bungeecord-chat:1.20-R0.2'
+}
+
+tasks.register('generateMagmaLibs', dev.vankka.dependencydownload.task.GenerateDependencyDownloadResourceTask) {
+    var conf = configurations.magmaLibraries
+    configuration = conf
+    file = "data/magma_libraries.txt"
 }
 
 neoDev {
@@ -346,6 +353,15 @@ configurations {
             capability("net.neoforged:neoforge-magma-launcher:${project.version}")
         }
         javaComponent.addVariantsFromConfiguration(it) {}
+    }
+    libraries {
+        canBeResolved = true
+    }
+    neoFormDependencies {
+        canBeResolved = true
+    }
+    magmaLibraries {
+        extendsFrom libraries, neoFormDependencies
     }
 }
 

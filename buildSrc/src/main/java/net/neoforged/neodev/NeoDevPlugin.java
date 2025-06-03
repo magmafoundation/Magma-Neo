@@ -478,6 +478,9 @@ public class NeoDevPlugin implements Plugin<Project> {
                         "org/magmafoundation/magma/launcher/");
                 manifest.attributes(Map.of("NeoForge-Version", project.getProperties().get("neoforgeVersion")));
             });
+
+            task.dependsOn("generateMagmaLibs");
+            task.from(project.getTasks().named("generateMagmaLibs"));
         });
 
         tasks.named("assemble", task -> {
