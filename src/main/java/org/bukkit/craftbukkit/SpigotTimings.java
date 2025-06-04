@@ -2,9 +2,7 @@ package org.bukkit.craftbukkit;
 
 import java.util.HashMap;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.storage.PrimaryLevelData;
 import org.bukkit.craftbukkit.scheduler.CraftTask;
 import org.bukkit.plugin.java.JavaPluginLoader;
 import org.bukkit.scheduler.BukkitTask;
@@ -136,8 +134,8 @@ public class SpigotTimings {
         public final CustomTimingsHandler syncChunkLoadTileTicksTimer;
         public final CustomTimingsHandler syncChunkLoadPostTimer;
 
-        public WorldTimingsHandler(Level server) {
-            String name = ((PrimaryLevelData) server.levelData).getLevelName() + " - ";
+        public WorldTimingsHandler(String levelName) { // Magma use string
+            String name = levelName + " - ";
 
             mobSpawn = new CustomTimingsHandler("** " + name + "mobSpawn");
             doChunkUnload = new CustomTimingsHandler("** " + name + "doChunkUnload");

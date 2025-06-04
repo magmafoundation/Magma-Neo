@@ -1,17 +1,24 @@
 package org.magmafoundation.magma.neoforge;
 
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
+import com.google.common.collect.ImmutableMap;
 import io.izzel.arclight.api.EnumHelper;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.dimension.LevelStem;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.World;
 import org.bukkit.craftbukkit.util.CraftMagicNumbers;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -22,6 +29,19 @@ public class NeoInject {
 
     public static final Map<net.minecraft.world.entity.EntityType<?>, String> ENTITY_TYPES = new ConcurrentHashMap<>();
     public static final Map<net.minecraft.world.entity.EntityType<?>, org.bukkit.entity.EntityType> ENTITY_TYPES0 = new ConcurrentHashMap<>();
+
+    public static BiMap<ResourceKey<LevelStem>, World.Environment> environments = HashBiMap
+            .create(ImmutableMap.<ResourceKey<LevelStem>, World.Environment>builder()
+                    .put(LevelStem.OVERWORLD, World.Environment.NORMAL)
+                    .put(LevelStem.NETHER, World.Environment.NETHER)
+                    .put(LevelStem.END, World.Environment.THE_END)
+                    .build());
+
+    public static BiMap<World.Environment, ResourceKey<LevelStem>> environments0 = HashBiMap.create(ImmutableMap.<World.Environment, ResourceKey<LevelStem>>builder()
+            .put(World.Environment.NORMAL, LevelStem.OVERWORLD)
+            .put(World.Environment.NETHER, LevelStem.NETHER)
+            .put(World.Environment.THE_END, LevelStem.END)
+            .build());
 
     public static void init() {
         log("Injecting NeoForge Block Materials into Bukkit");
@@ -101,6 +121,23 @@ public class NeoInject {
             }
         }
         EntityClassLookup.init();
+    }
+
+    public static void addNeoForgeEnvironment(Registry<LevelStem> registry) {
+        var i = World.Environment.values().length;
+        for (var entry : registry.entrySet()) {
+            ResourceKey<LevelStem> key = entry.getKey();
+            World.Environment environment = environments.get(key);
+            if (environment == null) {
+                String envName = ResourceLocationUtil.standardize(key.location());
+                var id = i - 1;
+                environment = EnumHelper.addEnum(World.Environment.class, envName, List.of(Integer.TYPE), List.of(id));
+                environments.put(key, environment);
+                environments0.put(environment, key);
+                log("Added NeoForge Environment: " + environment.name() + " - " + key.location());
+                i++;
+            }
+        }
     }
 
     private static void addNeoForgeEnchantments() {}

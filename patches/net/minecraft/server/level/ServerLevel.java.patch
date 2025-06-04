@@ -1,15 +1,6 @@
 --- a/net/minecraft/server/level/ServerLevel.java
 +++ b/net/minecraft/server/level/ServerLevel.java
-@@ -178,7 +_,7 @@
-     final List<ServerPlayer> players = Lists.newArrayList();
-     private final ServerChunkCache chunkSource;
-     private final MinecraftServer server;
--    public final ServerLevelData serverLevelData;
-+    public final net.minecraft.world.level.storage.PrimaryLevelData serverLevelData; // CraftBukkit - type
-     private int lastSpawnChunkRadius;
-     final EntityTickList entityTickList = new EntityTickList();
-     public final PersistentEntitySectionManager<Entity> entityManager;
-@@ -199,12 +_,25 @@
+@@ -199,12 +_,27 @@
      private final List<CustomSpawner> customSpawners;
      @Nullable
      private EndDragonFight dragonFight;
@@ -21,8 +12,10 @@
      private final RandomSequences randomSequences;
  
 +    // CraftBukkit start
++    public net.minecraft.world.level.storage.PrimaryLevelData worldDataServer;
 +    public final LevelStorageSource.LevelStorageAccess convertable;
 +    public final UUID uuid;
++    public ResourceKey<LevelStem> typeKey;
 +
 +    public LevelChunk getChunkIfLoaded(int x, int z) {
 +        return this.chunkSource.getChunk(x, z, false);
@@ -30,41 +23,68 @@
 +
 +    @Override
 +    public ResourceKey<LevelStem> getTypeKey() {
-+        return convertable.dimensionType;
++        return typeKey == null ? super.getTypeKey() : typeKey;
 +    }
 +
      public ServerLevel(
          MinecraftServer p_214999_,
          Executor p_215000_,
-@@ -230,11 +_,29 @@
+@@ -230,11 +_,57 @@
              p_215007_,
              p_214999_.getMaxChainedNeighborUpdates()
          );
 +        // CraftBukkit start
 +        this.pvpMode = p_214999_.isPvpAllowed();
 +        convertable = p_215001_;
-+        uuid = org.bukkit.craftbukkit.util.WorldUUID.getUUID(p_215001_.levelDirectory.path().toFile());
++        java.io.File worldFile = net.minecraft.world.level.dimension.DimensionType.getStorageFolder(p_215003_, p_215001_.levelDirectory.path()).toFile();
++        uuid = org.bukkit.craftbukkit.util.WorldUUID.getUUID(worldFile);
++        worldName =  worldFile.getName();
++        var typeKey = p_215001_.dimensionType;
++        if (typeKey != null) {
++            this.typeKey = typeKey;
++        } else {
++            var dimensions = p_214999_.registryAccess().registryOrThrow(Registries.LEVEL_STEM);
++            var key = dimensions.getResourceKey(p_215004_);
++            if (key.isPresent()) {
++                this.typeKey = key.get();
++            } else {
++                this.typeKey = ResourceKey.create(Registries.LEVEL_STEM, dimension.location());
++            }
++        }
 +        // CraftBukkit end
          this.tickTime = p_215009_;
          this.server = p_214999_;
 -        this.customSpawners = p_215008_;
--        this.serverLevelData = p_215002_;
-+        this.serverLevelData = (net.minecraft.world.level.storage.PrimaryLevelData) p_215002_;
+         this.serverLevelData = p_215002_;
          ChunkGenerator chunkgenerator = p_215004_.generator();
 +        // CraftBukkit start
-+        serverLevelData.setWorld(this);
++        //Magma start
++        if (p_215002_ instanceof net.minecraft.world.level.storage.PrimaryLevelData data) {
++            this.worldDataServer = data;
++        } else if (p_215002_ instanceof net.minecraft.world.level.storage.DerivedLevelData derived) {
++            this.worldDataServer = org.magmafoundation.magma.helper.DelegateWorldInfo.wrap(derived);
++        }
++
++        //Magma end
 +        if (biomeProvider != null) {
-+            net.minecraft.world.level.biome.BiomeSource worldChunkManager = new org.bukkit.craftbukkit.generator.CustomWorldChunkManager(getWorld(), biomeProvider, server.registryAccess().registryOrThrow(Registries.BIOME));
++            org.bukkit.generator.WorldInfo worldInfo = new org.bukkit.craftbukkit.generator.CraftWorldInfo(worldDataServer, p_215001_, environment, p_215004_.type().value());
++            net.minecraft.world.level.biome.BiomeSource worldChunkManager = new org.bukkit.craftbukkit.generator.CustomWorldChunkManager(worldInfo, biomeProvider, server.registryAccess().registryOrThrow(Registries.BIOME));
 +            if (chunkgenerator instanceof net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator cga) {
 +                chunkgenerator = new net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator(worldChunkManager, cga.settings);
 +            } else if (chunkgenerator instanceof net.minecraft.world.level.levelgen.FlatLevelSource cpf) {
 +                chunkgenerator = new net.minecraft.world.level.levelgen.FlatLevelSource(cpf.settings(), worldChunkManager);
 +            }
++        } else {
++            biomeProvider = getCraftServer().getBiomeProvider(p_215002_.getLevelName());
 +        }
 +        if (generator != null) {
 +            chunkgenerator = new org.bukkit.craftbukkit.generator.CustomChunkGenerator(this, chunkgenerator, generator);
++        }else {
++            generator = getCraftServer().getGenerator(p_215002_.getLevelName());
 +        }
++
 +        // CraftBukkit end
++        this.spigotConfig = new org.spigotmc.SpigotWorldConfig(worldName); // Spigot
          boolean flag = p_214999_.forceSynchronousWrites();
          DataFixer datafixer = p_214999_.getFixerUpper();
          EntityPersistentStorage<Entity> entitypersistentstorage = new EntityStorage(
@@ -79,7 +99,7 @@
              flag,
              p_215005_,
              this.entityManager::updateChunkStatus,
-@@ -298,6 +_,12 @@
+@@ -298,6 +_,19 @@
          this.randomSequences = Objects.requireNonNullElseGet(
              p_288977_, () -> this.getDataStorage().computeIfAbsent(RandomSequences.factory(i), "random_sequences")
          );
@@ -88,7 +108,14 @@
 +        // Neo: Move the initialization of customSpawners to the end of costructor
 +        // Providing a fully initialized ServerLevel instance for the ServerLevelEvent.CustomSpawners
 +        this.customSpawners = net.neoforged.neoforge.event.EventHooks.getCustomSpawners(this, p_215008_);
++        this.world = new org.bukkit.craftbukkit.CraftWorld(this, generator, biomeProvider, environment);
 +        this.getCraftServer().addWorld(this.getWorld()); // CraftBukkit
++        if (worldDataServer != null) {
++            worldDataServer.setWorld(this);
++        }
++        timings = new org.bukkit.craftbukkit.SpigotTimings.WorldTimingsHandler(worldName); // Spigot - code below can generate new world and access timings // Magma level name
++        this.entityLimiter = new org.spigotmc.TickLimiter(spigotConfig.entityMaxTickTime);
++        this.tileLimiter = new org.spigotmc.TickLimiter(spigotConfig.tileMaxTickTime);
      }
  
      @Deprecated
@@ -291,25 +318,25 @@
                  p_8644_.progressStartNoAbort(Component.translatable("menu.savingLevel"));
              }
  
-@@ -807,7 +_,18 @@
+@@ -807,6 +_,18 @@
              } else {
                  this.entityManager.autoSave();
              }
++
++            // CraftBukkit start - moved from MinecraftServer.saveChunks
++            ServerLevel worldserver1 = this;
++            worldDataServer.setWorldBorder(worldserver1.getWorldBorder().createSettings());
++            worldDataServer.setCustomBossEvents(this.server.getCustomBossEvents().save(this.registryAccess()));
++            convertable.saveDataTag(this.server.registryAccess(), this.worldDataServer, this.server.getPlayerList().getSingleplayerData());
++            // CraftBukkit end
++
 +            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.level.LevelEvent.Save(this));
 +            if (p_8645_) {
 +                net.neoforged.neoforge.common.IOUtilities.waitUntilIOWorkerComplete();
 +            }
          }
-+
-+        // CraftBukkit start - moved from MinecraftServer.saveChunks
-+        ServerLevel worldserver1 = this;
-+        serverLevelData.setWorldBorder(worldserver1.getWorldBorder().createSettings());
-+        serverLevelData.setCustomBossEvents(this.server.getCustomBossEvents().save(this.registryAccess()));
-+        convertable.saveDataTag(this.server.registryAccess(), this.serverLevelData, this.server.getPlayerList().getSingleplayerData());
-+        // CraftBukkit end
      }
  
-     private void saveLevelData() {
 @@ -872,18 +_,40 @@
  
      @Override

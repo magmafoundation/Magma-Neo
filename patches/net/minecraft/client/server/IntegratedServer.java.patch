@@ -4,9 +4,8 @@
          this.setPvpAllowed(true);
          this.setFlightAllowed(true);
          this.initializeKeyPair();
--        this.loadLevel();
 +        net.neoforged.neoforge.server.ServerLifecycleHooks.handleServerAboutToStart(this);
-+        this.loadLevel(storageSource.getLevelId()); // CraftBukkit
+         this.loadLevel();
          GameProfile gameprofile = this.getSingleplayerProfile();
          String s = this.getWorldData().getLevelName();
          this.setMotd(gameprofile != null ? gameprofile.getName() + " - " + s : s);

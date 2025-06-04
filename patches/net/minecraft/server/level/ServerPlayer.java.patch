@@ -126,7 +126,7 @@
 +                }
 +            }
 +        }
-+        if (persistVehicle && entity1 != null && entity != this && entity.hasExactlyOnePlayerPassenger()) {
++        if (persistVehicle && entity != null && entity1 != this && entity1.hasExactlyOnePlayerPassenger()) {
 +            // CraftBukkit end
              CompoundTag compoundtag1 = new CompoundTag();
              CompoundTag compoundtag2 = new CompoundTag();

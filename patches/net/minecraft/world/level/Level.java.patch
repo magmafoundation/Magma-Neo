@@ -9,10 +9,11 @@
      public static final Codec<ResourceKey<Level>> RESOURCE_KEY_CODEC = ResourceKey.codec(Registries.DIMENSION);
      public static final ResourceKey<Level> OVERWORLD = ResourceKey.create(Registries.DIMENSION, ResourceLocation.withDefaultNamespace("overworld"));
      public static final ResourceKey<Level> NETHER = ResourceKey.create(Registries.DIMENSION, ResourceLocation.withDefaultNamespace("the_nether"));
-@@ -114,6 +_,53 @@
+@@ -114,7 +_,59 @@
      private final RegistryAccess registryAccess;
      private final DamageSources damageSources;
      private long subTickCount;
+-
 +    public boolean restoringBlockSnapshots = false;
 +    public boolean captureBlockSnapshots = false;
 +    public java.util.ArrayList<net.neoforged.neoforge.common.util.BlockSnapshot> capturedBlockSnapshots = new java.util.ArrayList<>();
@@ -20,7 +21,7 @@
 +    private final java.util.ArrayList<BlockEntity> pendingFreshBlockEntities = new java.util.ArrayList<>();
 +
 +    // CraftBukkit start Added the following
-+    private final org.bukkit.craftbukkit.CraftWorld world;
++    public org.bukkit.craftbukkit.CraftWorld world;
 +    public boolean pvpMode;
 +    public org.bukkit.generator.ChunkGenerator generator;
 +    public boolean preventPoiUpdated = false; // CraftBukkit - SPIGOT-5710
@@ -31,12 +32,12 @@
 +    public List<net.minecraft.world.entity.item.ItemEntity> captureDrops;
 +    public final it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<org.bukkit.entity.SpawnCategory> ticksPerSpawnCategory = new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>();
 +    public boolean populating;
-+    public final org.spigotmc.SpigotWorldConfig spigotConfig; // Spigot
++    public org.spigotmc.SpigotWorldConfig spigotConfig; // Spigot
 +
-+    public final org.bukkit.craftbukkit.SpigotTimings.WorldTimingsHandler timings; // Spigot
++    public org.bukkit.craftbukkit.SpigotTimings.WorldTimingsHandler timings; // Spigot
 +    public static BlockPos lastPhysicsProblem; // Spigot
-+    private org.spigotmc.TickLimiter entityLimiter; // Spigot
-+    private org.spigotmc.TickLimiter tileLimiter; // Spigot
++    protected org.spigotmc.TickLimiter entityLimiter; // Spigot
++    protected org.spigotmc.TickLimiter tileLimiter; // Spigot
 +    private int tileTickPosition; // Spigot
 +
 +    public org.bukkit.craftbukkit.CraftWorld getWorld() {
@@ -46,31 +47,33 @@
 +        return (org.bukkit.craftbukkit.CraftServer) org.bukkit.Bukkit.getServer();
 +    }
 +
-+    public abstract ResourceKey<net.minecraft.world.level.dimension.LevelStem> getTypeKey();
++    public ResourceKey<net.minecraft.world.level.dimension.LevelStem> getTypeKey() {
++        return Registries.levelToLevelStem(dimension);
++    }
 +    // CraftBukkit end
 +
 +    // Magma start
 +    protected static org.bukkit.generator.ChunkGenerator chunkGenerator;
 +    protected static org.bukkit.generator.BiomeProvider biomeProvider;
 +    protected static org.bukkit.World.Environment environment;
++    public String worldName;
 +
-+    public static void setCBWorldInfo(org.bukkit.generator.ChunkGenerator generator, org.bukkit.generator.BiomeProvider biomeProvider, org.bukkit.World.Environment environment) {
++
++    public static void setCBWorldInfo(org.bukkit.generator.ChunkGenerator generator, org.bukkit.generator.BiomeProvider biome, org.bukkit.World.Environment env) {
 +       chunkGenerator = generator;
-+       biomeProvider = biomeProvider;
-+       environment = environment;
++       biomeProvider = biome;
++       environment = env;
 +    }
 +    // Magma end
- 
++
++    //Magma start - fix dummy level NPE
      protected Level(
          WritableLevelData p_270739_,
-@@ -126,6 +_,18 @@
+         ResourceKey<Level> p_270683_,
+@@ -126,6 +_,14 @@
          long p_270248_,
          int p_270466_
      ) {
-+        this.spigotConfig = new org.spigotmc.SpigotWorldConfig(((net.minecraft.world.level.storage.PrimaryLevelData) p_270739_).getLevelName()); // Spigot
-+        // CraftBukkit start
-+        this.world = new org.bukkit.craftbukkit.CraftWorld((net.minecraft.server.level.ServerLevel)this, generator, biomeProvider, environment);
-+
 +        // CraftBukkit Ticks things
 +        for (org.bukkit.entity.SpawnCategory spawnCategory : org.bukkit.entity.SpawnCategory.values()) {
 +            if (org.bukkit.craftbukkit.util.CraftSpawnCategory.isValidForLimits(spawnCategory)) {
@@ -97,10 +100,13 @@
                  }
              };
          } else {
-@@ -154,6 +_,39 @@
+@@ -154,6 +_,40 @@
          this.neighborUpdater = new CollectingNeighborUpdater(this, p_270466_);
          this.registryAccess = p_270200_;
          this.damageSources = new DamageSources(p_270200_);
++        if (environment == null) {
++            environment = org.magmafoundation.magma.neoforge.NeoInject.environments.get(getTypeKey());
++        }
 +        // CraftBukkit start
 +        getWorldBorder().world = (net.minecraft.server.level.ServerLevel) this;
 +        // From PlayerList.setPlayerFileData
@@ -131,9 +137,7 @@
 +            public void onBorderSetDamageSafeZOne(WorldBorder worldborder, double d0) {}
 +        });
 +        // CraftBukkit end
-+        timings = new org.bukkit.craftbukkit.SpigotTimings.WorldTimingsHandler(this); // Spigot - code below can generate new world and access timings
-+        this.entityLimiter = new org.spigotmc.TickLimiter(spigotConfig.entityMaxTickTime);
-+        this.tileLimiter = new org.spigotmc.TickLimiter(spigotConfig.tileMaxTickTime);
++
      }
  
      @Override
