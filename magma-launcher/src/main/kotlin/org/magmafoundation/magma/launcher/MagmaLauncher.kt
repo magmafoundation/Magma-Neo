@@ -18,8 +18,14 @@
 
 package org.magmafoundation.magma.launcher
 
+import cpw.mods.bootstraplauncher.BootstrapLauncher
 import org.magmafoundation.magma.launcher.dep.DependenciesDownloader
 import org.magmafoundation.magma.launcher.installer.MagmaInstaller
+import org.magmafoundation.magma.launcher.utils.JarTool
+import org.magmafoundation.magma.launcher.utils.ServerInitHelper
+import org.magmafoundation.magma.launcher.utils.SystemType
+import java.nio.file.spi.FileSystemProvider
+import java.util.function.Consumer
 import java.util.jar.Manifest
 
 
@@ -35,6 +41,23 @@ fun main(args: Array<String>) {
     var libsToLoad = dependenciesDownloader.start()
 
     val magmaInstaller = MagmaInstaller(version = getVersion(), neoForgeVersion = getNeoForgeVersion())
+
+
+    val launchArgs: MutableList<String?> = JarTool.readFileLinesFromJar(
+        "data/" + (if (SystemType.getOS() == SystemType.OS.WINDOWS) "win" else "unix") + "_args.txt"
+    )
+    val forgeArgs: MutableList<String?> = ArrayList()
+    launchArgs.stream().filter { s: String? ->
+        s!!.startsWith("--launchTarget") || s.startsWith("--fml.neoForgeVersion") || s.startsWith("--fml.mcVersion") || s.startsWith("--fml.fmlVersion") || s.startsWith("--fml.neoFormVersion")
+    }.toList().forEach(
+        Consumer { arg: String? ->
+            forgeArgs.add(arg?.split(" ")[0])
+            forgeArgs.add(arg?.split(" ")[1])
+        })
+
+    ServerInitHelper.applyLaunchArgs(launchArgs as List<String>)
+
+    BootstrapLauncher.main(*forgeArgs.filterNotNull().toTypedArray())
 
 }
 

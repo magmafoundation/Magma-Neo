@@ -258,11 +258,11 @@ import org.bukkit.structure.StructureManager;
 import org.bukkit.util.StringUtil;
 import org.bukkit.util.permissions.DefaultPermissions;
 import org.magmafoundation.magma.Magma;
+import org.magmafoundation.magma.deps.snakeyaml.LoaderOptions;
+import org.magmafoundation.magma.deps.snakeyaml.Yaml;
+import org.magmafoundation.magma.deps.snakeyaml.constructor.SafeConstructor;
+import org.magmafoundation.magma.deps.snakeyaml.error.MarkedYAMLException;
 import org.magmafoundation.magma.neoforge.NeoInject;
-import org.yaml.snakeyaml.LoaderOptions;
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.SafeConstructor;
-import org.yaml.snakeyaml.error.MarkedYAMLException;
 
 public final class CraftServer implements Server {
     private final String serverName = "Magma";

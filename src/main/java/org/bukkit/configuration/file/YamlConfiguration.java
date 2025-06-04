@@ -19,20 +19,20 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.jetbrains.annotations.NotNull;
-import org.yaml.snakeyaml.DumperOptions;
-import org.yaml.snakeyaml.LoaderOptions;
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.comments.CommentLine;
-import org.yaml.snakeyaml.comments.CommentType;
-import org.yaml.snakeyaml.error.YAMLException;
-import org.yaml.snakeyaml.nodes.AnchorNode;
-import org.yaml.snakeyaml.nodes.MappingNode;
-import org.yaml.snakeyaml.nodes.Node;
-import org.yaml.snakeyaml.nodes.NodeTuple;
-import org.yaml.snakeyaml.nodes.ScalarNode;
-import org.yaml.snakeyaml.nodes.SequenceNode;
-import org.yaml.snakeyaml.nodes.Tag;
-import org.yaml.snakeyaml.reader.UnicodeReader;
+import org.magmafoundation.magma.deps.snakeyaml.DumperOptions;
+import org.magmafoundation.magma.deps.snakeyaml.LoaderOptions;
+import org.magmafoundation.magma.deps.snakeyaml.Yaml;
+import org.magmafoundation.magma.deps.snakeyaml.comments.CommentLine;
+import org.magmafoundation.magma.deps.snakeyaml.comments.CommentType;
+import org.magmafoundation.magma.deps.snakeyaml.error.YAMLException;
+import org.magmafoundation.magma.deps.snakeyaml.nodes.AnchorNode;
+import org.magmafoundation.magma.deps.snakeyaml.nodes.MappingNode;
+import org.magmafoundation.magma.deps.snakeyaml.nodes.Node;
+import org.magmafoundation.magma.deps.snakeyaml.nodes.NodeTuple;
+import org.magmafoundation.magma.deps.snakeyaml.nodes.ScalarNode;
+import org.magmafoundation.magma.deps.snakeyaml.nodes.SequenceNode;
+import org.magmafoundation.magma.deps.snakeyaml.nodes.Tag;
+import org.magmafoundation.magma.deps.snakeyaml.reader.UnicodeReader;
 
 /**
  * An implementation of {@link Configuration} which saves all files in Yaml.
