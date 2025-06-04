@@ -262,6 +262,25 @@ class MagmaInstaller(version: String, neoForgeVersion: String) {
      * Runs the installation process
      */
     private fun install() {
+
+        copyFileFromJar(lzma, "data/server.lzma", true)
+        copyFileFromJar(
+            universalJar,
+            "maven/net/neoforged/neoforge/$magmaVersion/neoforge-$magmaVersion-universal.jar"
+        )
+
+        if(!needToPatchServer()) return;
+        copyFileFromJar(
+            universalJar,
+            "maven/net/neoforged/neoforge/$magmaVersion/neoforge-$magmaVersion-universal.jar",
+            true
+        )
+
+        if (!minecraftServerJar.exists()) {
+            System.err.println("The server is missing essential files to install properly, delete your libraries folder and try again.")
+            exitProcess(-1)
+        }
+
         val progressBar = ProgressBarBuilder()
             .setTaskName("Patching server...")
             .setStyle(ProgressBarStyle.ASCII)
@@ -270,19 +289,7 @@ class MagmaInstaller(version: String, neoForgeVersion: String) {
             .build()
 
         progressBar.use { pb ->
-            // Step 1: Copy necessary files
-            copyFileFromJar(lzma, "data/server.lzma")
-            copyFileFromJar(
-                universalJar,
-                "maven/net/neoforged/neoforge/$magmaVersion/neoforge-$magmaVersion-universal.jar"
-            )
-
-            if (!minecraftServerJar.exists()) {
-                System.err.println("The server is missing essential files to install properly, delete your libraries folder and try again.")
-                exitProcess(-1)
-            }
-
-            // Step 2: Extract bundled resources
+            // Step 1: Extract bundled resources
             mute()
             println("[STEP ONE] Extracting bundled resources...")
             pb.extraMessage = "Extracting bundled resources..."
@@ -296,7 +303,7 @@ class MagmaInstaller(version: String, neoForgeVersion: String) {
             unmute()
             pb.step()
 
-            // Step 3: Extract jars if needed
+            // Step 2: Extract jars if needed
             if (!mcUnpacked.exists()) {
                 mute()
                 println("[STEP TWO] Extracting jars...")
@@ -312,7 +319,7 @@ class MagmaInstaller(version: String, neoForgeVersion: String) {
             }
             pb.step()
 
-            // Step 4: Extract NeoForm mappings
+            // Step 3: Extract NeoForm mappings
             if (neoFormZip.exists() && !mappings.exists()) {
                 mute()
                 println("[STEP THREE] Extracting NeoForm mappings...")
@@ -331,7 +338,7 @@ class MagmaInstaller(version: String, neoForgeVersion: String) {
             // Clean up corrupted files
             checkAndCleanCorruptedFiles()
 
-            // Step 5: Download Mojang mappings
+            // Step 4: Download Mojang mappings
             if (!mojmap.exists()) {
                 mute()
                 println("[STEP FOUR] Downloading mojang mappings...")
@@ -347,7 +354,7 @@ class MagmaInstaller(version: String, neoForgeVersion: String) {
             }
             pb.step()
 
-            // Step 6: Merge mappings
+            // Step 5: Merge mappings
             if (!mergedMappings.exists()) {
                 mute()
                 println("[STEP FIVE] Merging mappings...")
@@ -365,7 +372,7 @@ class MagmaInstaller(version: String, neoForgeVersion: String) {
             }
             pb.step()
 
-            // Step 7: Split server jar
+            // Step 6: Split server jar
             if (!mcSlim.exists() || !mcExtra.exists()) {
                 mute()
                 println("[STEP SIX] Splitting server jar...")
@@ -381,7 +388,7 @@ class MagmaInstaller(version: String, neoForgeVersion: String) {
             }
             pb.step()
 
-            // Step 8: Create SRG jar
+            // Step 7: Create SRG jar
             if (!mcSRG.exists()) {
                 mute()
                 println("[STEP SEVEN] Creating srg jar file...")
@@ -397,7 +404,7 @@ class MagmaInstaller(version: String, neoForgeVersion: String) {
             }
             pb.step()
 
-            // Step 9: Patch the server if needed
+            // Step 8: Patch the server if needed
             patchServerIfNeeded(pb)
             pb.step()
         }
@@ -421,8 +428,9 @@ class MagmaInstaller(version: String, neoForgeVersion: String) {
     private fun patchServerIfNeeded(progressBar: ProgressBar) {
         var storedServerMD5: String? = null
         var storedMagmaMD5: String? = null
-        var serverMD5: String? = HashUtil.getFileHash(minecraftServerJar, "md5")
-        val magmaMD5: String = HashUtil.getFileHash(JarTool.getFile(), "md5")
+        var serverMD5: String? = HashUtil.getFileHash(serverJar, "md5")
+        val lzmaMD5: String = HashUtil.getFileHash(lzma, "md5")
+        val universalMD5: String = HashUtil.getFileHash(universalJar, "md5")
 
         if (installInfo.exists()) {
             val infoLines = Files.readAllLines(installInfo.toPath())
@@ -434,7 +442,7 @@ class MagmaInstaller(version: String, neoForgeVersion: String) {
                           storedServerMD5 == null || 
                           storedMagmaMD5 == null || 
                           (storedServerMD5 != serverMD5) || 
-                          (storedMagmaMD5 != magmaMD5)
+                          (storedMagmaMD5 != lzmaMD5)
 
         if (needsPatching) {
             mute()
@@ -452,7 +460,7 @@ class MagmaInstaller(version: String, neoForgeVersion: String) {
 
         // Write installation info
         FileWriter(installInfo).use { fw ->
-            fw.write("$serverMD5\n$magmaMD5")
+            fw.write("$serverMD5\n$lzmaMD5\n${universalMD5}\n")
         }
     }
 
@@ -474,8 +482,14 @@ class MagmaInstaller(version: String, neoForgeVersion: String) {
      * Copies a file from the jar to the filesystem
      */
     @Throws(Exception::class)
-    private fun copyFileFromJar(file: File, pathInJar: String?) {
-        if (file.exists()) return
+    private fun copyFileFromJar(file: File, pathInJar: String?, removeIfExists: Boolean = false) {
+        if (file.exists()) {
+            if (removeIfExists) {
+                file.delete()
+            } else {
+                return
+            }
+        }
 
         file.parentFile.mkdirs()
         file.createNewFile()
@@ -518,4 +532,15 @@ class MagmaInstaller(version: String, neoForgeVersion: String) {
             true
         }
     }
+
+    private fun needToPatchServer(): Boolean {
+        if(installInfo.exists()) {
+            var lzmaMD5: String? = HashUtil.getFileHash(lzma, "md5")
+            val lines = Files.readAllLines(installInfo.toPath())
+
+            return lines.size < 3 || (lzmaMD5 != lines.get(1)) || !HashUtil.getFileHash(universalJar, "md5").equals(lines.get(2))
+        }
+        return true
+    }
+
 }
