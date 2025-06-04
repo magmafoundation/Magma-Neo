@@ -112,7 +112,7 @@ class DependenciesDownloader {
 
         if (Files.exists(serverPath)) {
             val fileHash = HashUtil.getFileHash(serverPath.toFile(), "sha256")
-            if (fileHash == "c96394da86f9d9f9ef7ca2d2ee1f2f0980c29b7aa5c94b43c02c50435dbcf53f") {
+            if (fileHash == "e3bc55693e93cda0188f2e60aea28113fc647c5e85a15fa3d1b347349231b4bb") {
                 println("Server is already downloaded and verified.")
                 return
             } else {
@@ -124,8 +124,8 @@ class DependenciesDownloader {
         try {
             println("Downloading server...")
             DownloadUtil.downloadFile(
-                "https://piston-data.mojang.com/v1/objects/450698d1863ab5180c25d7c804ef0fe6369dd1ba/server.jar",
-                "c96394da86f9d9f9ef7ca2d2ee1f2f0980c29b7aa5c94b43c02c50435dbcf53f",
+                "https://piston-data.mojang.com/v1/objects/59353fb40c36d304f2035d51e7d6e6baa98dc05c/server.jar",
+                "e3bc55693e93cda0188f2e60aea28113fc647c5e85a15fa3d1b347349231b4bb",
                 librariesPath.resolve("net/minecraft/server/1.21.1/server-1.21.1.jar")
             )
         } catch (e: Throwable) {

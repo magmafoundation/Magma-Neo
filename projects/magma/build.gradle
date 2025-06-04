@@ -137,7 +137,7 @@ dependencies {
     implementation(jarJar(project(":neoforge-coremods")))
 
     // Magma - Bukkit
-    libraries "org.yaml:snakeyaml:2.2"
+    libraries "org.magmafoundation:SpigotToNeoForgeLibs:1.0.0"
     libraries 'org.apache.maven:maven-resolver-provider:3.9.6'
     libraries 'org.apache.maven.resolver:maven-resolver-connector-basic:1.9.18'
     libraries ('org.apache.maven.resolver:maven-resolver-transport-http:1.9.18') {
@@ -360,8 +360,11 @@ configurations {
     neoFormDependencies {
         canBeResolved = true
     }
+    moduleLibraries {
+        canBeResolved = true
+    }
     magmaLibraries {
-        extendsFrom libraries, neoFormDependencies
+        extendsFrom libraries, neoFormDependencies, moduleLibraries
     }
 }
 

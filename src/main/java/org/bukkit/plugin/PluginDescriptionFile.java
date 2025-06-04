@@ -25,14 +25,14 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.yaml.snakeyaml.DumperOptions;
-import org.yaml.snakeyaml.LoaderOptions;
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.AbstractConstruct;
-import org.yaml.snakeyaml.constructor.SafeConstructor;
-import org.yaml.snakeyaml.nodes.Node;
-import org.yaml.snakeyaml.nodes.Tag;
-import org.yaml.snakeyaml.representer.Representer;
+import org.magmafoundation.magma.deps.snakeyaml.DumperOptions;
+import org.magmafoundation.magma.deps.snakeyaml.LoaderOptions;
+import org.magmafoundation.magma.deps.snakeyaml.Yaml;
+import org.magmafoundation.magma.deps.snakeyaml.constructor.AbstractConstruct;
+import org.magmafoundation.magma.deps.snakeyaml.constructor.SafeConstructor;
+import org.magmafoundation.magma.deps.snakeyaml.nodes.Node;
+import org.magmafoundation.magma.deps.snakeyaml.nodes.Tag;
+import org.magmafoundation.magma.deps.snakeyaml.representer.Representer;
 
 /**
  * This type is the runtime-container for the information in the plugin.yml.

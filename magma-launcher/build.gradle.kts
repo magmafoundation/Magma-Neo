@@ -7,8 +7,6 @@ plugins {
     kotlin("jvm")
 }
 
-
-
 dependencies {
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -18,6 +16,7 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation("dev.vankka:dependencydownload-runtime:1.3.1")
     implementation("me.tongfei:progressbar:0.10.1")
+    implementation("cpw.mods:bootstraplauncher:2.0.2")
 }
 
 tasks.test {

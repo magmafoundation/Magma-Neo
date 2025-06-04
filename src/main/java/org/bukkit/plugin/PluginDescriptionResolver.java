@@ -1,7 +1,7 @@
 package org.bukkit.plugin;
 
-import org.yaml.snakeyaml.nodes.Tag;
-import org.yaml.snakeyaml.resolver.Resolver;
+import org.magmafoundation.magma.deps.snakeyaml.nodes.Tag;
+import org.magmafoundation.magma.deps.snakeyaml.resolver.Resolver;
 
 final class PluginDescriptionResolver extends Resolver {
     @Override
