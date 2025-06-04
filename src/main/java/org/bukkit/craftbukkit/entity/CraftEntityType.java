@@ -10,10 +10,15 @@ import org.bukkit.craftbukkit.legacy.FieldRename;
 import org.bukkit.craftbukkit.util.ApiVersion;
 import org.bukkit.craftbukkit.util.CraftNamespacedKey;
 import org.bukkit.entity.EntityType;
+import org.magmafoundation.magma.neoforge.NeoInject;
 
 public class CraftEntityType {
     public static EntityType minecraftToBukkit(net.minecraft.world.entity.EntityType<?> minecraft) {
         Preconditions.checkArgument(minecraft != null);
+
+        if (NeoInject.ENTITY_TYPES0.containsKey(minecraft)) {
+            return NeoInject.ENTITY_TYPES0.get(minecraft);
+        }
 
         net.minecraft.core.Registry<net.minecraft.world.entity.EntityType<?>> registry = CraftRegistry.getMinecraftRegistry(Registries.ENTITY_TYPE);
         EntityType bukkit = Registry.ENTITY_TYPE.get(CraftNamespacedKey.fromMinecraft(registry.getResourceKey(minecraft).orElseThrow().location()));

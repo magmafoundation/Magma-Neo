@@ -4,12 +4,18 @@ import com.google.common.base.Preconditions;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import org.bukkit.Bukkit;
 import org.bukkit.Keyed;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Translatable;
 import org.bukkit.World;
+import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.util.CraftNamespacedKey;
 import org.bukkit.entity.minecart.CommandMinecart;
 import org.bukkit.entity.minecart.ExplosiveMinecart;
 import org.bukkit.entity.minecart.HopperMinecart;
@@ -22,6 +28,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.magmafoundation.magma.neoforge.NeoInject;
 
 public enum EntityType implements Keyed, Translatable {
 
@@ -311,10 +318,12 @@ public enum EntityType implements Keyed, Translatable {
     private final Class<? extends Entity> clazz;
     private final short typeId;
     private final boolean independent, living;
-    private final NamespacedKey key;
+    private NamespacedKey key;
+    private net.minecraft.world.entity.EntityType<?> handleType;
+    private Function<Location, ? extends net.minecraft.world.entity.Entity> factory;
 
-    private static final Map<String, EntityType> NAME_MAP = new HashMap<String, EntityType>();
-    private static final Map<Short, EntityType> ID_MAP = new HashMap<Short, EntityType>();
+    public static final Map<String, EntityType> NAME_MAP = new HashMap<String, EntityType>();
+    public static final Map<Short, EntityType> ID_MAP = new HashMap<Short, EntityType>();
 
     static {
         for (EntityType type : values()) {
@@ -349,7 +358,7 @@ public enum EntityType implements Keyed, Translatable {
     @Deprecated
     @Nullable
     public String getName() {
-        return name;
+        return name == null ? name() : name;
     }
 
     @NotNull
@@ -390,7 +399,7 @@ public enum EntityType implements Keyed, Translatable {
         if (name == null) {
             return null;
         }
-        return NAME_MAP.get(name.toLowerCase(Locale.ROOT));
+        return Objects.requireNonNullElse(NAME_MAP.get(name.toLowerCase(Locale.ROOT)), EntityType.UNKNOWN);
     }
 
     /**
@@ -439,5 +448,30 @@ public enum EntityType implements Keyed, Translatable {
      */
     public boolean isEnabledByFeature(@NotNull World world) {
         return Bukkit.getDataPackManager().isEnabledByFeature(this, world);
+    }
+
+    public void magmaInject(ResourceLocation resourceLocation, net.minecraft.world.entity.EntityType<?> entityType) {
+        this.key = CraftNamespacedKey.fromMinecraft(resourceLocation);
+        this.handleType = entityType;
+        NAME_MAP.put(name.toLowerCase(), this);
+        ID_MAP.put((short) typeId, this);
+        NeoInject.ENTITY_TYPES.put(entityType, name);
+        NeoInject.ENTITY_TYPES0.put(entityType, this);
+        this.factory = bukkitLoc -> {
+            if (bukkitLoc != null && bukkitLoc.getWorld() != null) {
+                ServerLevel serverLevel = ((CraftWorld) bukkitLoc.getWorld()).getHandle();
+                net.minecraft.world.entity.Entity entity = handleType.create(serverLevel);
+                if (entity != null) {
+                    entity.absMoveTo(bukkitLoc.getX(), bukkitLoc.getY(), bukkitLoc.getZ(), bukkitLoc.getYaw(), bukkitLoc.getPitch());
+                }
+                return entity;
+            } else {
+                return null;
+            }
+        };
+    }
+
+    public Function<Location, ? extends net.minecraft.world.entity.Entity> getFactory() {
+        return factory;
     }
 }

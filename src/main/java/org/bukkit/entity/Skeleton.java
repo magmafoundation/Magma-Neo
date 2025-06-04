@@ -65,6 +65,10 @@ public interface Skeleton extends AbstractSkeleton {
         /**
          * Bogged skeleton.
          */
-        BOGGED;
+        BOGGED,
+        /**
+         * Custom skeleton type.
+         */
+        MAGMA_CUSTOM;
     }
 }

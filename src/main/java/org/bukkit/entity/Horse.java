@@ -40,7 +40,10 @@ public interface Horse extends AbstractHorse {
          * Also not really a horse :)
          */
         CAMEL,
-        ;
+        /**
+         * Magma's custom horse variant.
+         */
+        MAGMA_CUSTOM;
     }
 
     /**
