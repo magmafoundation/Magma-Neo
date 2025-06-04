@@ -1,13 +1,11 @@
 --- a/net/minecraft/server/network/ServerLoginPacketListenerImpl.java
 +++ b/net/minecraft/server/network/ServerLoginPacketListenerImpl.java
-@@ -44,7 +_,25 @@
- import org.apache.commons.lang3.Validate;
+@@ -45,6 +_,24 @@
  import org.slf4j.Logger;
  
--public class ServerLoginPacketListenerImpl implements ServerLoginPacketListener, TickablePacketListener {
-+// CraftBukkit start
-+public class ServerLoginPacketListenerImpl implements ServerLoginPacketListener, TickablePacketListener, org.bukkit.craftbukkit.entity.CraftPlayer.TransferCookieConnection {
+ public class ServerLoginPacketListenerImpl implements ServerLoginPacketListener, TickablePacketListener, org.bukkit.craftbukkit.entity.CraftPlayer.TransferCookieConnection {
 +
++    // CraftBukkit start
 +    @Override
 +    public boolean isTransferred() {
 +        return this.transferred;

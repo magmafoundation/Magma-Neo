@@ -1,13 +1,11 @@
 --- a/net/minecraft/server/network/ServerCommonPacketListenerImpl.java
 +++ b/net/minecraft/server/network/ServerCommonPacketListenerImpl.java
-@@ -26,7 +_,25 @@
- import net.minecraft.util.VisibleForDebug;
+@@ -27,6 +_,24 @@
  import org.slf4j.Logger;
  
--public abstract class ServerCommonPacketListenerImpl implements ServerCommonPacketListener {
-+// CraftBukkit start
-+public abstract class ServerCommonPacketListenerImpl implements ServerCommonPacketListener, org.bukkit.craftbukkit.entity.CraftPlayer.TransferCookieConnection {
+ public abstract class ServerCommonPacketListenerImpl implements ServerCommonPacketListener, org.bukkit.craftbukkit.entity.CraftPlayer.TransferCookieConnection {
 +
++    // CraftBukkit start
 +    @Override
 +    public boolean isTransferred() {
 +        return this.transferred;
