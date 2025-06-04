@@ -428,7 +428,7 @@ class MagmaInstaller(version: String, neoForgeVersion: String) {
     private fun patchServerIfNeeded(progressBar: ProgressBar) {
         var storedServerMD5: String? = null
         var storedMagmaMD5: String? = null
-        var serverMD5: String? = HashUtil.getFileHash(serverJar, "md5")
+        var serverMD5: String? = HashUtil.getFileHash(JarTool.getFile(), "md5")
         val lzmaMD5: String = HashUtil.getFileHash(lzma, "md5")
         val universalMD5: String = HashUtil.getFileHash(universalJar, "md5")
 
