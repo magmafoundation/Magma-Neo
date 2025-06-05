@@ -22,7 +22,7 @@
                  return levelchunk;
              },
              p_347404_ -> p_347565_.mainThreadMailBox()
-@@ -214,7 +_,21 @@
+@@ -214,7 +_,23 @@
  
      private static void postLoadProtoChunk(ServerLevel p_347492_, List<CompoundTag> p_347609_) {
          if (!p_347609_.isEmpty()) {
@@ -32,11 +32,13 @@
 +                boolean needsRemoval = false;
 +                net.minecraft.server.dedicated.DedicatedServer server = p_347492_.getCraftServer().getServer();
 +                if (!server.areNpcsEnabled() && entity instanceof net.minecraft.world.entity.npc.Npc) {
-+                    entity.discard(null); // CraftBukkit - add Bukkit remove cause
++                    entity.setRemovedReason(null); // CraftBukkit - add Bukkit remove cause
++                    entity.discard();
 +                    needsRemoval = true;
 +                }
 +                if (!server.isSpawningAnimals() && (entity instanceof net.minecraft.world.entity.animal.Animal || entity instanceof net.minecraft.world.entity.animal.WaterAnimal)) {
-+                    entity.discard(null); // CraftBukkit - add Bukkit remove cause
++                    entity.setRemovedReason(null); // CraftBukkit - add Bukkit remove cause
++                    entity.discard();
 +                    needsRemoval = true;
 +                }
 +                return !needsRemoval;

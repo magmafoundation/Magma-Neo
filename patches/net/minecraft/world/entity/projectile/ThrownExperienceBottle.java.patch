@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/entity/projectile/ThrownExperienceBottle.java
 +++ b/net/minecraft/world/entity/projectile/ThrownExperienceBottle.java
-@@ -38,10 +_,19 @@
+@@ -38,9 +_,19 @@
      protected void onHit(HitResult p_37521_) {
          super.onHit(p_37521_);
          if (this.level() instanceof ServerLevel) {
@@ -17,8 +17,7 @@
 +            // CraftBukkit end
 +
              ExperienceOrb.award((ServerLevel)this.level(), this.position(), i);
--            this.discard();
-+            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.HIT); // CraftBukkit - add Bukkit remove cause
++            this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.HIT); // CraftBukkit - add Bukkit remove cause
+             this.discard();
          }
      }
- }

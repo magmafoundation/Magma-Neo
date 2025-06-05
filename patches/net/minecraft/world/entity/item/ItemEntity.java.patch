@@ -28,14 +28,14 @@
      }
  
      @Override
-@@ -120,18 +_,25 @@
+@@ -120,18 +_,26 @@
  
      @Override
      public void tick() {
 +        if (getItem().onEntityItemUpdate(this)) return;
          if (this.getItem().isEmpty()) {
--            this.discard();
-+            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++            this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
+             this.discard();
          } else {
              super.tick();
 -            if (this.pickupDelay > 0 && this.pickupDelay != 32767) {
@@ -80,7 +80,7 @@
  
              this.hasImpulse = this.hasImpulse | this.updateInWaterStateAndDoFluidPushing();
              if (!this.level().isClientSide) {
-@@ -185,11 +_,46 @@
+@@ -185,11 +_,48 @@
                  }
              }
  
@@ -96,7 +96,8 @@
 +                        return;
 +                    }
 +                    // CraftBukkit end
-+                    this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++                    this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++                    this.discard();
 +                }
 +            }
 +            if (item.isEmpty() && !this.isRemoved()) {
@@ -121,7 +122,8 @@
 +                return;
 +            }
 +            // CraftBukkit end
-+            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++            this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++            this.discard();
 +        }
 +    }
 +    // Spigot end
@@ -150,7 +152,7 @@
                  merge(this, itemstack, p_32016_, itemstack1);
              } else {
                  merge(p_32016_, itemstack1, this, itemstack);
-@@ -254,11 +_,16 @@
+@@ -254,10 +_,16 @@
      }
  
      private static void merge(ItemEntity p_32018_, ItemStack p_32019_, ItemEntity p_32020_, ItemStack p_32021_) {
@@ -163,12 +165,11 @@
          p_32018_.pickupDelay = Math.max(p_32018_.pickupDelay, p_32020_.pickupDelay);
          p_32018_.age = Math.min(p_32018_.age, p_32020_.age);
          if (p_32021_.isEmpty()) {
--            p_32020_.discard();
-+            p_32020_.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.MERGE); // CraftBukkit - add Bukkit remove cause);
++            p_32020_.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.MERGE); // CraftBukkit - add Bukkit remove cause);
+             p_32020_.discard();
          }
      }
- 
-@@ -278,12 +_,17 @@
+@@ -278,11 +_,17 @@
          } else if (this.level().isClientSide) {
              return true;
          } else {
@@ -182,12 +183,11 @@
              this.gameEvent(GameEvent.ENTITY_DAMAGE, p_32013_.getEntity());
              if (this.health <= 0) {
 -                this.getItem().onDestroyed(this);
--                this.discard();
 +                this.getItem().onDestroyed(this, p_32013_);
-+                this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DEATH); // CraftBukkit - add Bukkit remove cause
++                this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DEATH); // CraftBukkit - add Bukkit remove cause
+                 this.discard();
              }
  
-             return true;
 @@ -295,6 +_,7 @@
          p_32050_.putShort("Health", (short)this.health);
          p_32050_.putShort("Age", (short)this.age);
@@ -206,16 +206,15 @@
  
          if (p_32034_.hasUUID("Owner")) {
              this.target = p_32034_.getUUID("Owner");
-@@ -333,7 +_,7 @@
+@@ -333,6 +_,7 @@
          }
  
          if (this.getItem().isEmpty()) {
--            this.discard();
-+            this.discard(null); // CraftBukkit - add Bukkit remove cause
++            this.setRemovedReason(null); // CraftBukkit - add Bukkit remove cause
+             this.discard();
          }
      }
- 
-@@ -343,10 +_,62 @@
+@@ -343,9 +_,62 @@
              ItemStack itemstack = this.getItem();
              Item item = itemstack.getItem();
              int i = itemstack.getCount();
@@ -275,11 +274,10 @@
 +
                  p_32040_.take(this, i);
                  if (itemstack.isEmpty()) {
--                    this.discard();
-+                    this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.PICKUP); // CraftBukkit - add Bukkit remove cause
++                    this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.PICKUP); // CraftBukkit - add Bukkit remove cause
+                     this.discard();
                      itemstack.setCount(i);
                  }
- 
 @@ -398,6 +_,15 @@
          this.target = p_266724_;
      }

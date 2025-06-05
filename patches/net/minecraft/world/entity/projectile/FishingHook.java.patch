@@ -19,22 +19,21 @@
      private FishingHook(EntityType<? extends FishingHook> p_150141_, Level p_150142_, int p_150143_, int p_150144_) {
          super(p_150141_, p_150142_);
          this.noCulling = true;
-@@ -141,12 +_,12 @@
+@@ -141,11 +_,13 @@
          super.tick();
          Player player = this.getPlayerOwner();
          if (player == null) {
--            this.discard();
-+            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++            this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
+             this.discard();
          } else if (this.level().isClientSide || !this.shouldStopFishing(player)) {
              if (this.onGround()) {
                  this.life++;
                  if (this.life >= 1200) {
--                    this.discard();
-+                    this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++                    this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
+                     this.discard();
                      return;
                  }
-             } else {
-@@ -240,19 +_,19 @@
+@@ -240,11 +_,12 @@
      private boolean shouldStopFishing(Player p_37137_) {
          ItemStack itemstack = p_37137_.getMainHandItem();
          ItemStack itemstack1 = p_37137_.getOffhandItem();
@@ -45,11 +44,11 @@
          if (!p_37137_.isRemoved() && p_37137_.isAlive() && (flag || flag1) && !(this.distanceToSqr(p_37137_) > 1024.0)) {
              return false;
          } else {
--            this.discard();
-+            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++            this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
+             this.discard();
              return true;
          }
-     }
+@@ -252,7 +_,7 @@
  
      private void checkCollision() {
          HitResult hitresult = ProjectileUtil.getHitResultOnMoveVector(this, this::canHitEntity);
@@ -166,7 +165,7 @@
                      double d0 = player.getX() - this.getX();
                      double d1 = player.getY() - this.getY();
                      double d2 = player.getZ() - this.getZ();
-@@ -476,10 +_,28 @@
+@@ -476,10 +_,29 @@
              }
  
              if (this.onGround()) {
@@ -190,26 +189,9 @@
 +            }
 +            // CraftBukkit end
  
--            this.discard();
-+            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++            this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
+             this.discard();
 +            if (event != null) return event.getRodDamage();
              return i;
          } else {
              return 0;
-@@ -510,8 +_,15 @@
- 
-     @Override
-     public void remove(Entity.RemovalReason p_150146_) {
-+        // CraftBukkit start - add Bukkit remove cause
-+        this.remove(p_150146_, null);
-+    }
-+
-+    @Override
-+    public void remove(Entity.RemovalReason p_150146_, org.bukkit.event.entity.EntityRemoveEvent.Cause cause) {
-+        // CraftBukkit end
-         this.updateOwnerInfo(null);
--        super.remove(p_150146_);
-+        super.remove(p_150146_, cause); // CraftBukkit - add Bukkit remove cause
-     }
- 
-     @Override

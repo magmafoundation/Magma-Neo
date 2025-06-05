@@ -51,15 +51,15 @@
          }
      }
  
-@@ -181,14 +_,18 @@
+@@ -181,6 +_,7 @@
          this.level().broadcastEntityEvent(this, (byte)17);
          this.gameEvent(GameEvent.EXPLODE, this.getOwner());
          this.dealExplosionDamage();
--        this.discard();
-+        this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.EXPLODE); // CraftBukkit - add Bukkit remove cause
++        this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.EXPLODE); // CraftBukkit - add Bukkit remove cause
+         this.discard();
      }
  
-     @Override
+@@ -188,7 +_,11 @@
      protected void onHitEntity(EntityHitResult p_37071_) {
          super.onHitEntity(p_37071_);
          if (!this.level().isClientSide) {

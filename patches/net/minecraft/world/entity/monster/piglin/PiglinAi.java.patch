@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/entity/monster/piglin/PiglinAi.java
 +++ b/net/minecraft/world/entity/monster/piglin/PiglinAi.java
-@@ -330,23 +_,26 @@
+@@ -330,23 +_,27 @@
      protected static void pickUpItem(Piglin p_34844_, ItemEntity p_34845_) {
          stopWalking(p_34844_);
          ItemStack itemstack;
@@ -9,9 +9,9 @@
 +        if (p_34845_.getItem().is(Items.GOLD_NUGGET) && !org.bukkit.craftbukkit.event.CraftEventFactory.callEntityPickupItemEvent(p_34844_, p_34845_, 0, false).isCancelled()) {
              p_34844_.take(p_34845_, p_34845_.getItem().getCount());
              itemstack = p_34845_.getItem();
--            p_34845_.discard();
++            p_34845_.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.PICKUP); // CraftBukkit - add Bukkit remove cause
+             p_34845_.discard();
 -        } else {
-+            p_34845_.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.PICKUP); // CraftBukkit - add Bukkit remove cause
 +        } else if (!org.bukkit.craftbukkit.event.CraftEventFactory.callEntityPickupItemEvent(p_34844_, p_34845_, p_34845_.getItem().getCount() - 1, false).isCancelled()) {
              p_34844_.take(p_34845_, 1);
              itemstack = removeOneItemFromItemEntity(p_34845_);

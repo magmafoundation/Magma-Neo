@@ -141,7 +141,23 @@
      }
  
      @Override
-@@ -209,6 +_,19 @@
+@@ -202,13 +_,35 @@
+         }
+     }
+ 
++    // Magma start - will allow to call and save for CraftEvent to call the real setblock. this is for mixins
++    public boolean fake$setBlock = false;
++    public BlockState fake$setBlockBlockState = null;
+     @Override
+     public boolean setBlock(BlockPos p_46601_, BlockState p_46602_, int p_46603_) {
++        if (fake$setBlock) {
++            fake$setBlock = false;
++            fake$setBlockBlockState = p_46602_;
++            return false;
++        }
++        // Magma end
+         return this.setBlock(p_46601_, p_46602_, p_46603_, 512);
+     }
  
      @Override
      public boolean setBlock(BlockPos p_46605_, BlockState p_46606_, int p_46607_, int p_46608_) {

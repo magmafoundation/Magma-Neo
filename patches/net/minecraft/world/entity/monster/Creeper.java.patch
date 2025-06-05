@@ -40,7 +40,7 @@
                      itemstack.shrink(1);
                  } else {
                      itemstack.hurtAndBreak(1, p_32301_, getSlotForHand(p_32302_));
-@@ -234,11 +_,20 @@
+@@ -234,11 +_,21 @@
      public void explodeCreeper() {
          if (!this.level().isClientSide) {
              float f = this.isPowered() ? 2.0F : 1.0F;
@@ -57,7 +57,8 @@
 +                this.level().explode(this, this.getX(), this.getY(), this.getZ(), (float)this.explosionRadius * f, Level.ExplosionInteraction.MOB);
 +                this.spawnLingeringCloud();
 +                this.triggerOnDeathMobEffects(Entity.RemovalReason.KILLED);
-+                this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.EXPLODE); // CraftBukkit - add Bukkit remove cause
++                this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.EXPLODE); // CraftBukkit - add Bukkit remove cause
++                this.discard();
 +                // CraftBukkit start
 +            } else {
 +                swell = 0;

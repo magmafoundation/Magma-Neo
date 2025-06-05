@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/level/block/FarmBlock.java
 +++ b/net/minecraft/world/level/block/FarmBlock.java
-@@ -88,29 +_,55 @@
+@@ -88,29 +_,57 @@
          int i = p_221139_.getValue(MOISTURE);
          if (!isNearWater(p_221140_, p_221141_) && !p_221140_.isRainingAt(p_221141_.above())) {
              if (i > 0) {
@@ -12,9 +12,10 @@
                  turnToDirt(null, p_221139_, p_221140_, p_221141_);
              }
          } else if (i < 7) {
--            p_221140_.setBlock(p_221141_, p_221139_.setValue(MOISTURE, Integer.valueOf(7)), 2);
++            p_221140_.fake$setBlock = true;
+             p_221140_.setBlock(p_221141_, p_221139_.setValue(MOISTURE, Integer.valueOf(7)), 2);
 +            // CraftBukkit start
-+            org.bukkit.craftbukkit.event.CraftEventFactory.handleMoistureChangeEvent(p_221140_, p_221141_, p_221139_.setValue(MOISTURE, Integer.valueOf(7)), 2);
++            org.bukkit.craftbukkit.event.CraftEventFactory.handleMoistureChangeEvent(p_221140_, p_221141_, p_221140_.fake$setBlockBlockState, 2);
 +            // CraftBukkit end
          }
      }

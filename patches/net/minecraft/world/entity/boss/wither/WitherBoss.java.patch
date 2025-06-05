@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/entity/boss/wither/WitherBoss.java
 +++ b/net/minecraft/world/entity/boss/wither/WitherBoss.java
-@@ -263,15 +_,37 @@
+@@ -263,14 +_,37 @@
              int j = this.getInvulnerableTicks() - 1;
              this.bossEvent.setProgress(1.0F - (float)j / 220.0F);
              if (j <= 0) {
@@ -36,11 +36,10 @@
  
              this.setInvulnerableTicks(j);
              if (this.tickCount % 10 == 0) {
--                this.heal(10.0F);
-+                this.heal(10.0F, org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.WITHER_SPAWN); // CraftBukkit
++                this.setHealRegainReason(org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.WITHER_SPAWN); // Magma - add regain reason
+                 this.heal(10.0F);
              }
          } else {
-             super.customServerAiStep();
 @@ -308,6 +_,7 @@
                              .getNearbyEntities(LivingEntity.class, TARGETING_CONDITIONS, this, this.getBoundingBox().inflate(20.0, 8.0, 20.0));
                          if (!list.isEmpty()) {
@@ -72,15 +71,15 @@
                              flag = this.level().destroyBlock(blockpos, true, this) || flag;
                          }
                      }
-@@ -343,13 +_,17 @@
+@@ -343,6 +_,7 @@
              }
  
              if (this.tickCount % 20 == 0) {
--                this.heal(1.0F);
-+                this.heal(1.0F, org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.REGEN); // CraftBukkit
++                this.setHealRegainReason(org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.REGEN); // Magma - add regain reason
+                 this.heal(1.0F);
              }
  
-             this.bossEvent.setProgress(this.getHealth() / this.getMaxHealth());
+@@ -350,6 +_,10 @@
          }
      }
  
@@ -91,14 +90,13 @@
      public static boolean canDestroy(BlockState p_31492_) {
          return !p_31492_.isAir() && !p_31492_.is(BlockTags.WITHER_IMMUNE);
      }
-@@ -495,8 +_,9 @@
+@@ -495,7 +_,9 @@
  
      @Override
      public void checkDespawn() {
 +        if (net.neoforged.neoforge.event.EventHooks.checkMobDespawn(this)) return;
          if (this.level().getDifficulty() == Difficulty.PEACEFUL && this.shouldDespawnInPeaceful()) {
--            this.discard();
-+            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++            this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
+             this.discard();
          } else {
              this.noActionTime = 0;
-         }

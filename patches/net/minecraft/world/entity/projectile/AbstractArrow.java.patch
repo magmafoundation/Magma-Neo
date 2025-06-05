@@ -75,26 +75,24 @@
                      this.hasImpulse = true;
                      if (projectiledeflection != ProjectileDeflection.NONE) {
                          break;
-@@ -319,8 +_,8 @@
+@@ -319,7 +_,8 @@
  
      protected void tickDespawn() {
          this.life++;
 -        if (this.life >= 1200) {
--            this.discard();
 +        if (this.life >= ((this instanceof ThrownTrident) ? this.level().spigotConfig.tridentDespawnRate : this.level().spigotConfig.arrowDespawnRate)) { // Spigot
-+            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++            this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
+             this.discard();
          }
      }
- 
-@@ -357,7 +_,7 @@
+@@ -357,6 +_,7 @@
              }
  
              if (this.piercingIgnoreEntityIds.size() >= this.getPierceLevel() + 1) {
--                this.discard();
-+                this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.HIT); // CraftBukkit - add Bukkit remove cause
++                this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.HIT); // CraftBukkit - add Bukkit remove cause
+                 this.discard();
                  return;
              }
- 
 @@ -376,7 +_,13 @@
          boolean flag = entity.getType() == EntityType.ENDERMAN;
          int i = entity.getRemainingFireTicks();
@@ -110,25 +108,23 @@
          }
  
          if (entity.hurt(damagesource, (float)j)) {
-@@ -414,7 +_,7 @@
+@@ -414,6 +_,7 @@
  
              this.playSound(this.soundEvent, 1.0F, 1.2F / (this.random.nextFloat() * 0.2F + 0.9F));
              if (this.getPierceLevel() <= 0) {
--                this.discard();
-+                this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.HIT); // CraftBukkit - add Bukkit remove cause
++                this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.HIT); // CraftBukkit - add Bukkit remove cause
+                 this.discard();
              }
          } else {
-             entity.setRemainingFireTicks(i);
-@@ -425,7 +_,7 @@
+@@ -425,6 +_,7 @@
                      this.spawnAtLocation(this.getPickupItem(), 0.1F);
                  }
  
--                this.discard();
-+                this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.HIT); // CraftBukkit - add Bukkit remove cause
++                this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.HIT); // CraftBukkit - add Bukkit remove cause
+                 this.discard();
              }
          }
-     }
-@@ -580,9 +_,24 @@
+@@ -580,8 +_,24 @@
      @Override
      public void playerTouch(Player p_36766_) {
          if (!this.level().isClientSide && (this.inGround || this.isNoPhysics()) && this.shakeTime <= 0) {
@@ -150,8 +146,7 @@
 +            if ((this.pickup == AbstractArrow.Pickup.ALLOWED && p_36766_.getInventory().add(itemstack)) || (this.pickup == AbstractArrow.Pickup.CREATIVE_ONLY && p_36766_.getAbilities().instabuild)) {
 +                // CraftBukkit end
                  p_36766_.take(this, 1);
--                this.discard();
-+                this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.PICKUP); // CraftBukkit - add Bukkit remove cause
++                this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.PICKUP); // CraftBukkit - add Bukkit remove cause
+                 this.discard();
              }
          }
-     }

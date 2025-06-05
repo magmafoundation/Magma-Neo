@@ -134,7 +134,7 @@
              Vec3i vec3i = this.getPickupReach();
  
              for (ItemEntity itementity : this.level()
-@@ -559,18 +_,24 @@
+@@ -559,18 +_,25 @@
  
      protected void pickUpItem(ItemEntity p_21471_) {
          ItemStack itemstack = p_21471_.getItem();
@@ -145,8 +145,8 @@
              this.take(p_21471_, itemstack1.getCount());
              itemstack.shrink(itemstack1.getCount());
              if (itemstack.isEmpty()) {
--                p_21471_.discard();
-+                p_21471_.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.PICKUP); // CraftBukkit - add Bukkit remove cause
++                p_21471_.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.PICKUP); // CraftBukkit - add Bukkit remove cause
+                 p_21471_.discard();
              }
          }
      }
@@ -192,33 +192,31 @@
          return itemattributemodifiers.compute(this.getAttributeBaseValue(Attributes.ATTACK_DAMAGE), EquipmentSlot.MAINHAND);
      }
  
-@@ -701,8 +_,9 @@
+@@ -701,7 +_,9 @@
  
      @Override
      public void checkDespawn() {
 +        if (net.neoforged.neoforge.event.EventHooks.checkMobDespawn(this)) return;
          if (this.level().getDifficulty() == Difficulty.PEACEFUL && this.shouldDespawnInPeaceful()) {
--            this.discard();
-+            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++            this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
+             this.discard();
          } else if (!this.isPersistenceRequired() && !this.requiresCustomPersistence()) {
              Entity entity = this.level().getNearestPlayer(this, -1.0);
-             if (entity != null) {
-@@ -710,13 +_,13 @@
+@@ -710,12 +_,14 @@
                  int i = this.getType().getCategory().getDespawnDistance();
                  int j = i * i;
                  if (d0 > (double)j && this.removeWhenFarAway(d0)) {
--                    this.discard();
-+                    this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++                    this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
+                     this.discard();
                  }
  
                  int k = this.getType().getCategory().getNoDespawnDistance();
                  int l = k * k;
                  if (this.noActionTime > 600 && this.random.nextInt(800) == 0 && d0 > (double)l && this.removeWhenFarAway(d0)) {
--                    this.discard();
-+                    this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++                    this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
+                     this.discard();
                  } else if (d0 < (double)l) {
                      this.noActionTime = 0;
-                 }
 @@ -729,6 +_,7 @@
      @Override
      protected final void serverAiStep() {
@@ -263,7 +261,7 @@
          if (this.isRemoved()) {
              return null;
          } else {
-@@ -1304,14 +_,19 @@
+@@ -1304,13 +_,19 @@
                      }
                  }
  
@@ -280,11 +278,10 @@
                      t.startRiding(entity, true);
                  }
  
--                this.discard();
-+                this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.TRANSFORMATION); // CraftBukkit - add Bukkit remove cause
++                this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.TRANSFORMATION); // CraftBukkit - add Bukkit remove cause
+                 this.discard();
                  return t;
              }
-         }
 @@ -1351,6 +_,7 @@
      public boolean startRiding(Entity p_21396_, boolean p_21397_) {
          boolean flag = super.startRiding(p_21396_, p_21397_);

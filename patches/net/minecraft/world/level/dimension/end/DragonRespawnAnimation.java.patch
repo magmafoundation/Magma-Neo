@@ -1,11 +1,10 @@
 --- a/net/minecraft/world/level/dimension/end/DragonRespawnAnimation.java
 +++ b/net/minecraft/world/level/dimension/end/DragonRespawnAnimation.java
-@@ -101,7 +_,7 @@
+@@ -101,6 +_,7 @@
                  for (EndCrystal endcrystal : p_64046_) {
                      endcrystal.setBeamTarget(null);
                      p_64044_.explode(endcrystal, endcrystal.getX(), endcrystal.getY(), endcrystal.getZ(), 6.0F, Level.ExplosionInteraction.NONE);
--                    endcrystal.discard();
-+                    endcrystal.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.EXPLODE); // CraftBukkit - add Bukkit remove cause
++                    endcrystal.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.EXPLODE); // CraftBukkit - add Bukkit remove cause
+                     endcrystal.discard();
                  }
              } else if (p_64047_ >= 80) {
-                 p_64044_.levelEvent(3001, new BlockPos(0, 128, 0), 0);

@@ -23,12 +23,11 @@
              ItemStack itemstack2 = ItemUtils.createFilledResult(itemstack, p_148829_, itemstack1, false);
              p_148829_.setItemInHand(p_148830_, itemstack2);
              Level level = p_148831_.level();
-@@ -98,7 +_,7 @@
+@@ -98,6 +_,7 @@
                  CriteriaTriggers.FILLED_BUCKET.trigger((ServerPlayer)p_148829_, itemstack1);
              }
  
--            p_148831_.discard();
-+            p_148831_.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.PICKUP); // CraftBukkit - add Bukkit remove cause
++            p_148831_.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.PICKUP); // CraftBukkit - add Bukkit remove cause
+             p_148831_.discard();
              return Optional.of(InteractionResult.sidedSuccess(level.isClientSide));
          } else {
-             return Optional.empty();

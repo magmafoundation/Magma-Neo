@@ -127,16 +127,15 @@
              super.rideTick();
              this.oBob = this.bob;
              this.bob = 0.0F;
-@@ -515,7 +_,8 @@
+@@ -515,6 +_,8 @@
  
          if (this.level().getDifficulty() == Difficulty.PEACEFUL && this.level().getGameRules().getBoolean(GameRules.RULE_NATURAL_REGENERATION)) {
              if (this.getHealth() < this.getMaxHealth() && this.tickCount % 20 == 0) {
--                this.heal(1.0F);
 +                // CraftBukkit - added regain reason of "REGEN" for filtering purposes.
-+                this.heal(1.0F, org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.REGEN);
++                this.setHealRegainReason(org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.REGEN); // Magma - add regain reason
+                 this.heal(1.0F);
              }
  
-             if (this.foodData.getSaturationLevel() < 20.0F && this.tickCount % 20 == 0) {
 @@ -630,6 +_,7 @@
  
      @Override
@@ -321,12 +320,12 @@
                  if (this.useItem.isEmpty()) {
                      if (interactionhand == InteractionHand.MAIN_HAND) {
                          this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
-@@ -949,20 +_,34 @@
+@@ -949,20 +_,35 @@
          }
      }
  
 +    // CraftBukkit start
-+    protected boolean actuallyHurt(DamageSource p_36312_, float fe, org.bukkit.event.entity.EntityDamageEvent event) {
++    protected boolean actuallyHurtCB(DamageSource p_36312_, float fe, org.bukkit.event.entity.EntityDamageEvent event) {
 +        this.magmaDamageEventMixin = event;
 +        return super.actuallyHurtCB(p_36312_, fe);
 +    }
@@ -334,10 +333,11 @@
      @Override
 -    protected void actuallyHurt(DamageSource p_36312_, float p_36313_) {
 +    protected void actuallyHurt(DamageSource p_36312_, float fe) {
-+        if(true) {
-+            super.actuallyHurtCB(p_36312_, fe);
++        if(useCBHurt) {
++            actuallyHurtCB$return.set(super.actuallyHurtCB(p_36312_, fe));
 +            return;
 +        }
++        else
 +        // CraftBukkit end
          if (!this.isInvulnerableTo(p_36312_)) {
 -            p_36313_ = this.getDamageAfterArmorAbsorb(p_36312_, p_36313_);
@@ -564,21 +564,14 @@
          this.stopUsingItem();
          this.level().broadcastEntityEvent(this, (byte)30);
      }
-@@ -1349,7 +_,13 @@
+@@ -1347,7 +_,6 @@
+     public void respawn() {
+     }
  
-     @Override
+-    @Override
      public void remove(Entity.RemovalReason p_150097_) {
--        super.remove(p_150097_);
-+        // CraftBukkit start - add Bukkit remove cause
-+        this.remove(p_150097_, null);
-+    }
-+
-+    public void remove(Entity.RemovalReason p_150097_, org.bukkit.event.entity.EntityRemoveEvent.Cause cause) {
-+        super.remove(p_150097_, cause);
-+        // CraftBukkit end
+         super.remove(p_150097_);
          this.inventoryMenu.removed(this);
-         if (this.containerMenu != null && this.hasContainerOpen()) {
-             this.doCloseContainer();
 @@ -1384,6 +_,11 @@
          return this.containerMenu != this.inventoryMenu;
      }

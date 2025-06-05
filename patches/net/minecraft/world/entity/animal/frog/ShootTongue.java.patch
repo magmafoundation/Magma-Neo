@@ -1,11 +1,10 @@
 --- a/net/minecraft/world/entity/animal/frog/ShootTongue.java
 +++ b/net/minecraft/world/entity/animal/frog/ShootTongue.java
-@@ -92,7 +_,7 @@
+@@ -92,6 +_,7 @@
              if (entity.isAlive()) {
                  p_218642_.doHurtTarget(entity);
                  if (!entity.isAlive()) {
--                    entity.remove(Entity.RemovalReason.KILLED);
-+                    entity.remove(Entity.RemovalReason.KILLED, org.bukkit.event.entity.EntityRemoveEvent.Cause.DEATH); // CraftBukkit - add Bukkit remove cause
++                    entity.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DEATH); // CraftBukkit - add Bukkit remove cause
+                     entity.remove(Entity.RemovalReason.KILLED);
                  }
              }
-         }

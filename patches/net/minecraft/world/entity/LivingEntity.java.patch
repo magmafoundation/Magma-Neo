@@ -98,15 +98,14 @@
              this.extinguishFire();
          }
  
-@@ -542,7 +_,7 @@
+@@ -542,6 +_,7 @@
          this.deathTime++;
          if (this.deathTime >= 20 && !this.level().isClientSide() && !this.isRemoved()) {
              this.level().broadcastEntityEvent(this, (byte)60);
--            this.remove(Entity.RemovalReason.KILLED);
-+            this.remove(Entity.RemovalReason.KILLED, org.bukkit.event.entity.EntityRemoveEvent.Cause.DEATH); // CraftBukkit - add Bukkit remove cause
++            this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DEATH); // CraftBukkit - add Bukkit remove cause
+             this.remove(Entity.RemovalReason.KILLED);
          }
      }
- 
 @@ -646,11 +_,17 @@
      }
  
@@ -126,26 +125,14 @@
                      this.level()
                          .playSeededSound(
                              null, this.getX(), this.getY(), this.getZ(), equipable.getEquipSound(), this.getSoundSource(), 1.0F, 1.0F, this.random.nextLong()
-@@ -666,11 +_,18 @@
+@@ -666,6 +_,7 @@
  
      @Override
      public void remove(Entity.RemovalReason p_276115_) {
-+        // CraftBukkit start - add Bukkit remove cause
-+        this.remove(p_276115_, null);
-+    }
-+
-+    @Override
-+    public void remove(Entity.RemovalReason p_276115_, org.bukkit.event.entity.EntityRemoveEvent.Cause cause) {
 +        // CraftBukkit end
          if (p_276115_ == Entity.RemovalReason.KILLED || p_276115_ == Entity.RemovalReason.DISCARDED) {
              this.triggerOnDeathMobEffects(p_276115_);
          }
- 
--        super.remove(p_276115_);
-+        super.remove(p_276115_, cause); // CraftBukkit
-         this.brain.clearMemories();
-     }
- 
 @@ -679,6 +_,7 @@
              mobeffectinstance.onMobRemoved(this, p_350496_);
          }
@@ -415,22 +402,25 @@
          if (mobeffectinstance != null) {
              this.onEffectRemoved(mobeffectinstance);
              return true;
-@@ -1060,18 +_,54 @@
+@@ -1060,18 +_,57 @@
          }
      }
  
-+    // CraftBukkit start - Delegate so we can handle providing a reason for health being regained
-     public void heal(float p_21116_) {
-+        heal(p_21116_, org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.CUSTOM);
++
++    // Magma start - mixin suport
++    private org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason heal$regainReason = org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.CUSTOM;
++
++    public void setHealRegainReason(org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason reason) {
++        this.heal$regainReason = reason;
 +    }
 +
-+    public void heal(float p_21116_, org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason regainReason) {
+     public void heal(float p_21116_) {
 +        p_21116_ = net.neoforged.neoforge.event.EventHooks.onLivingHeal(this, p_21116_);
 +        if (p_21116_ <= 0) return;
          float f = this.getHealth();
          if (f > 0.0F) {
 -            this.setHealth(f + p_21116_);
-+            org.bukkit.event.entity.EntityRegainHealthEvent event = new org.bukkit.event.entity.EntityRegainHealthEvent(this.getBukkitEntity(), p_21116_, regainReason);
++            org.bukkit.event.entity.EntityRegainHealthEvent event = new org.bukkit.event.entity.EntityRegainHealthEvent(this.getBukkitEntity(), p_21116_, heal$regainReason);
 +            // Suppress during worldgen
 +            if (this.valid) {
 +                this.level().getCraftServer().getPluginManager().callEvent(event);
@@ -471,7 +461,7 @@
          this.entityData.set(DATA_HEALTH_ID, Mth.clamp(p_21154_, 0.0F, this.getMaxHealth()));
      }
  
-@@ -1085,57 +_,90 @@
+@@ -1085,57 +_,91 @@
              return false;
          } else if (this.level().isClientSide) {
              return false;
@@ -540,19 +530,16 @@
 -            if ((float)this.invulnerableTime > 10.0F && !p_21016_.is(DamageTypeTags.BYPASSES_COOLDOWN)) {
 +            if ((float) this.invulnerableTime > (float) this.invulnerableDuration / 2.0F && !p_21016_.is(DamageTypeTags.BYPASSES_COOLDOWN)) { // CraftBukkit - restore use of maxNoDamageTicks
                  if (p_21017_ <= this.lastHurt) {
--                    return false;
--                }
--
--                this.actuallyHurt(p_21016_, p_21017_ - this.lastHurt);
 +                    this.damageContainers.pop();
-+                    return false;
-+                }
-+
+                     return false;
+                 }
+ 
 +                this.damageContainers.peek().setReduction(net.neoforged.neoforge.common.damagesource.DamageContainer.Reduction.INVULNERABILITY, this.lastHurt);
 +
 +                // CraftBukkit start
 +                this.magmaDamageEventMixin = event;
-+                if (!this.actuallyHurtCB(p_21016_, (float) event.getFinalDamage() - this.lastHurt)) {
+                 this.actuallyHurt(p_21016_, p_21017_ - this.lastHurt);
++                if (!actuallyHurtCB$return.get()) {
 +                    return false;
 +                }
 +                // CraftBukkit end
@@ -954,7 +941,7 @@
                  }
  
                  return p_21194_;
-@@ -1677,13 +_,184 @@
+@@ -1677,13 +_,192 @@
          }
      }
  
@@ -1127,7 +1114,15 @@
 +        return false; // CraftBukkit
 +    }
 +
++    // Magma start
++    protected boolean useCBHurt = true;
++    protected java.util.concurrent.atomic.AtomicBoolean actuallyHurtCB$return = new java.util.concurrent.atomic.AtomicBoolean(false);
 +    protected void actuallyHurt(final DamageSource p_21240_, float p_21241_) {
++        if(useCBHurt){
++            actuallyHurtCB$return.set(actuallyHurtCB(p_21240_, p_21241_));
++            return;
++        } else
++            // Magma end
          if (!this.isInvulnerableTo(p_21240_)) {
 -            p_21241_ = this.getDamageAfterArmorAbsorb(p_21240_, p_21241_);
 -            p_21241_ = this.getDamageAfterMagicAbsorb(p_21240_, p_21241_);

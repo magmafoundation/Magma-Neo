@@ -36,12 +36,11 @@
                  BlockPos blockpos = p_37384_.getBlockPos().relative(p_37384_.getDirection());
                  if (this.level().isEmptyBlock(blockpos)) {
                      this.level().setBlockAndUpdate(blockpos, BaseFireBlock.getState(this.level(), blockpos));
-@@ -64,7 +_,7 @@
+@@ -64,6 +_,7 @@
      protected void onHit(HitResult p_37388_) {
          super.onHit(p_37388_);
          if (!this.level().isClientSide) {
--            this.discard();
-+            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.HIT); // CraftBukkit - add Bukkit remove cause
++            this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.HIT); // CraftBukkit - add Bukkit remove cause
+             this.discard();
          }
      }
- 

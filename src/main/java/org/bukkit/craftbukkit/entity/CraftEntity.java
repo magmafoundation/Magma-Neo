@@ -295,7 +295,8 @@ public abstract class CraftEntity implements org.bukkit.entity.Entity {
     @Override
     public void remove() {
         entity.pluginRemoved = true;
-        entity.discard(getHandle().generation ? null : EntityRemoveEvent.Cause.PLUGIN);
+        entity.setRemovedReason(getHandle().generation ? null : EntityRemoveEvent.Cause.PLUGIN);
+        entity.discard();
     }
 
     @Override

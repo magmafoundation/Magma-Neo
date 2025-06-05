@@ -63,15 +63,14 @@
              p_58742_.stopRiding();
              p_58742_.ejectPassengers();
              this.storeBee(BeehiveBlockEntity.Occupant.of(p_58742_));
-@@ -188,7 +_,7 @@
+@@ -188,6 +_,7 @@
                  this.level.gameEvent(GameEvent.BLOCK_CHANGE, blockpos, GameEvent.Context.of(p_58742_, this.getBlockState()));
              }
  
--            p_58742_.discard();
-+            p_58742_.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.ENTER_BLOCK); // CraftBukkit - add Bukkit remove cause
++            p_58742_.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.ENTER_BLOCK); // CraftBukkit - add Bukkit remove cause
+             p_58742_.discard();
              super.setChanged();
          }
-     }
 @@ -206,7 +_,12 @@
          BeehiveBlockEntity.BeeReleaseStatus p_155142_,
          @Nullable BlockPos p_155143_

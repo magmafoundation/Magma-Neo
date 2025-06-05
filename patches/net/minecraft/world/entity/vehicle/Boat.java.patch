@@ -130,16 +130,10 @@
                          && d0 < (double)((float)blockpos$mutableblockpos.getY() + fluidstate.getHeight(this.level(), blockpos$mutableblockpos))) {
                          if (!fluidstate.isSource()) {
                              return Boat.Status.UNDER_FLOWING_WATER;
-@@ -805,6 +_,13 @@
+@@ -805,6 +_,7 @@
  
      @Override
      public void remove(Entity.RemovalReason p_352927_) {
-+        // CraftBukkit start - add Bukkit remove cause
-+        this.remove(p_352927_, null);
-+    }
-+
-+    @Override
-+    public void remove(Entity.RemovalReason p_352927_, org.bukkit.event.entity.EntityRemoveEvent.Cause cause) {
 +        // CraftBukkit end
          if (!this.level().isClientSide && p_352927_.shouldDestroy() && this.isLeashed()) {
              this.dropLeash(true, true);

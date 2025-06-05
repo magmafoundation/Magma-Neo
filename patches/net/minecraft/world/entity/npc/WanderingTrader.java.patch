@@ -26,12 +26,11 @@
                  }
              }
          }
-@@ -240,7 +_,7 @@
+@@ -240,6 +_,7 @@
  
      private void maybeDespawn() {
          if (this.despawnDelay > 0 && !this.isTrading() && --this.despawnDelay == 0) {
--            this.discard();
-+            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++            this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
+             this.discard();
          }
      }
- 

@@ -117,12 +117,13 @@
                          return true;
                      } else {
                          long i = serverlevel.getGameTime();
-@@ -426,7 +_,7 @@
+@@ -426,7 +_,8 @@
                          } else {
                              this.brokenByPlayer(serverlevel, p_31579_);
                              this.showBreakingParticles();
 -                            this.kill();
-+                            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DEATH); // CraftBukkit - SPIGOT-4890: remain as this.discard() since above damagesource method will call death event
++                            this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DEATH); // CraftBukkit - SPIGOT-4890: remain as this.discard() since above damagesource method will call death event
++                            this.discard();
                          }
  
                          return true;
@@ -170,7 +171,7 @@
      }
  
      private void playBrokenSound() {
-@@ -598,8 +_,23 @@
+@@ -598,8 +_,24 @@
          return this.isSmall();
      }
  
@@ -189,7 +190,8 @@
 +
 +    public void kill(DamageSource damageSource) {
 +        org.bukkit.craftbukkit.event.CraftEventFactory.callEntityDeathEvent(this, (damageSource == null ? this.damageSources().genericKill() : damageSource), drops); // CraftBukkit - call event
-+        this.remove(Entity.RemovalReason.KILLED, org.bukkit.event.entity.EntityRemoveEvent.Cause.DEATH); // CraftBukkit - add Bukkit remove cause
++        this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DEATH); // CraftBukkit - add Bukkit remove cause
++        this.remove(Entity.RemovalReason.KILLED);
 +        // CraftBukkit end
          this.remove(Entity.RemovalReason.KILLED);
          this.gameEvent(GameEvent.ENTITY_DIE);

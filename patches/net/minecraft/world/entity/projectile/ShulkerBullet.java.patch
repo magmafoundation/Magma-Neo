@@ -19,15 +19,14 @@
      @Override
      public SoundSource getSoundSource() {
          return SoundSource.HOSTILE;
-@@ -187,7 +_,7 @@
+@@ -187,6 +_,7 @@
      @Override
      public void checkDespawn() {
          if (this.level().getDifficulty() == Difficulty.PEACEFUL) {
--            this.discard();
-+            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++            this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
+             this.discard();
          }
      }
- 
 @@ -218,8 +_,8 @@
              }
  
@@ -48,30 +47,15 @@
              }
          }
      }
-@@ -301,14 +_,20 @@
-     }
- 
-     private void destroy() {
--        this.discard();
-+        // CraftBukkit start - add Bukkit remove cause
-+        this.destroy(null);
-+    }
-+
-+    private void destroy(org.bukkit.event.entity.EntityRemoveEvent.Cause cause) {
-+        this.discard(cause);
-+        // CraftBukkit end
-         this.level().gameEvent(GameEvent.ENTITY_DAMAGE, this.position(), GameEvent.Context.of(this));
-     }
- 
+@@ -308,6 +_,7 @@
      @Override
      protected void onHit(HitResult p_37347_) {
          super.onHit(p_37347_);
--        this.destroy();
-+        this.destroy(org.bukkit.event.entity.EntityRemoveEvent.Cause.HIT); // CraftBukkit - add Bukkit remove cause
++        this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.HIT); // CraftBukkit - add Bukkit remove cause
+         this.destroy();
      }
  
-     @Override
-@@ -318,10 +_,15 @@
+@@ -318,9 +_,15 @@
  
      @Override
      public boolean hurt(DamageSource p_37338_, float p_37339_) {
@@ -83,8 +67,7 @@
          if (!this.level().isClientSide) {
              this.playSound(SoundEvents.SHULKER_BULLET_HURT, 1.0F, 1.0F);
              ((ServerLevel)this.level()).sendParticles(ParticleTypes.CRIT, this.getX(), this.getY(), this.getZ(), 15, 0.2, 0.2, 0.2, 0.0);
--            this.destroy();
-+            this.destroy(org.bukkit.event.entity.EntityRemoveEvent.Cause.DEATH); // CraftBukkit - add Bukkit remove cause
++            this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DEATH); // CraftBukkit - add Bukkit remove cause
+             this.destroy();
          }
  
-         return true;

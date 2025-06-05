@@ -9,15 +9,14 @@
      }
  
      @Override
-@@ -65,7 +_,7 @@
+@@ -65,6 +_,7 @@
                      if (entity.isAlive()) {
                          EnchantmentHelper.doPostAttackEffects(serverlevel, entity, damagesource);
                      } else {
--                        livingentity.heal(5.0F);
-+                        livingentity.heal(5.0F, org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.WITHER); // CraftBukkit
++                        livingentity.setHealRegainReason(org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.WITHER); // Magma - add regain reason
+                         livingentity.heal(5.0F);
                      }
                  }
-             } else {
 @@ -81,7 +_,7 @@
                  }
  
@@ -27,12 +26,11 @@
                  }
              }
          }
-@@ -91,8 +_,14 @@
+@@ -91,7 +_,14 @@
      protected void onHit(HitResult p_37628_) {
          super.onHit(p_37628_);
          if (!this.level().isClientSide) {
 -            this.level().explode(this, this.getX(), this.getY(), this.getZ(), 1.0F, false, Level.ExplosionInteraction.MOB);
--            this.discard();
 +            // CraftBukkit start
 +            org.bukkit.event.entity.ExplosionPrimeEvent event = new org.bukkit.event.entity.ExplosionPrimeEvent(this.getBukkitEntity(), 1.0F, false);
 +            this.level().getCraftServer().getPluginManager().callEvent(event);
@@ -40,7 +38,7 @@
 +                this.level().explode(this, this.getX(), this.getY(), this.getZ(), event.getRadius(), event.getFire(), Level.ExplosionInteraction.MOB);
 +            }
 +            // CraftBukkit end
-+            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.HIT); // CraftBukkit - add Bukkit remove cause
++            this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.HIT); // CraftBukkit - add Bukkit remove cause
+             this.discard();
          }
      }
- 

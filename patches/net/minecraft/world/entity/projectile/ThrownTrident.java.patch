@@ -1,11 +1,10 @@
 --- a/net/minecraft/world/entity/projectile/ThrownTrident.java
 +++ b/net/minecraft/world/entity/projectile/ThrownTrident.java
-@@ -67,7 +_,7 @@
+@@ -67,6 +_,7 @@
                      this.spawnAtLocation(this.getPickupItem(), 0.1F);
                  }
  
--                this.discard();
-+                this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.DROP); // CraftBukkit - add Bukkit remove cause
++                this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DROP); // CraftBukkit - add Bukkit remove cause
+                 this.discard();
              } else {
                  this.setNoPhysics(true);
-                 Vec3 vec3 = entity.getEyePosition().subtract(this.position());

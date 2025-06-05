@@ -652,7 +652,8 @@ public class CraftEventFactory {
 
             if (spawnReason != SpawnReason.CUSTOM) {
                 if (isAnimal && !world.getWorld().getAllowAnimals() || isMonster && !world.getWorld().getAllowMonsters() || isNpc && !world.getCraftServer().getServer().areNpcsEnabled()) {
-                    entity.discard(null); // Add Bukkit remove cause
+                    entity.setRemovedReason(null); // Add Bukkit remove cause
+                    entity.discard();
                     return false;
                 }
             }
@@ -690,12 +691,15 @@ public class CraftEventFactory {
         if (event != null && (event.isCancelled() || entity.isRemoved())) {
             Entity vehicle = entity.getVehicle();
             if (vehicle != null) {
-                vehicle.discard(null); // Add Bukkit remove cause
+                vehicle.setRemovedReason(null); // Add Bukkit remove cause
+                vehicle.discard();
             }
             for (Entity passenger : entity.getIndirectPassengers()) {
-                passenger.discard(null); // Add Bukkit remove cause
+                passenger.setRemovedReason(null); // Add Bukkit remove cause
+                passenger.discard();
             }
-            entity.discard(null); // Add Bukkit remove cause
+            entity.setRemovedReason(null); // Add Bukkit remove cause
+            entity.discard();
             return false;
         }
 
@@ -708,7 +712,8 @@ public class CraftEventFactory {
                     if (e instanceof net.minecraft.world.entity.ExperienceOrb loopItem) {
                         if (!loopItem.isRemoved()) {
                             xp.value += loopItem.value;
-                            loopItem.discard(null); // Add Bukkit remove cause
+                            loopItem.setRemovedReason(null); // Add Bukkit remove cause
+                            loopItem.discard();
                         }
                     }
                 }
@@ -869,6 +874,7 @@ public class CraftEventFactory {
     }
 
     public static BlockPos sourceBlockOverride = null; // SPIGOT-7068: Add source block override, not the most elegant way but better than passing down a BlockPos up to five methods deep.
+    public static java.util.concurrent.atomic.AtomicBoolean fixBlockSpreadMixin = new java.util.concurrent.atomic.AtomicBoolean(true); // Magma
 
     public static boolean handleBlockSpreadEvent(LevelAccessor world, BlockPos source, BlockPos target, net.minecraft.world.level.block.state.BlockState block, int flag) {
         // Suppress during worldgen
@@ -884,7 +890,9 @@ public class CraftEventFactory {
         Bukkit.getPluginManager().callEvent(event);
 
         if (!event.isCancelled()) {
-            state.update(true);
+            if (fixBlockSpreadMixin.getAndSet(true)) {
+                state.update(true);
+            }
         }
         return !event.isCancelled();
     }

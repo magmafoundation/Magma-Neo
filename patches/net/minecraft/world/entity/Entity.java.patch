@@ -125,27 +125,27 @@
      }
  
      public boolean isColliding(BlockPos p_20040_, BlockState p_20041_) {
-@@ -325,12 +_,18 @@
+@@ -325,11 +_,20 @@
      }
  
      public void kill() {
--        this.remove(Entity.RemovalReason.KILLED);
-+        this.remove(Entity.RemovalReason.KILLED, org.bukkit.event.entity.EntityRemoveEvent.Cause.DEATH); // CraftBukkit - add Bukkit remove cause
++        this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DEATH); // CraftBukkit - add Bukkit remove cause
+         this.remove(Entity.RemovalReason.KILLED);
          this.gameEvent(GameEvent.ENTITY_DIE);
      }
  
-     public final void discard() {
--        this.remove(Entity.RemovalReason.DISCARDED);
-+        // CraftBukkit start - add Bukkit remove cause
-+        this.discard(null);
++    // Magma start - mixin support
++    private org.bukkit.event.entity.EntityRemoveEvent.Cause remove$removalReason;
++
++    public void setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause removalReason) {
++        this.remove$removalReason = removalReason;
 +    }
 +
-+    public final void discard(org.bukkit.event.entity.EntityRemoveEvent.Cause cause) {
-+        this.remove(Entity.RemovalReason.DISCARDED, cause);
-+        // CraftBukkit end
+     public final void discard() {
++        this.setRemovedReason(null);
+         this.remove(Entity.RemovalReason.DISCARDED);
      }
  
-     protected abstract void defineSynchedData(SynchedEntityData.Builder p_326003_);
 @@ -339,6 +_,16 @@
          return this.entityData;
      }
@@ -163,21 +163,7 @@
      @Override
      public boolean equals(Object p_20245_) {
          return p_20245_ instanceof Entity ? ((Entity)p_20245_).id == this.id : false;
-@@ -350,13 +_,25 @@
-     }
- 
-     public void remove(Entity.RemovalReason p_146834_) {
--        this.setRemoved(p_146834_);
-+        // CraftBukkit start - add Bukkit remove cause
-+        this.setRemoved(p_146834_, null);
-+    }
-+
-+    public void remove(Entity.RemovalReason p_146834_, org.bukkit.event.entity.EntityRemoveEvent.Cause cause) {
-+        this.setRemoved(p_146834_, cause);
-+        // CraftBukkit end
-     }
- 
-     public void onClientRemoval() {
+@@ -357,6 +_,12 @@
      }
  
      public void setPose(Pose p_20125_) {
@@ -310,12 +296,13 @@
          this.igniteForTicks(Mth.floor(p_345382_ * 20.0F));
      }
  
-@@ -547,7 +_,7 @@
+@@ -547,7 +_,8 @@
      }
  
      protected void onBelowWorld() {
 -        this.discard();
-+        this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.OUT_OF_WORLD); // CraftBukkit - add Bukkit remove cause
++        this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.OUT_OF_WORLD);
++        this.discard(); // CraftBukkit - add Bukkit remove cause
      }
  
      public boolean isFree(double p_20230_, double p_20231_, double p_20232_) {
@@ -542,7 +529,7 @@
      public void awardKillScore(Entity p_19953_, int p_19954_, DamageSource p_19955_) {
          if (p_19953_ instanceof ServerPlayer) {
              CriteriaTriggers.ENTITY_KILLED_PLAYER.trigger((ServerPlayer)p_19953_, this, p_19955_);
-@@ -1628,15 +_,21 @@
+@@ -1628,14 +_,21 @@
      }
  
      public boolean saveAsPassenger(CompoundTag p_20087_) {
@@ -561,20 +548,23 @@
                  return false;
              } else {
                  p_20087_.putString("id", s);
--                this.saveWithoutId(p_20087_);
-+                this.saveWithoutId(p_20087_, includeAll); // CraftBukkit - pass on includeAll
++                saveWithoutId$includeAll.set(includeAll);
+                 this.saveWithoutId(p_20087_);
                  return true;
              }
-         }
-@@ -1647,15 +_,37 @@
+@@ -1646,16 +_,41 @@
+         return this.isPassenger() ? false : this.saveAsPassenger(p_20224_);
      }
  
-     public CompoundTag saveWithoutId(CompoundTag p_20241_) {
-+        // CraftBukkit start - allow excluding certain data when saving
-+        return saveWithoutId(p_20241_, true);
++    // Magma start - mixin
++    public java.util.concurrent.atomic.AtomicBoolean saveWithoutId$includeAll = new java.util.concurrent.atomic.AtomicBoolean(true);
++    public CompoundTag saveWithoutIdCB(CompoundTag p_20241_, boolean includeAll) {
++        saveWithoutId$includeAll.set(includeAll);
++        return saveWithoutId(p_20241_);
 +    }
++    // Magma end
 +
-+    public CompoundTag saveWithoutId(CompoundTag p_20241_, boolean includeAll) {
+     public CompoundTag saveWithoutId(CompoundTag p_20241_) {
 +        // CraftBukkit end
          try {
 -            if (this.vehicle != null) {
@@ -582,7 +572,7 @@
 -            } else {
 -                p_20241_.put("Pos", this.newDoubleList(this.getX(), this.getY(), this.getZ()));
 +            // CraftBukkit start - selectively save position
-+            if (includeAll) {
++            if (saveWithoutId$includeAll.get()) {
 +                if (this.vehicle != null) {
 +                    p_20241_.put("Pos", this.newDoubleList(this.vehicle.getX(), this.getY(), this.vehicle.getZ()));
 +                } else {
@@ -614,7 +604,7 @@
              p_20241_.putInt("PortalCooldown", this.portalCooldown);
 -            p_20241_.putUUID("UUID", this.getUUID());
 +            // CraftBukkit start - selectively save uuid and world
-+            if (includeAll) {
++            if (saveWithoutId$includeAll.get()) {
 +                p_20241_.putUUID("UUID", this.getUUID());
 +                // PAIL: Check above UUID reads 1.8 properly, ie: UUIDMost / UUIDLeast
 +                p_20241_.putLong("WorldUUIDLeast", ((net.minecraft.server.level.ServerLevel) this.level).getWorld().getUID().getLeastSignificantBits());
@@ -1118,17 +1108,11 @@
      }
  
      public void checkDespawn() {
-@@ -3412,6 +_,14 @@
+@@ -3412,6 +_,8 @@
  
      @Override
      public final void setRemoved(Entity.RemovalReason p_146876_) {
-+        // CraftBukkit start - add Bukkit remove cause
-+        setRemoved(p_146876_, null);
-+    }
-+
-+    @Override
-+    public final void setRemoved(Entity.RemovalReason p_146876_, org.bukkit.event.entity.EntityRemoveEvent.Cause cause) {
-+        org.bukkit.craftbukkit.event.CraftEventFactory.callEntityRemoveEvent(this, cause);
++        org.bukkit.craftbukkit.event.CraftEventFactory.callEntityRemoveEvent(this, remove$removalReason);
 +        // CraftBukkit end
          if (this.removalReason == null) {
              this.removalReason = p_146876_;

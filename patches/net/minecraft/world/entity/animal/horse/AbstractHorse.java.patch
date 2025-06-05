@@ -84,24 +84,22 @@
      }
  
      @Override
-@@ -516,7 +_,7 @@
+@@ -516,6 +_,7 @@
          }
  
          if (this.getHealth() < this.getMaxHealth() && f > 0.0F) {
--            this.heal(f);
-+            this.heal(f, org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.EATING); // CraftBukkit
++            this.setHealRegainReason(org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.EATING); // Magma - set heal reason
+             this.heal(f);
              flag = true;
          }
- 
-@@ -587,7 +_,7 @@
+@@ -587,6 +_,7 @@
          super.aiStep();
          if (!this.level().isClientSide && this.isAlive()) {
              if (this.random.nextInt(900) == 0 && this.deathTime == 0) {
--                this.heal(1.0F);
-+                this.heal(1.0F, org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.REGEN); // CraftBukkit
++                this.setHealRegainReason(org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.REGEN); // Magma - set heal reason
+                 this.heal(1.0F);
              }
  
-             if (this.canEatGrass()) {
 @@ -816,6 +_,7 @@
          this.setDeltaMovement(vec3.x, d0, vec3.z);
          this.setIsJumping(true);

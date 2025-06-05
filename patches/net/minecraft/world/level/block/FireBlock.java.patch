@@ -102,7 +102,7 @@
                  BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
  
                  for (int l = -1; l <= 1; l++) {
-@@ -221,7 +_,16 @@
+@@ -221,7 +_,19 @@
                                          && p_221163_.nextInt(k1) <= i2
                                          && (!p_221161_.isRaining() || !this.isNearRain(p_221161_, blockpos$mutableblockpos))) {
                                          int j2 = Math.min(15, i + p_221163_.nextInt(5) / 4);
@@ -114,7 +114,10 @@
 +                                                continue;
 +                                            }
 +
-+                                            org.bukkit.craftbukkit.event.CraftEventFactory.handleBlockSpreadEvent(p_221161_, p_221162_, blockpos$mutableblockpos, this.getStateWithAge(p_221161_, blockpos$mutableblockpos, j2), 3);
++                                            org.bukkit.craftbukkit.event.CraftEventFactory.fixBlockSpreadMixin.set(false);
++                                            if (org.bukkit.craftbukkit.event.CraftEventFactory.handleBlockSpreadEvent(p_221161_, p_221162_, blockpos$mutableblockpos, this.getStateWithAge(p_221161_, blockpos$mutableblockpos, j2), 3)) {
++                                                p_221161_.setBlock(blockpos$mutableblockpos, this.getStateWithAge(p_221161_, blockpos$mutableblockpos, j2), 3);
++                                            }
 +                                        }
 +                                        // CraftBukkit end
                                      }

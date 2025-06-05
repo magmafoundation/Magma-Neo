@@ -9,12 +9,11 @@
              return AbstractIllager.IllagerArmPose.CROSSBOW_HOLD;
          } else {
              return this.isAggressive() ? AbstractIllager.IllagerArmPose.ATTACKING : AbstractIllager.IllagerArmPose.NEUTRAL;
-@@ -201,7 +_,7 @@
+@@ -201,6 +_,7 @@
              this.onItemPickup(p_33296_);
              ItemStack itemstack1 = this.inventory.addItem(itemstack);
              if (itemstack1.isEmpty()) {
--                p_33296_.discard();
-+                p_33296_.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.PICKUP); // CraftBukkit - add Bukkit remove cause
++                p_33296_.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.PICKUP); // CraftBukkit - add Bukkit remove cause
+                 p_33296_.discard();
              } else {
                  itemstack.setCount(itemstack1.getCount());
-             }

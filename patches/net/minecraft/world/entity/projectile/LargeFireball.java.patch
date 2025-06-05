@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/entity/projectile/LargeFireball.java
 +++ b/net/minecraft/world/entity/projectile/LargeFireball.java
-@@ -18,20 +_,30 @@
+@@ -18,19 +_,30 @@
  
      public LargeFireball(EntityType<? extends LargeFireball> p_37199_, Level p_37200_) {
          super(p_37199_, p_37200_);
@@ -19,7 +19,6 @@
          if (!this.level().isClientSide) {
 -            boolean flag = this.level().getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING);
 -            this.level().explode(this, this.getX(), this.getY(), this.getZ(), (float)this.explosionPower, flag, Level.ExplosionInteraction.MOB);
--            this.discard();
 +            // TODO 1.19.3: The creation of Level.ExplosionInteraction means this code path will fire EntityMobGriefingEvent twice. Should we try and fix it? -SS
 +            boolean flag = net.neoforged.neoforge.event.EventHooks.canEntityGrief(this.level(), this.getOwner());
 +            // CraftBukkit start - fire ExplosionPrimeEvent
@@ -30,10 +29,10 @@
 +                this.level().explode(this, this.getX(), this.getY(), this.getZ(), event.getRadius(), event.getFire(), Level.ExplosionInteraction.MOB);
 +            }
 +            // CraftBukkit end
-+            this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.HIT); // CraftBukkit - add Bukkit remove cause
++            this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.HIT); // CraftBukkit - add Bukkit remove cause
+             this.discard();
          }
      }
- 
 @@ -57,7 +_,8 @@
      public void readAdditionalSaveData(CompoundTag p_37220_) {
          super.readAdditionalSaveData(p_37220_);

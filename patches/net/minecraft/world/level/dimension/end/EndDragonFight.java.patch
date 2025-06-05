@@ -1,14 +1,13 @@
 --- a/net/minecraft/world/level/dimension/end/EndDragonFight.java
 +++ b/net/minecraft/world/level/dimension/end/EndDragonFight.java
-@@ -214,7 +_,7 @@
+@@ -214,6 +_,7 @@
              this.dragonKilled = false;
              if (!flag) {
                  LOGGER.info("But we didn't have a portal, let's remove it.");
--                enderdragon.discard();
-+                enderdragon.discard(null); // CraftBukkit - add Bukkit remove cause
++                enderdragon.setRemovedReason(null);
+                 enderdragon.discard();
                  this.dragonUUID = null;
              }
-         }
 @@ -477,7 +_,7 @@
          return this.previouslyKilled;
      }

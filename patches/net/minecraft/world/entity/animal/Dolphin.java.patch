@@ -24,7 +24,7 @@
      }
  
      @Override
-@@ -207,11 +_,17 @@
+@@ -207,10 +_,17 @@
          if (this.getItemBySlot(EquipmentSlot.MAINHAND).isEmpty()) {
              ItemStack itemstack = p_28357_.getItem();
              if (this.canHoldItem(itemstack)) {
@@ -38,11 +38,10 @@
                  this.setItemSlot(EquipmentSlot.MAINHAND, itemstack);
                  this.setGuaranteedDrop(EquipmentSlot.MAINHAND);
                  this.take(p_28357_, itemstack.getCount());
--                p_28357_.discard();
-+                p_28357_.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.PICKUP); // CraftBukkit - add Bukkit remove cause
++                p_28357_.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.PICKUP); // CraftBukkit - add Bukkit remove cause
+                 p_28357_.discard();
              }
          }
-     }
 @@ -469,7 +_,7 @@
  
          @Override

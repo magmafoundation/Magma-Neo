@@ -9,12 +9,11 @@
              ZombifiedPiglin zombifiedpiglin = EntityType.ZOMBIFIED_PIGLIN.create(p_29473_);
              if (zombifiedpiglin != null) {
                  zombifiedpiglin.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.GOLDEN_SWORD));
-@@ -219,8 +_,15 @@
+@@ -219,7 +_,15 @@
                  }
  
                  zombifiedpiglin.setPersistenceRequired();
 -                p_29473_.addFreshEntity(zombifiedpiglin);
--                this.discard();
 +                net.neoforged.neoforge.event.EventHooks.onLivingConvert(this, zombifiedpiglin);
 +                // CraftBukkit start
 +                if (org.bukkit.craftbukkit.event.CraftEventFactory.callPigZapEvent(this, p_29474_, zombifiedpiglin).isCancelled()) {
@@ -23,7 +22,7 @@
 +                // CraftBukkit - added a reason for spawning this creature
 +                p_29473_.addFreshEntity(zombifiedpiglin, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.LIGHTNING);
 +                // CraftBukkit end
-+                this.discard(org.bukkit.event.entity.EntityRemoveEvent.Cause.TRANSFORMATION); // CraftBukkit - add Bukkit remove cause
++                this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.TRANSFORMATION); // CraftBukkit - add Bukkit remove cause
+                 this.discard();
              } else {
                  super.thunderHit(p_29473_, p_29474_);
-             }

@@ -151,19 +151,19 @@
              );
              if (entity != null) {
                  UUID uuid;
-@@ -255,16 +_,17 @@
+@@ -255,9 +_,11 @@
  
                  if (!p_11263_.isPassenger()) {
                      LOGGER.warn("Couldn't reattach entity to player");
--                    entity.discard();
-+                    entity.discard(null); // CraftBukkit - add Bukkit remove cause
++                    entity.setRemovedReason(null); // CraftBukkit - add Bukkit remove cause
+                     entity.discard();
  
                      for (Entity entity2 : entity.getIndirectPassengers()) {
--                        entity2.discard();
-+                        entity2.discard(null); // CraftBukkit - add Bukkit remove cause
++                        entity2.setRemovedReason(null); // CraftBukkit - add Bukkit remove cause
+                         entity2.discard();
                      }
                  }
-             }
+@@ -265,6 +_,7 @@
          }
  
          p_11263_.initInventoryMenu();
