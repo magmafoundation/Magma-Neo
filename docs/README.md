@@ -24,5 +24,5 @@ Magma is based on **NeoForge and Spigot**, meaning it can run both **Craftbukkit
 Coming soon we will have a full guide on how to install Magma once we have a ready release.
 
 [Discord]: https://discord.gg/magma
-[Documentation]: https://docs.magmafoundation.org
+[Documentation]: https://magmafoundation.org/docs
 [Download]: https://magmafoundation.org
