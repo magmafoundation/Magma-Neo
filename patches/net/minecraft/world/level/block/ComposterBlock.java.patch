@@ -34,7 +34,7 @@
              if (i < 7 && !p_316624_.isClientSide) {
                  BlockState blockstate = addItem(p_316715_, p_316118_, p_316624_, p_316660_, p_316332_);
                  p_316624_.levelEvent(1500, p_316660_, p_316118_ != blockstate ? 1 : 0);
-@@ -261,8 +_,15 @@
+@@ -261,8 +_,19 @@
  
      public static BlockState insertItem(Entity p_270919_, BlockState p_270087_, ServerLevel p_270284_, ItemStack p_270253_, BlockPos p_270678_) {
          int i = p_270087_.getValue(LEVEL);
@@ -43,11 +43,15 @@
 +        if (i < 7 && getValue(p_270253_) > 0) {
 +            // CraftBukkit start
 +            double rand = p_270284_.getRandom().nextDouble();
-+            BlockState blockstate = addItem(p_270919_, p_270087_, org.bukkit.craftbukkit.util.DummyGeneratorAccess.INSTANCE, p_270678_, p_270253_, rand);
++            setRand(rand);
++            BlockState blockstate = addItem(p_270919_, p_270087_, org.bukkit.craftbukkit.util.DummyGeneratorAccess.INSTANCE, p_270678_, p_270253_);
++            setRand(0);
 +            if (p_270087_ == blockstate || !org.bukkit.craftbukkit.event.CraftEventFactory.callEntityChangeBlockEvent(p_270919_, p_270678_, blockstate)) {
 +                return p_270087_;
 +            }
-+            blockstate = addItem(p_270919_, p_270087_, p_270284_, p_270678_, p_270253_, rand);
++            setRand(rand);
++            blockstate = addItem(p_270919_, p_270087_, p_270284_, p_270678_, p_270253_);
++            setRand(0);
 +            // CraftBukkit end
              p_270253_.shrink(1);
              return blockstate;
@@ -67,21 +71,23 @@
          if (!p_52000_.isClientSide) {
              Vec3 vec3 = Vec3.atLowerCornerWithOffset(p_52001_, 0.5, 1.01, 0.5).offsetRandom(p_52000_.random, 0.7F);
              ItemEntity itementity = new ItemEntity(p_52000_, vec3.x(), vec3.y(), vec3.z(), new ItemStack(Items.BONE_MEAL));
-@@ -291,9 +_,15 @@
+@@ -290,10 +_,17 @@
+         return blockstate;
      }
  
-     static BlockState addItem(@Nullable Entity p_270464_, BlockState p_270603_, LevelAccessor p_270151_, BlockPos p_270547_, ItemStack p_270354_) {
-+        // CraftBukkit start
-+        return addItem(p_270464_, p_270603_, p_270151_, p_270547_, p_270354_, p_270151_.getRandom().nextDouble());
++    // Magma
++    static double magma$rand;
++    static void setRand(double rand) {
++        magma$rand = rand;
 +    }
 +
-+    static BlockState addItem(@Nullable Entity p_270464_, BlockState p_270603_, LevelAccessor p_270151_, BlockPos p_270547_, ItemStack p_270354_, double rand) {
+     static BlockState addItem(@Nullable Entity p_270464_, BlockState p_270603_, LevelAccessor p_270151_, BlockPos p_270547_, ItemStack p_270354_) {
 +        // CraftBukkit end
          int i = p_270603_.getValue(LEVEL);
 -        float f = COMPOSTABLES.getFloat(p_270354_.getItem());
 -        if ((i != 0 || !(f > 0.0F)) && !(p_270151_.getRandom().nextDouble() < (double)f)) {
 +        float f = getValue(p_270354_);
-+        if ((i != 0 || !(f > 0.0F)) && !(rand < (double)f)) {  // CraftBukkit - use rand parameter
++        if ((i != 0 || !(f > 0.0F)) && !(magma$rand < (double)f)) {  // CraftBukkit - use rand parameter
              return p_270603_;
          } else {
              int j = i + 1;
@@ -127,6 +133,16 @@
          }
  
          @Override
+@@ -405,7 +_,9 @@
+             ItemStack itemstack = this.getItem(0);
+             if (!itemstack.isEmpty()) {
+                 this.changed = true;
++                ComposterBlock.setRand(level.getRandom().nextDouble());
+                 BlockState blockstate = ComposterBlock.addItem(null, this.state, this.level, this.pos, itemstack);
++                ComposterBlock.setRand(0);
+                 this.level.levelEvent(1500, this.pos, blockstate != this.state ? 1 : 0);
+                 this.removeItemNoUpdate(0);
+             }
 @@ -420,6 +_,7 @@
  
          public OutputContainer(BlockState p_52042_, LevelAccessor p_52043_, BlockPos p_52044_, ItemStack p_52045_) {
