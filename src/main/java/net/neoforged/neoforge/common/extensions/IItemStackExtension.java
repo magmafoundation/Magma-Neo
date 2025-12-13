@@ -222,6 +222,7 @@ public interface IItemStackExtension {
      * @deprecated To be replaced with hand sensitive version in 21.2
      * @see #onEntitySwing(LivingEntity, InteractionHand)
      */
+    @SuppressWarnings("removal")
     @Deprecated(forRemoval = true, since = "21.1")
     default boolean onEntitySwing(LivingEntity entity) {
         return self().getItem().onEntitySwing(self(), entity);
@@ -511,5 +512,15 @@ public interface IItemStackExtension {
         }
 
         return CommonHooks.computeModifiedAttributes(self(), defaultModifiers);
+    }
+
+    /**
+     * Determines whether the item held by this stack can be safely stored inside another container item, optionally
+     * taking this stack's data into account.
+     *
+     * @return whether the item held by this stack can fit inside a container item
+     */
+    default boolean canFitInsideContainerItems() {
+        return self().getItem().canFitInsideContainerItems(self());
     }
 }

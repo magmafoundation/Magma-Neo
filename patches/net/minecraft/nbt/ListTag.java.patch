@@ -1,6 +1,6 @@
 --- a/net/minecraft/nbt/ListTag.java
 +++ b/net/minecraft/nbt/ListTag.java
-@@ -135,7 +_,7 @@
+@@ -135,13 +_,22 @@
      private final List<Tag> list;
      private byte type;
  
@@ -9,3 +9,18 @@
          this.list = p_128721_;
          this.type = p_128722_;
      }
+ 
+     public ListTag() {
+         this(Lists.newArrayList(), (byte)0);
++    }
++
++    /**
++     * Neo: create a list tag with the given initial capacity.
++     *
++     * @param initialCapacity the initial capacity of the list tag
++     */
++    public ListTag(int initialCapacity) {
++        this(new java.util.ArrayList<>(initialCapacity), (byte)0);
+     }
+ 
+     @Override
