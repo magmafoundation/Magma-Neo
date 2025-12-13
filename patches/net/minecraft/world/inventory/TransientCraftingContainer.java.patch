@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/inventory/TransientCraftingContainer.java
 +++ b/net/minecraft/world/inventory/TransientCraftingContainer.java
-@@ -13,6 +_,68 @@
+@@ -13,6 +_,73 @@
      private final int height;
      private final AbstractContainerMenu menu;
  
@@ -65,6 +65,11 @@
 +        this.owner = player;
 +    }
 +    // CraftBukkit end
++
++
++    public void setOwner(net.minecraft.world.entity.player.Player owner) {
++        this.owner = owner;
++    }
 +
      public TransientCraftingContainer(AbstractContainerMenu p_287684_, int p_287629_, int p_287593_) {
          this(p_287684_, p_287629_, p_287593_, NonNullList.withSize(p_287629_ * p_287593_, ItemStack.EMPTY));
