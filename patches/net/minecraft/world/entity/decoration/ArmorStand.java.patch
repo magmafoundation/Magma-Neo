@@ -23,7 +23,7 @@
      @Override
      public void refreshDimensions() {
          double d0 = this.getX();
-@@ -158,13 +_,20 @@
+@@ -158,13 +_,24 @@
  
      @Override
      public void setItemSlot(EquipmentSlot p_31584_, ItemStack p_31585_) {
@@ -37,12 +37,14 @@
          this.verifyEquippedItem(p_31585_);
          switch (p_31584_.getType()) {
              case HAND:
--                this.onEquipItem(p_31584_, this.handItems.set(p_31584_.getIndex(), p_31585_), p_31585_);
-+                this.onEquipItem(p_31584_, this.handItems.set(p_31584_.getIndex(), p_31585_), p_31585_, silent); // CraftBukkit
++                this.setEquipSilent(silent);
+                 this.onEquipItem(p_31584_, this.handItems.set(p_31584_.getIndex(), p_31585_), p_31585_);
++                this.setEquipSilent(false);
                  break;
              case HUMANOID_ARMOR:
--                this.onEquipItem(p_31584_, this.armorItems.set(p_31584_.getIndex(), p_31585_), p_31585_);
-+                this.onEquipItem(p_31584_, this.armorItems.set(p_31584_.getIndex(), p_31585_), p_31585_, silent); // CraftBukkit
++                this.setEquipSilent(silent);
+                 this.onEquipItem(p_31584_, this.armorItems.set(p_31584_.getIndex(), p_31585_), p_31585_);
++                this.setEquipSilent(false);
          }
      }
  

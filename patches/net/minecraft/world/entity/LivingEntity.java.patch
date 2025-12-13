@@ -106,22 +106,23 @@
              this.remove(Entity.RemovalReason.KILLED);
          }
      }
-@@ -646,11 +_,17 @@
+@@ -645,12 +_,18 @@
+         return true;
      }
  
-     public void onEquipItem(EquipmentSlot p_238393_, ItemStack p_238394_, ItemStack p_238395_) {
-+        // CraftBukkit start
-+        onEquipItem(p_238393_, p_238394_, p_238395_, false);
++    // Magma
++    private boolean magma$equipSilent = false;
++    public void setEquipSilent(boolean silent) {
++        this.magma$equipSilent = silent;
 +    }
 +
-+    public void onEquipItem(EquipmentSlot p_238393_, ItemStack p_238394_, ItemStack p_238395_, boolean silent) {
-+        // CraftBukkit end
+     public void onEquipItem(EquipmentSlot p_238393_, ItemStack p_238394_, ItemStack p_238395_) {
          boolean flag = p_238395_.isEmpty() && p_238394_.isEmpty();
          if (!flag && !ItemStack.isSameItemSameComponents(p_238394_, p_238395_) && !this.firstTick) {
              Equipable equipable = Equipable.get(p_238395_);
              if (!this.level().isClientSide() && !this.isSpectator()) {
 -                if (!this.isSilent() && equipable != null && equipable.getEquipmentSlot() == p_238393_) {
-+                if (!this.isSilent() && equipable != null && equipable.getEquipmentSlot() == p_238393_ && !silent) { // CraftBukkit
++                if (!this.isSilent() && equipable != null && equipable.getEquipmentSlot() == p_238393_ && !magma$equipSilent) { // CraftBukkit
                      this.level()
                          .playSeededSound(
                              null, this.getX(), this.getY(), this.getZ(), equipable.getEquipSound(), this.getSoundSource(), 1.0F, 1.0F, this.random.nextLong()
@@ -585,12 +586,13 @@
                      this.markHurt();
                  }
  
-@@ -1180,7 +_,7 @@
+@@ -1180,7 +_,9 @@
                          d1 = p_21016_.getSourcePosition().z() - this.getZ();
                      }
  
--                    this.knockback(0.4F, d0, d1);
-+                    this.knockback(0.4F, d0, d1, entity, entity == null ? org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause.DAMAGE : org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause.ENTITY_ATTACK); // CraftBukkit
++                    this.setKnockbackCauseAndAttacker(entity == null ? org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause.DAMAGE : org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause.ENTITY_ATTACK, entity);
+                     this.knockback(0.4F, d0, d1);
++                    this.setKnockbackCause(org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause.UNKNOWN);
                      if (!flag) {
                          this.indicateDamage(d0, d1);
                      }
@@ -611,12 +613,13 @@
              return flag2;
          }
      }
-@@ -1229,7 +_,7 @@
+@@ -1229,7 +_,9 @@
      }
  
      protected void blockedByShield(LivingEntity p_21246_) {
--        p_21246_.knockback(0.5, p_21246_.getX() - this.getX(), p_21246_.getZ() - this.getZ());
-+        p_21246_.knockback(0.5, p_21246_.getX() - this.getX(), p_21246_.getZ() - this.getZ(), null, org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause.SHIELD_BLOCK); // CraftBukkit
++        p_21246_.setKnockbackCause(org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause.SHIELD_BLOCK);
+         p_21246_.knockback(0.5, p_21246_.getX() - this.getX(), p_21246_.getZ() - this.getZ());
++        p_21246_.setKnockbackCause(org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause.UNKNOWN);
      }
  
      private boolean checkTotemDeathProtection(DamageSource p_21263_) {
@@ -780,15 +783,25 @@
      }
  
      protected void dropCustomDeathLoot(ServerLevel p_348639_, DamageSource p_21018_, boolean p_21020_) {
-@@ -1440,6 +_,16 @@
+@@ -1439,7 +_,26 @@
+         loottable.getRandomItems(lootparams, this.getLootTableSeed(), this::spawnAtLocation);
      }
  
-     public void knockback(double p_147241_, double p_147242_, double p_147243_) {
-+        // CraftBukkit start - EntityKnockbackEvent
-+        knockback(p_147241_, p_147242_, p_147243_, null, org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause.UNKNOWN);
++    // Magma
++    private org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause magma$knockbackCause = org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause.UNKNOWN;
++    private Entity magma$knockbackAttacker = null;
++
++    public void setKnockbackCause(org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause cause) {
++        this.magma$knockbackCause = cause;
++        this.magma$knockbackAttacker = null;
 +    }
 +
-+    public void knockback(double p_147241_, double p_147242_, double p_147243_, Entity attacker, org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause cause) {
++    public void setKnockbackCauseAndAttacker(org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause cause, Entity attacker) {
++        this.magma$knockbackCause = cause;
++        this.magma$knockbackAttacker = attacker;
++    }
++
+     public void knockback(double p_147241_, double p_147242_, double p_147243_) {
 +        net.neoforged.neoforge.event.entity.living.LivingKnockBackEvent event = net.neoforged.neoforge.common.CommonHooks.onLivingKnockBack(this, (float) p_147241_, p_147242_, p_147243_);
 +        if(event.isCanceled()) return;
 +        p_147241_ = event.getStrength();
@@ -802,7 +815,7 @@
  
              Vec3 vec31 = new Vec3(p_147242_, 0.0, p_147243_).normalize().scale(p_147241_);
 -            this.setDeltaMovement(vec3.x / 2.0 - vec31.x, this.onGround() ? Math.min(0.4, vec3.y / 2.0 + p_147241_) : vec3.y, vec3.z / 2.0 - vec31.z);
-+            org.bukkit.event.entity.EntityKnockbackEvent eventCB = org.bukkit.craftbukkit.event.CraftEventFactory.callEntityKnockbackEvent((org.bukkit.craftbukkit.entity.CraftLivingEntity) this.getBukkitEntity(), attacker, cause, p_147241_, vec31, vec3.x / 2.0D - vec31.x, this.onGround() ? Math.min(0.4D, vec3.y / 2.0D + p_147241_) : vec3.y, vec3.z / 2.0D - vec31.z);
++            org.bukkit.event.entity.EntityKnockbackEvent eventCB = org.bukkit.craftbukkit.event.CraftEventFactory.callEntityKnockbackEvent((org.bukkit.craftbukkit.entity.CraftLivingEntity) this.getBukkitEntity(), magma$knockbackAttacker, magma$knockbackCause, p_147241_, vec31, vec3.x / 2.0D - vec31.x, this.onGround() ? Math.min(0.4D, vec3.y / 2.0D + p_147241_) : vec3.y, vec3.z / 2.0D - vec31.z);
 +            if (eventCB.isCancelled()) {
 +                return;
 +            }
