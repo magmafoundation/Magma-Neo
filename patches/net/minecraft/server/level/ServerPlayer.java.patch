@@ -33,61 +33,18 @@
      public ServerPlayer(MinecraftServer p_254143_, ServerLevel p_254435_, GameProfile p_253651_, ClientInformation p_301997_) {
          super(p_254435_, p_254435_.getSharedSpawnPos(), p_254435_.getSharedSpawnAngle(), p_253651_);
          this.textFilter = p_254143_.createTextFilterForPlayer(this);
-@@ -287,7 +_,53 @@
+@@ -287,6 +_,11 @@
          this.moveTo(this.adjustSpawnLocation(p_254435_, p_254435_.getSharedSpawnPos()).getBottomCenter(), 0.0F, 0.0F);
          this.updateOptions(p_301997_);
          this.object = null;
--    }
 +
 +        // CraftBukkit start
 +        this.displayName = this.getScoreboardName();
 +        this.bukkitPickUpLoot = true;
 +        this.maxHealthCache = this.getMaxHealth();
-+    }
-+
-+    // Use method to resend items in hands in case of client desync, because the item use got cancelled.
-+    // For example, when cancelling the leash event
-+    public void resendItemInHands() {
-+        containerMenu.findSlot(getInventory(), getInventory().selected).ifPresent(s -> {
-+            containerSynchronizer.sendSlotChange(containerMenu, s, getMainHandItem());
-+        });
-+        containerSynchronizer.sendSlotChange(inventoryMenu, net.minecraft.world.inventory.InventoryMenu.SHIELD_SLOT, getOffhandItem());
-+    }
-+
-+    // Yes, this doesn't match Vanilla, but it's the best we can do for now.
-+    // If this is an issue, PRs are welcome
-+    public final BlockPos getSpawnPoint(ServerLevel worldserver) {
-+        BlockPos blockposition = worldserver.getSharedSpawnPos();
-+        if (worldserver.dimensionType().hasSkyLight() && worldserver.serverLevelData.getGameType() != GameType.ADVENTURE) {
-+            int i = Math.max(0, this.server.getSpawnRadius(worldserver));
-+            int j = Mth.floor(worldserver.getWorldBorder().getDistanceToBorder((double) blockposition.getX(), (double) blockposition.getZ()));
-+            if (j < i) {
-+                i = j;
-+            }
-+            if (j <= 1) {
-+                i = 1;
-+            }
-+            long k = (long) (i * 2 + 1);
-+            long l = k * k;
-+            int i1 = l > 2147483647L ? Integer.MAX_VALUE : (int) l;
-+            int j1 = this.getCoprime(i1);
-+            int k1 = RandomSource.create().nextInt(i1);
-+            for (int l1 = 0; l1 < i1; ++l1) {
-+                int i2 = (k1 + j1 * l1) % i1;
-+                int j2 = i2 % (i * 2 + 1);
-+                int k2 = i2 / (i * 2 + 1);
-+                BlockPos blockposition1 = PlayerRespawnLogic.getOverworldRespawnPos(worldserver, blockposition.getX() + j2 - i, blockposition.getZ() + k2 - i);
-+                if (blockposition1 != null) {
-+                    return blockposition1;
-+                }
-+            }
-+        }
-+        return blockposition;
-+    }
-+    // CraftBukkit end
+     }
  
      @Override
-     public BlockPos adjustSpawnLocation(ServerLevel p_352206_, BlockPos p_352202_) {
 @@ -357,11 +_,20 @@
          if (p_9131_.contains("recipeBook", 10)) {
              this.recipeBook.fromNbt(p_9131_.getCompound("recipeBook"), this.server.getRecipeManager());
@@ -914,7 +871,7 @@
          }
  
          private static float calculateLookAtYaw(Vec3 p_348686_, BlockPos p_348467_) {
-@@ -1968,4 +_,140 @@
+@@ -1968,4 +_,180 @@
              return (float)Mth.wrapDegrees(Mth.atan2(vec3.z, vec3.x) * 180.0F / (float)Math.PI - 90.0);
          }
      }
@@ -1052,6 +1009,46 @@
 +    @Override
 +    public org.bukkit.craftbukkit.entity.CraftPlayer getBukkitEntity() {
 +        return (org.bukkit.craftbukkit.entity.CraftPlayer) super.getBukkitEntity();
++    }
++
++    // Use method to resend items in hands in case of client desync, because the item use got cancelled.
++    // For example, when cancelling the leash event
++    public void resendItemInHands() {
++        containerMenu.findSlot(getInventory(), getInventory().selected).ifPresent(s -> {
++            containerSynchronizer.sendSlotChange(containerMenu, s, getMainHandItem());
++        });
++        containerSynchronizer.sendSlotChange(inventoryMenu, net.minecraft.world.inventory.InventoryMenu.SHIELD_SLOT, getOffhandItem());
++    }
++
++    // Yes, this doesn't match Vanilla, but it's the best we can do for now.
++    // If this is an issue, PRs are welcome
++    public final BlockPos getSpawnPoint(ServerLevel worldserver) {
++        BlockPos blockposition = worldserver.getSharedSpawnPos();
++        if (worldserver.dimensionType().hasSkyLight() && worldserver.serverLevelData.getGameType() != GameType.ADVENTURE) {
++            int i = Math.max(0, this.server.getSpawnRadius(worldserver));
++            int j = Mth.floor(worldserver.getWorldBorder().getDistanceToBorder((double) blockposition.getX(), (double) blockposition.getZ()));
++            if (j < i) {
++                i = j;
++            }
++            if (j <= 1) {
++                i = 1;
++            }
++            long k = (long) (i * 2 + 1);
++            long l = k * k;
++            int i1 = l > 2147483647L ? Integer.MAX_VALUE : (int) l;
++            int j1 = this.getCoprime(i1);
++            int k1 = RandomSource.create().nextInt(i1);
++            for (int l1 = 0; l1 < i1; ++l1) {
++                int i2 = (k1 + j1 * l1) % i1;
++                int j2 = i2 % (i * 2 + 1);
++                int k2 = i2 / (i * 2 + 1);
++                BlockPos blockposition1 = PlayerRespawnLogic.getOverworldRespawnPos(worldserver, blockposition.getX() + j2 - i, blockposition.getZ() + k2 - i);
++                if (blockposition1 != null) {
++                    return blockposition1;
++                }
++            }
++        }
++        return blockposition;
 +    }
 +    // CraftBukkit end
  }

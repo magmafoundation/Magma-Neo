@@ -1,14 +1,5 @@
 --- a/net/minecraft/world/level/chunk/LevelChunk.java
 +++ b/net/minecraft/world/level/chunk/LevelChunk.java
-@@ -74,7 +_,7 @@
-     };
-     private final Map<BlockPos, LevelChunk.RebindableTickingBlockEntityWrapper> tickersInLevel = Maps.newHashMap();
-     private boolean loaded;
--    public final Level level;
-+    public final ServerLevel level; // CraftBukkit - type
-     @Nullable
-     private Supplier<FullChunkStatus> fullStatus;
-     @Nullable
 @@ -83,6 +_,11 @@
      private final LevelChunkTicks<Block> blockTicks;
      private final LevelChunkTicks<Fluid> fluidTicks;
@@ -187,7 +178,7 @@
          this.blockEntities.values().forEach(p_187988_ -> {
              if (this.level instanceof ServerLevel serverlevel) {
                  this.addGameEventListener(p_187988_, serverlevel);
-@@ -662,6 +_,70 @@
+@@ -662,6 +_,75 @@
          return new LevelChunk.BoundTickingBlockEntity<>(p_156376_, p_156377_);
      }
  
@@ -219,10 +210,10 @@
 +            if (this.needsDecoration) {
 +                this.needsDecoration = false;
 +                java.util.Random random = new java.util.Random();
-+                random.setSeed(level.getSeed());
++                random.setSeed(getServerLevel().getSeed());
 +                long xRand = random.nextLong() / 2L * 2L + 1L;
 +                long zRand = random.nextLong() / 2L * 2L + 1L;
-+                random.setSeed((long) this.chunkPos.x * xRand + (long) this.chunkPos.z * zRand ^ level.getSeed());
++                random.setSeed((long) this.chunkPos.x * xRand + (long) this.chunkPos.z * zRand ^ getServerLevel().getSeed());
 +
 +                org.bukkit.World world = this.level.getWorld();
 +                if (world != null) {
@@ -254,6 +245,11 @@
 +        return super.isUnsaved() && !this.mustNotSave;
 +    }
 +    // CraftBukkit end
++
++    // Magma
++    public ServerLevel getServerLevel() {
++        return (ServerLevel) level;
++    }
 +
      class BoundTickingBlockEntity<T extends BlockEntity> implements TickingBlockEntity {
          private final T blockEntity;

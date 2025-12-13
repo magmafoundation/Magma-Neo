@@ -343,13 +343,21 @@
          }
      }
  
-@@ -872,18 +_,40 @@
+@@ -870,20 +_,48 @@
+         return list.isEmpty() ? null : list.get(this.random.nextInt(list.size()));
+     }
  
++    // Magma
++    private org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason magma$spawnReason = org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT;
++    public void setSpawnReason(org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason reason) {
++        magma$spawnReason = reason;
++    }
++
      @Override
      public boolean addFreshEntity(Entity p_8837_) {
 -        return this.addEntity(p_8837_);
 +        // CraftBukkit start
-+        return this.addFreshEntity(p_8837_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT);
++        return this.addFreshEntity(p_8837_, magma$spawnReason);
 +    }
 +
 +    @Override

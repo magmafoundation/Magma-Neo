@@ -245,32 +245,38 @@
          return p_21437_;
      }
  
-@@ -1270,8 +_,15 @@
+@@ -1270,6 +_,20 @@
          return this.restrictRadius != -1.0F;
      }
  
 +    // CraftBukkit start
++    private org.bukkit.event.entity.EntityTransformEvent.TransformReason magma$transformReason = org.bukkit.event.entity.EntityTransformEvent.TransformReason.UNKNOWN;
++    private org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason magma$spawnReason = org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT;
++    @Nullable
++    public <T extends Mob> T convertToCB(EntityType<T> p_21407_, boolean p_21408_, org.bukkit.event.entity.EntityTransformEvent.TransformReason transformReason, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason spawnReason) {
++        magma$transformReason = transformReason;
++        magma$spawnReason = spawnReason;
++        var mob = this.convertTo(p_21407_, p_21408_);
++        magma$transformReason = org.bukkit.event.entity.EntityTransformEvent.TransformReason.UNKNOWN;
++        magma$spawnReason = org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT;
++        return mob;
++    }
++    // CraftBukkit end
++
      @Nullable
      public <T extends Mob> T convertTo(EntityType<T> p_21407_, boolean p_21408_) {
-+        return this.convertTo(p_21407_, p_21408_, org.bukkit.event.entity.EntityTransformEvent.TransformReason.UNKNOWN, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT);
-+    }
-+
-+    @Nullable
-+    public <T extends Mob> T convertTo(EntityType<T> p_21407_, boolean p_21408_, org.bukkit.event.entity.EntityTransformEvent.TransformReason transformReason, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason spawnReason) {
-+        // CraftBukkit end
          if (this.isRemoved()) {
-             return null;
-         } else {
-@@ -1304,13 +_,19 @@
+@@ -1304,13 +_,21 @@
                      }
                  }
  
--                this.level().addFreshEntity(t);
 +                // CraftBukkit start
-+                if (org.bukkit.craftbukkit.event.CraftEventFactory.callEntityTransformEvent(this, t, transformReason).isCancelled()) {
++                if (org.bukkit.craftbukkit.event.CraftEventFactory.callEntityTransformEvent(this, t, magma$transformReason).isCancelled()) {
 +                    return null;
 +                }
-+                this.level().addFreshEntity(t, spawnReason);
++                this.level().setSpawnReason(magma$spawnReason);
+                 this.level().addFreshEntity(t);
++                this.level().setSpawnReason(org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT);
 +                // CraftBukkit end
                  if (this.isPassenger()) {
                      Entity entity = this.getVehicle();

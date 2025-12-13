@@ -47,7 +47,7 @@
      private void finishConversion(ServerLevel p_34399_) {
 -        Villager villager = this.convertTo(EntityType.VILLAGER, false);
 +        // CraftBukkit start
-+        Villager villager = (Villager) this.convertTo(EntityType.VILLAGER, false, org.bukkit.event.entity.EntityTransformEvent.TransformReason.CURED, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.CURED);
++        Villager villager = (Villager) this.convertToCB(EntityType.VILLAGER, false, org.bukkit.event.entity.EntityTransformEvent.TransformReason.CURED, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.CURED);
 +        if (villager == null) {
 +            ((org.bukkit.entity.ZombieVillager) getBukkitEntity()).setConversionTime(-1); // SPIGOT-5208: End conversion to stop event spam
 +            return;

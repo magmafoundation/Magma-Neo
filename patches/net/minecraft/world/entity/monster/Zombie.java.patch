@@ -56,7 +56,7 @@
  
      protected void convertToZombieType(EntityType<? extends Zombie> p_34311_) {
 -        Zombie zombie = this.convertTo(p_34311_, true);
-+        Zombie zombie = this.convertTo(p_34311_, true, org.bukkit.event.entity.EntityTransformEvent.TransformReason.DROWNED, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DROWNED);
++        Zombie zombie = this.convertToCB(p_34311_, true, org.bukkit.event.entity.EntityTransformEvent.TransformReason.DROWNED, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DROWNED);
          if (zombie != null) {
              zombie.handleAttributes(zombie.level().getCurrentDifficultyAt(zombie.blockPosition()).getSpecialMultiplier());
              zombie.setCanBreakDoors(zombie.supportsBreakDoorGoal() && this.canBreakDoors());
@@ -116,7 +116,7 @@
 +    public static ZombieVillager zombifyVillager(ServerLevel p_219160_, Villager villager, net.minecraft.core.BlockPos blockPosition, LivingEntity p_219161_, boolean silent, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason spawnReason) {
 +
 +        {
-+            ZombieVillager zombievillager = (ZombieVillager) villager.convertTo(EntityType.ZOMBIE_VILLAGER, false, org.bukkit.event.entity.EntityTransformEvent.TransformReason.INFECTION, spawnReason);
++            ZombieVillager zombievillager = (ZombieVillager) villager.convertToCB(EntityType.ZOMBIE_VILLAGER, false, org.bukkit.event.entity.EntityTransformEvent.TransformReason.INFECTION, spawnReason);
 +            // CraftBukkit end
              if (zombievillager != null) {
                  zombievillager.finalizeSpawn(

@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/level/LevelWriter.java
 +++ b/net/minecraft/world/level/LevelWriter.java
-@@ -27,4 +_,10 @@
+@@ -27,4 +_,16 @@
      default boolean addFreshEntity(Entity p_46964_) {
          return false;
      }
@@ -10,4 +10,10 @@
 +        return false;
 +    }
 +    // CraftBukkit end
++
++    // Magma start
++    default void setSpawnReason(org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason reason) {
++
++    }
++    // Magma end
  }
