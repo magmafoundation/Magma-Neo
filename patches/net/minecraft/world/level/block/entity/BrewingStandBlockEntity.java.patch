@@ -38,7 +38,7 @@
      public BrewingStandBlockEntity(BlockPos p_155283_, BlockState p_155284_) {
          super(BlockEntityType.BREWING_STAND, p_155283_, p_155284_);
      }
-@@ -92,19 +_,36 @@
+@@ -92,19 +_,38 @@
      public static void serverTick(Level p_155286_, BlockPos p_155287_, BlockState p_155288_, BrewingStandBlockEntity p_155289_) {
          ItemStack itemstack = p_155289_.items.get(4);
          if (p_155289_.fuel <= 0 && itemstack.is(Items.BLAZE_POWDER)) {
@@ -75,23 +75,29 @@
 +            boolean flag2 = p_155289_.brewTime <= 0; // == -> <=
 +            // CraftBukkit end
              if (flag2 && flag) {
--                doBrew(p_155286_, p_155287_, p_155289_.items);
-+                doBrew(p_155286_, p_155287_, p_155289_.items, p_155289_); // CraftBukkit
++                setMagma$brewingStandBlockEntity(p_155289_);
+                 doBrew(p_155286_, p_155287_, p_155289_.items);
++                setMagma$brewingStandBlockEntity(null);
              } else if (!flag || !itemstack1.is(p_155289_.ingredient)) {
                  p_155289_.brewTime = 0;
              }
-@@ -163,23 +_,49 @@
+@@ -163,23 +_,55 @@
          }
      }
  
--    private static void doBrew(Level p_155291_, BlockPos p_155292_, NonNullList<ItemStack> p_155293_) {
-+    private static void doBrew(Level p_155291_, BlockPos p_155292_, NonNullList<ItemStack> p_155293_, BrewingStandBlockEntity tileentitybrewingstand) { // CraftBukkit
++    // Magma
++    private static BrewingStandBlockEntity magma$brewingStandBlockEntity;
++    private static void setMagma$brewingStandBlockEntity(BrewingStandBlockEntity brewingStandBlockEntity) {
++        magma$brewingStandBlockEntity = brewingStandBlockEntity;
++    }
++
+     private static void doBrew(Level p_155291_, BlockPos p_155292_, NonNullList<ItemStack> p_155293_) {
 +        if (net.neoforged.neoforge.event.EventHooks.onPotionAttemptBrew(p_155293_)) return;
          ItemStack itemstack = p_155293_.get(3);
          PotionBrewing potionbrewing = p_155291_.potionBrewing();
  
 +        // CraftBukkit start
-+        org.bukkit.inventory.InventoryHolder owner = tileentitybrewingstand.getOwner();
++        org.bukkit.inventory.InventoryHolder owner = magma$brewingStandBlockEntity.getOwner();
 +        java.util.List<org.bukkit.inventory.ItemStack> brewResults = new java.util.ArrayList<>(3);
 +
          for (int i = 0; i < 3; i++) {
@@ -105,7 +111,7 @@
 +        }
 +
 +        if (owner != null) {
-+            org.bukkit.event.inventory.BrewEvent event = new org.bukkit.event.inventory.BrewEvent(org.bukkit.craftbukkit.block.CraftBlock.at(p_155291_, p_155292_), (org.bukkit.inventory.BrewerInventory) owner.getInventory(), brewResults, tileentitybrewingstand.fuel);
++            org.bukkit.event.inventory.BrewEvent event = new org.bukkit.event.inventory.BrewEvent(org.bukkit.craftbukkit.block.CraftBlock.at(p_155291_, p_155292_), (org.bukkit.inventory.BrewerInventory) owner.getInventory(), brewResults, magma$brewingStandBlockEntity.fuel);
 +            org.bukkit.Bukkit.getPluginManager().callEvent(event);
 +            if (event.isCancelled()) {
 +                return;
