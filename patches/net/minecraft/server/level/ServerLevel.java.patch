@@ -343,7 +343,7 @@
          }
      }
  
-@@ -870,20 +_,48 @@
+@@ -870,19 +_,48 @@
          return list.isEmpty() ? null : list.get(this.random.nextInt(list.size()));
      }
  
@@ -362,18 +362,17 @@
 +
 +    @Override
 +    public boolean addFreshEntity(Entity entity, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason reason) {
-+        return this.addEntity(entity, reason);
++        return this.addEntity(entity);
 +        // CraftBukkit end
      }
  
      public boolean addWithUUID(Entity p_8848_) {
--        return this.addEntity(p_8848_);
 +        // CraftBukkit start
 +        return this.addWithUUID(p_8848_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT);
 +    }
 +
 +    public boolean addWithUUID(Entity p_8848_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason reason) {
-+        return this.addEntity(p_8848_, reason);
+         return this.addEntity(p_8848_);
 +        // CraftBukkit end
      }
  
@@ -390,11 +389,10 @@
          if (p_143335_ instanceof ServerPlayer serverplayer) {
              this.addPlayer(serverplayer);
          } else {
--            this.addEntity(p_143335_);
-+            this.addEntity(p_143335_, reason); // CraftBukkit
++            this.setSpawnReason(reason);
+             this.addEntity(p_143335_);
          }
      }
- 
 @@ -896,6 +_,7 @@
      }
  
@@ -403,7 +401,7 @@
          Entity entity = this.getEntities().get(p_8854_.getUUID());
          if (entity != null) {
              LOGGER.warn("Force-added player with duplicate UUID {}", p_8854_.getUUID());
-@@ -903,28 +_,57 @@
+@@ -903,28 +_,56 @@
              this.removePlayerImmediately((ServerPlayer)entity, Entity.RemovalReason.DISCARDED);
          }
  
@@ -412,9 +410,7 @@
 +        p_8854_.onAddedToLevel();
      }
  
--    private boolean addEntity(Entity p_8873_) {
-+    // CraftBukkit start
-+    private boolean addEntity(Entity p_8873_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason spawnReason) {
+     private boolean addEntity(Entity p_8873_) {
 +        org.spigotmc.AsyncCatcher.catchOp("entity add"); // Spigot
          if (p_8873_.isRemoved()) {
 -            LOGGER.warn("Tried to add entity {} but it was marked as removed already", EntityType.getKey(p_8873_.getType()));
@@ -423,7 +419,7 @@
          } else {
 -            return this.entityManager.addNewEntity(p_8873_);
 +            // SPIGOT-6415: Don't call spawn event when reason is null. For example when an entity teleports to a new world.
-+            if (spawnReason != null && !org.bukkit.craftbukkit.event.CraftEventFactory.doEntityAddEventCalling(this, p_8873_, spawnReason)) {
++            if (magma$spawnReason != null && !org.bukkit.craftbukkit.event.CraftEventFactory.doEntityAddEventCalling(this, p_8873_, magma$spawnReason)) {
 +                return false;
 +            }
 +            // CraftBukkit end

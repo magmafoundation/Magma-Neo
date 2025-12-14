@@ -4,10 +4,9 @@
          EMPTY_ARMOR_SLOT_HELMET
      );
      private static final EquipmentSlot[] SLOT_IDS = new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
--    private final CraftingContainer craftSlots = new TransientCraftingContainer(this, 2, 2);
--    private final ResultContainer resultSlots = new ResultContainer();
 +    // CraftBukkit start
-+    private final TransientCraftingContainer craftSlots;
+     private final CraftingContainer craftSlots = new TransientCraftingContainer(this, 2, 2);
+-    private final ResultContainer resultSlots = new ResultContainer();
 +    private final ResultContainer resultSlots;
 +    // CraftBukkit end
      public final boolean active;
@@ -23,8 +22,8 @@
          this.owner = p_39708_;
 +        // CraftBukkit start
 +        this.resultSlots = new ResultContainer(); // CraftBukkit - moved to before InventoryCrafting construction
-+        this.craftSlots = new TransientCraftingContainer(this, 2, 2, p_39706_.player); // CraftBukkit - pass player
-+        this.craftSlots.resultInventory = this.resultSlots; // CraftBukkit - let InventoryCrafting know about its result slot
++        ((TransientCraftingContainer)this.craftSlots).setOwner(p_39706_.player);
++        ((TransientCraftingContainer)this.craftSlots).resultInventory = this.resultSlots; // CraftBukkit - let InventoryCrafting know about its result slot
 +        this.player = p_39706_; // CraftBukkit - save player
 +        setTitle(net.minecraft.network.chat.Component.translatable("container.crafting")); // SPIGOT-4722: Allocate title for player inventory
 +        // CraftBukkit end

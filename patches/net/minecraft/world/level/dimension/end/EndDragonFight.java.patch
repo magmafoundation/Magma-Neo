@@ -8,21 +8,26 @@
                  enderdragon.discard();
                  this.dragonUUID = null;
              }
-@@ -477,7 +_,7 @@
+@@ -477,6 +_,13 @@
          return this.previouslyKilled;
      }
  
--    public void tryRespawn() {
-+    public boolean tryRespawn() { // CraftBukkit - return boolean
++    // Magma
++    private java.util.concurrent.atomic.AtomicBoolean magma$tryRespawn = new java.util.concurrent.atomic.AtomicBoolean(false);
++    private java.util.concurrent.atomic.AtomicBoolean magma$respawnDragon = new java.util.concurrent.atomic.AtomicBoolean(false);
++
++    public boolean magma$tryRespawn() { return magma$tryRespawn.getAndSet(false); }
++    public boolean magma$respawnDragon() { return magma$respawnDragon.getAndSet(false); }
++
+     public void tryRespawn() {
          if (this.dragonKilled && this.respawnStage == null) {
              BlockPos blockpos = this.portalLocation;
-             if (blockpos == null) {
-@@ -499,18 +_,19 @@
+@@ -499,15 +_,16 @@
              for (Direction direction : Direction.Plane.HORIZONTAL) {
                  List<EndCrystal> list = this.level.getEntitiesOfClass(EndCrystal.class, new AABB(blockpos1.relative(direction, 2)));
                  if (list.isEmpty()) {
 -                    return;
-+                    return false; // CraftBukkit - return value
++                    magma$tryRespawn.set(true);
                  }
  
                  list1.addAll(list);
@@ -30,23 +35,19 @@
  
              LOGGER.debug("Found all crystals, respawning dragon.");
 -            this.respawnDragon(list1);
-+            return this.respawnDragon(list1); // CraftBukkit - return value
++            magma$tryRespawn.set(magma$respawnDragon());
          }
-+        return false; // CraftBukkit - return value
++        magma$tryRespawn.set(false);
      }
  
--    public void respawnDragon(List<EndCrystal> p_64092_) {
-+    public boolean respawnDragon(List<EndCrystal> p_64092_) { // CraftBukkit - return boolean
-         if (this.dragonKilled && this.respawnStage == null) {
-             for (BlockPattern.BlockPatternMatch blockpattern$blockpatternmatch = this.findExitPortal();
-                 blockpattern$blockpatternmatch != null;
+     public void respawnDragon(List<EndCrystal> p_64092_) {
 @@ -532,7 +_,9 @@
              this.respawnTime = 0;
              this.spawnExitPortal(false);
              this.respawnCrystals = p_64092_;
-+            return true; // CraftBukkit - return value
++            magma$respawnDragon.set(true);
          }
-+        return false; // CraftBukkit - return value
++        magma$respawnDragon.set(false);
      }
  
      public void resetSpikeCrystals() {

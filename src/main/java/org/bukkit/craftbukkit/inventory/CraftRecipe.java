@@ -9,6 +9,7 @@ import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.RecipeChoice;
 import org.bukkit.inventory.recipe.CookingBookCategory;
 import org.bukkit.inventory.recipe.CraftingBookCategory;
+import org.magmafoundation.magma.util.MagmaRecipeChoice;
 
 public interface CraftRecipe extends Recipe {
     void addToCraftingManager();
@@ -23,6 +24,10 @@ public interface CraftRecipe extends Recipe {
         } else if (bukkit instanceof RecipeChoice.ExactChoice) {
             stack = new Ingredient(((RecipeChoice.ExactChoice) bukkit).getChoices().stream().map((mat) -> new net.minecraft.world.item.crafting.Ingredient.ItemValue(CraftItemStack.asNMSCopy(mat))));
             stack.exact = true;
+            // Magma start
+        } else if (bukkit instanceof MagmaRecipeChoice magmaRecipeChoice) {
+            stack = magmaRecipeChoice.ingredient();
+            // Magma end
         } else {
             throw new IllegalArgumentException("Unknown recipe stack instance " + bukkit);
         }
@@ -38,21 +43,28 @@ public interface CraftRecipe extends Recipe {
     public static RecipeChoice toBukkit(Ingredient list) {
         list.getItems();
 
-        if (list.itemStacks.length == 0) {
+        // Magma start
+        if (!list.isVanilla()) {
+            return new MagmaRecipeChoice(list);
+        }
+        // Magma end
+
+        var items = list.getItems();
+        if (items.length == 0) {
             return null;
         }
 
         if (list.exact) {
-            List<org.bukkit.inventory.ItemStack> choices = new ArrayList<>(list.itemStacks.length);
-            for (net.minecraft.world.item.ItemStack i : list.itemStacks) {
+            List<org.bukkit.inventory.ItemStack> choices = new ArrayList<>(items.length);
+            for (net.minecraft.world.item.ItemStack i : items) {
                 choices.add(CraftItemStack.asBukkitCopy(i));
             }
 
             return new RecipeChoice.ExactChoice(choices);
         } else {
 
-            List<org.bukkit.Material> choices = new ArrayList<>(list.itemStacks.length);
-            for (net.minecraft.world.item.ItemStack i : list.itemStacks) {
+            List<org.bukkit.Material> choices = new ArrayList<>(items.length);
+            for (net.minecraft.world.item.ItemStack i : items) {
                 choices.add(CraftItemType.minecraftToBukkit(i.getItem()));
             }
 

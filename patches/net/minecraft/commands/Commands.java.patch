@@ -1,13 +1,5 @@
 --- a/net/minecraft/commands/Commands.java
 +++ b/net/minecraft/commands/Commands.java
-@@ -149,6 +_,7 @@
-     private final CommandDispatcher<CommandSourceStack> dispatcher = new CommandDispatcher<>();
- 
-     public Commands(Commands.CommandSelection p_230943_, CommandBuildContext p_230944_) {
-+        this(); // CraftBukkit
-         AdvancementCommands.register(this.dispatcher);
-         AttributeCommand.register(this.dispatcher, p_230944_);
-         ExecuteCommand.register(this.dispatcher, p_230944_);
 @@ -214,7 +_,7 @@
              JfrCommand.register(this.dispatcher);
          }
@@ -17,16 +9,11 @@
              TestCommand.register(this.dispatcher);
              RaidCommand.register(this.dispatcher, p_230944_);
              DebugPathCommand.register(this.dispatcher);
-@@ -249,6 +_,12 @@
+@@ -249,6 +_,7 @@
              PublishCommand.register(this.dispatcher);
          }
  
 +        net.neoforged.neoforge.event.EventHooks.onCommandRegister(this.dispatcher, p_230943_, p_230944_);
-+        // CraftBukkit start
-+    }
-+
-+    public Commands() {
-+        // CraftBukkkit end
          this.dispatcher.setConsumer(ExecutionCommandSource.resultConsumer());
      }
  

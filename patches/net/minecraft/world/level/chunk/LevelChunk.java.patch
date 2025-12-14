@@ -40,27 +40,28 @@
      }
  
      @Override
-@@ -236,6 +_,13 @@
-     @Nullable
-     @Override
-     public BlockState setBlockState(BlockPos p_62865_, BlockState p_62866_, boolean p_62867_) {
-+        return this.setBlockState(p_62865_, p_62866_, p_62867_, true); // CraftBukkit
+@@ -233,8 +_,13 @@
+         }
+     }
+ 
++    // Magma
++    private boolean magma$doPlace = true;
++    public void setMagma$doPlace(boolean doPlace) {
++        this.magma$doPlace = doPlace;
 +    }
 +
-+    // CraftBukkit start - ChunkMap#setBlockState() -> ChunkMap#setBlockState(BlockPos, IBlockData, boolean, boolean)
-+    @Nullable
-+    public BlockState setBlockState(BlockPos p_62865_, BlockState p_62866_, boolean p_62867_, boolean doPlace) {
-+    // CraftBukkit end
+     @Nullable
+-    @Override
+     public BlockState setBlockState(BlockPos p_62865_, BlockState p_62866_, boolean p_62867_) {
          int i = p_62865_.getY();
          LevelChunkSection levelchunksection = this.getSection(this.getSectionIndex(i));
-         boolean flag = levelchunksection.hasOnlyAir();
 @@ -278,7 +_,8 @@
                  if (!levelchunksection.getBlockState(j, k, l).is(block)) {
                      return null;
                  } else {
 -                    if (!this.level.isClientSide) {
 +                    // CraftBukkit - Don't place while processing the BlockPlaceEvent, unless it's a BlockContainer
-+                    if (!this.level.isClientSide && doPlace && (!this.level.captureBlockStates || block instanceof EntityBlock)) {
++                    if (!this.level.isClientSide && magma$doPlace && (!this.level.captureBlockStates || block instanceof EntityBlock)) {
                          p_62866_.onPlace(this.level, p_62865_, blockstate, p_62867_);
                      }
  

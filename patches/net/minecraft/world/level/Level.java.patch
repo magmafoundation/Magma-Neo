@@ -177,11 +177,10 @@
          if (this.isOutsideBuildHeight(p_46605_)) {
              return false;
          } else if (!this.isClientSide && this.isDebug()) {
-@@ -216,11 +_,60 @@
+@@ -216,11 +_,61 @@
          } else {
              LevelChunk levelchunk = this.getChunkAt(p_46605_);
              Block block = p_46606_.getBlock();
--            BlockState blockstate = levelchunk.setBlockState(p_46605_, p_46606_, (p_46607_ & 64) != 0);
 +
 +            p_46605_ = p_46605_.immutable(); // Forge - prevent mutable BlockPos leaks
 +            net.neoforged.neoforge.common.util.BlockSnapshot blockSnapshot = null;
@@ -203,7 +202,8 @@
 +            int oldLight = old.getLightEmission(this, p_46605_);
 +            int oldOpacity = old.getLightBlock(this, p_46605_);
 +
-+            BlockState blockstate = levelchunk.setBlockState(p_46605_, p_46606_, (p_46607_ & 64) != 0, (p_46607_ & 1024) == 0); // CraftBukkit custom NO_PLACE flag
++            levelchunk.setMagma$doPlace((p_46607_ & 1024) == 0);
+             BlockState blockstate = levelchunk.setBlockState(p_46605_, p_46606_, (p_46607_ & 64) != 0);
              if (blockstate == null) {
 +                if (blockSnapshot != null) this.capturedBlockSnapshots.remove(blockSnapshot);
 +                // CraftBukkit start - remove blockstate if failed (or the same)

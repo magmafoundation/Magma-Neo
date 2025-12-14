@@ -1,18 +1,26 @@
 --- a/net/minecraft/world/Container.java
 +++ b/net/minecraft/world/Container.java
-@@ -91,4 +_,22 @@
+@@ -91,4 +_,30 @@
              return level.getBlockEntity(blockpos) != p_272877_ ? false : p_272670_.canInteractWithBlock(blockpos, (double)p_320837_);
          }
      }
 +
 +    // CraftBukkit start
-+    java.util.List<ItemStack> getContents();
++    default java.util.List<ItemStack> getContents() {
++        return java.util.Collections.emptyList();
++    }
 +
-+    void onOpen(org.bukkit.craftbukkit.entity.CraftHumanEntity who);
++    default void onOpen(org.bukkit.craftbukkit.entity.CraftHumanEntity who) {
 +
-+    void onClose(org.bukkit.craftbukkit.entity.CraftHumanEntity who);
++    }
 +
-+    java.util.List<org.bukkit.entity.HumanEntity> getViewers();
++    default void onClose(org.bukkit.craftbukkit.entity.CraftHumanEntity who) {
++
++    }
++
++    default java.util.List<org.bukkit.entity.HumanEntity> getViewers() {
++        return java.util.Collections.emptyList();
++    }
 +
 +    org.bukkit.inventory.InventoryHolder getOwner();
 +

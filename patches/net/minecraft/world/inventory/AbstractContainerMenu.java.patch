@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/inventory/AbstractContainerMenu.java
 +++ b/net/minecraft/world/inventory/AbstractContainerMenu.java
-@@ -62,6 +_,45 @@
+@@ -62,6 +_,61 @@
      private ContainerSynchronizer synchronizer;
      private boolean suppressRemoteUpdates;
  
@@ -34,12 +34,28 @@
 +    }
 +    private net.minecraft.network.chat.Component title;
 +    public final net.minecraft.network.chat.Component getTitle() {
-+        com.google.common.base.Preconditions.checkState(this.title != null, "Title not set");
++        if (this.title == null) {
++            if (this.menuType != null) {
++                net.minecraft.resources.ResourceLocation key = BuiltInRegistries.MENU.getKey(this.menuType);
++                if (key == null) {
++                    this.title = net.minecraft.network.chat.Component.literal(this.toString());
++                } else {
++                    this.title = net.minecraft.network.chat.Component.translatable(key.toString());
++                }
++            } else {
++                this.title = net.minecraft.network.chat.Component.literal(this.toString());
++            }
++        }
 +        return this.title;
 +    }
 +    public final void setTitle(net.minecraft.network.chat.Component title) {
-+        com.google.common.base.Preconditions.checkState(this.title == null, "Title already set");
-+        this.title = title;
++        if(this.title == null) {
++            if(title == null) {
++                this.title = getTitle();
++            } else {
++                this.title = title;
++            }
++        }
 +    }
 +    // CraftBukkit end
 +

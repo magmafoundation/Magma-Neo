@@ -91,21 +91,24 @@
          p_294215_.connection.chunkSender.dropChunk(p_294215_, p_294758_);
      }
  
-@@ -907,19 +_,31 @@
+@@ -907,19 +_,35 @@
      }
  
      private CompletableFuture<Optional<CompoundTag>> readChunk(ChunkPos p_214964_) {
 -        return this.read(p_214964_).thenApplyAsync(p_214907_ -> p_214907_.map(this::upgradeChunkTag), Util.backgroundExecutor());
+-    }
 +        return this.read(p_214964_).thenApplyAsync(p_214907_ -> p_214907_.map((nbttagcompound) -> upgradeChunkTag(nbttagcompound, p_214964_)), Util.backgroundExecutor()); // CraftBukkit
-     }
- 
--    private CompoundTag upgradeChunkTag(CompoundTag p_214948_) {
--        return this.upgradeChunkTag(this.level.dimension(), this.overworldDataStorage, p_214948_, this.generator().getTypeNameForDataFixer());
++    }
++
 +    // CraftBukkit start
-+    private CompoundTag upgradeChunkTag(CompoundTag nbttagcompound, ChunkPos chunkcoordintpair) {
++    public CompoundTag upgradeChunkTag(CompoundTag nbttagcompound, ChunkPos chunkcoordintpair) {
 +        return this.upgradeChunkTag(this.level.dimension(), this.overworldDataStorage, nbttagcompound, this.generator().getTypeNameForDataFixer(), chunkcoordintpair, level);
-     }
++    }
 +    // CraftBukkit end
+ 
+     private CompoundTag upgradeChunkTag(CompoundTag p_214948_) {
+         return this.upgradeChunkTag(this.level.dimension(), this.overworldDataStorage, p_214948_, this.generator().getTypeNameForDataFixer());
+     }
  
      boolean anyPlayerCloseEnoughForSpawning(ChunkPos p_183880_) {
 +        // Spigot start

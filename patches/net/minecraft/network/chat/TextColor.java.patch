@@ -1,6 +1,6 @@
 --- a/net/minecraft/network/chat/TextColor.java
 +++ b/net/minecraft/network/chat/TextColor.java
-@@ -17,23 +_,29 @@
+@@ -17,23 +_,35 @@
      public static final Codec<TextColor> CODEC = Codec.STRING.comapFlatMap(TextColor::parseColor, TextColor::serialize);
      private static final Map<ChatFormatting, TextColor> LEGACY_FORMAT_TO_COLOR = Stream.of(ChatFormatting.values())
          .filter(ChatFormatting::isColor)
@@ -16,10 +16,15 @@
 +    @Nullable
 +    public final ChatFormatting format;
  
--    private TextColor(int p_131263_, String p_131264_) {
-+    private TextColor(int p_131263_, String p_131264_, ChatFormatting format) {
+     private TextColor(int p_131263_, String p_131264_) {
          this.value = p_131263_ & 16777215;
          this.name = p_131264_;
++        this.format = null;
++    }
++
++    private TextColor(int p_131263_, String p_131264_, ChatFormatting format) {
++        this.value = p_131263_ & 16777215;
++        this.name = p_131264_;
 +        this.format = format;
      }
  

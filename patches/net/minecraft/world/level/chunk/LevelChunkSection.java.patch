@@ -1,19 +1,18 @@
 --- a/net/minecraft/world/level/chunk/LevelChunkSection.java
 +++ b/net/minecraft/world/level/chunk/LevelChunkSection.java
-@@ -22,9 +_,11 @@
-     private short tickingBlockCount;
-     private short tickingFluidCount;
-     private final PalettedContainer<BlockState> states;
--    private PalettedContainerRO<Holder<Biome>> biomes;
-+    // CraftBukkit start - read/write
-+    private PalettedContainer<Holder<Biome>> biomes;
- 
--    public LevelChunkSection(PalettedContainer<BlockState> p_282846_, PalettedContainerRO<Holder<Biome>> p_281695_) {
-+    public LevelChunkSection(PalettedContainer<BlockState> p_282846_, PalettedContainer<Holder<Biome>> p_281695_) {
-+        // CraftBukkit end
-         this.states = p_282846_;
-         this.biomes = p_281695_;
+@@ -30,6 +_,12 @@
          this.recalcBlockCounts();
+     }
+ 
++    public LevelChunkSection(PalettedContainer<BlockState> p_282846_, PalettedContainer<Holder<Biome>> p_281695_) {
++        this.states = p_282846_;
++        this.biomes = p_281695_;
++        this.recalcBlockCounts();
++    }
++
+     public LevelChunkSection(Registry<Biome> p_282873_) {
+         this.states = new PalettedContainer<>(Block.BLOCK_STATE_REGISTRY, Blocks.AIR.defaultBlockState(), PalettedContainer.Strategy.SECTION_STATES);
+         this.biomes = new PalettedContainer<>(p_282873_.asHolderIdMap(), p_282873_.getHolderOrThrow(Biomes.PLAINS), PalettedContainer.Strategy.SECTION_BIOMES);
 @@ -65,7 +_,7 @@
  
          FluidState fluidstate = blockstate.getFluidState();
@@ -48,7 +47,7 @@
 +
 +    // CraftBukkit start
 +    public void setBiome(int i, int j, int k, Holder<Biome> biome) {
-+        this.biomes.set(i, j, k, biome);
++        this.biomes.recreate().set(i, j, k, biome);
 +    }
 +    // CraftBukkit end
  

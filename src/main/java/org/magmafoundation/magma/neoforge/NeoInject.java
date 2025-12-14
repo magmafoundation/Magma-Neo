@@ -4,6 +4,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableMap;
 import io.izzel.arclight.api.EnumHelper;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -11,6 +12,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.dimension.LevelStem;
@@ -20,8 +22,10 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.craftbukkit.util.CraftMagicNumbers;
+import org.bukkit.craftbukkit.util.CraftSpawnCategory;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.SpawnCategory;
 import org.magmafoundation.magma.util.ResourceLocationUtil;
 
 public class NeoInject {
@@ -29,6 +33,7 @@ public class NeoInject {
 
     public static final Map<net.minecraft.world.entity.EntityType<?>, String> ENTITY_TYPES = new ConcurrentHashMap<>();
     public static final Map<net.minecraft.world.entity.EntityType<?>, org.bukkit.entity.EntityType> ENTITY_TYPES0 = new ConcurrentHashMap<>();
+    public static final Map<SpawnCategory, MobCategory> SPAWN_CATEGORY_MOB_CATEGORY = new HashMap<>();
 
     public static BiMap<ResourceKey<LevelStem>, World.Environment> environments = HashBiMap
             .create(ImmutableMap.<ResourceKey<LevelStem>, World.Environment>builder()
@@ -50,6 +55,8 @@ public class NeoInject {
         addNeoForgeItemMaterials();
         log("Injecting NeoForge Entities into Bukkit");
         addNeoForgeEntities();
+        log("Injecting NeoForge Mob Categorys into Bukkit");
+        addNeoForgeMobCategorys();
     }
 
     private static void log(String message) {
@@ -141,6 +148,20 @@ public class NeoInject {
     }
 
     private static void addNeoForgeEnchantments() {}
+
+    private static void addNeoForgeMobCategorys() {
+        for (MobCategory category : MobCategory.values()) {
+            try {
+                CraftSpawnCategory.toBukkit(category);
+            } catch (Exception e) {
+                String name = category.name();
+                SpawnCategory bukkitCategory = EnumHelper.addEnum(SpawnCategory.class, name, List.of(), List.of());
+                SPAWN_CATEGORY_MOB_CATEGORY.put(bukkitCategory, category);
+                bukkitCategory.isModded = true;
+                log("Added NeoForge Mob Category: " + bukkitCategory.name());
+            }
+        }
+    }
 
     private static boolean isModded(ResourceLocation resourceLocation) {
         return !resourceLocation.getNamespace().equals(NamespacedKey.MINECRAFT);

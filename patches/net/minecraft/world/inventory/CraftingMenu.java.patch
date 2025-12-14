@@ -15,8 +15,8 @@
      public CraftingMenu(int p_39356_, Inventory p_39357_, ContainerLevelAccess p_39358_) {
          super(MenuType.CRAFTING, p_39356_);
 +        // CraftBukkit start - Switched order of IInventory construction and stored player
-+        ((TransientCraftingContainer)craftSlots).setOwner(p_39357_.player);
-+        ((TransientCraftingContainer)craftSlots).resultInventory = this.resultSlots;
++        ((TransientCraftingContainer)this.craftSlots).setOwner(p_39357_.player); // CraftBukkit - pass player
++        ((TransientCraftingContainer)this.craftSlots).resultInventory = this.resultSlots;
 +        // CraftBukkit end
          this.access = p_39358_;
          this.player = p_39357_.player;
@@ -25,7 +25,7 @@
              Optional<RecipeHolder<CraftingRecipe>> optional = p_150548_.getServer()
                  .getRecipeManager()
                  .getRecipeFor(RecipeType.CRAFTING, craftinginput, p_150548_, p_345124_);
-+            p_150550_.setCurrentRecipe(optional.orElse(null)); // CraftBukkit
++                p_150550_.setCurrentRecipe(optional.orElse(null)); // CraftBukkit
              if (optional.isPresent()) {
                  RecipeHolder<CraftingRecipe> recipeholder = optional.get();
                  CraftingRecipe craftingrecipe = recipeholder.value();

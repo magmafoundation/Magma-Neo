@@ -452,15 +452,7 @@
          if (this.isSleeping()) {
              this.serverLevel().getChunkSource().broadcastAndSend(this, new ClientboundAnimatePacket(this, 2));
          }
-@@ -1068,21 +_,53 @@
-         this.connection.send(new ClientboundOpenSignEditorPacket(p_277909_.getBlockPos(), p_277495_));
-     }
- 
--    public void nextContainerCounter() {
-+    public int nextContainerCounter() { // CraftBukkit - void -> int
-         this.containerCounter = this.containerCounter % 100 + 1;
-+        return this.containerCounter; // CraftBukkit
-     }
+@@ -1074,15 +_,46 @@
  
      @Override
      public OptionalInt openMenu(@Nullable MenuProvider p_9033_) {
@@ -871,7 +863,7 @@
          }
  
          private static float calculateLookAtYaw(Vec3 p_348686_, BlockPos p_348467_) {
-@@ -1968,4 +_,180 @@
+@@ -1968,4 +_,188 @@
              return (float)Mth.wrapDegrees(Mth.atan2(vec3.z, vec3.x) * 180.0F / (float)Math.PI - 90.0);
          }
      }
@@ -1051,4 +1043,12 @@
 +        return blockposition;
 +    }
 +    // CraftBukkit end
++
++    // Magma start
++
++    public int getContainerCounter() {
++        return containerCounter;
++    }
++
++    // Magma end
  }

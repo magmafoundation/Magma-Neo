@@ -6,7 +6,6 @@ package org.bukkit.entity;
  * @see <a href="https://minecraft.wiki/w/Spawn#Java_Edition_mob_cap">Minecraft Wiki</a>
  */
 public enum SpawnCategory {
-
     /**
      * Entities related to Monsters, eg: Witch, Zombie, Creeper, etc.
      */
@@ -40,4 +39,6 @@ public enum SpawnCategory {
      * Entities not related to a mob, eg: Player, ArmorStand, Boat, etc.
      */
     MISC;
+
+    public boolean isModded = false;
 }
