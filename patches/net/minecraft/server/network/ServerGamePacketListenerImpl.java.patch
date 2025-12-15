@@ -75,10 +75,12 @@
      }
  
      private int getMaximumFlyingTicks(Entity p_326388_) {
-@@ -394,6 +_,13 @@
-             Entity entity = this.player.getRootVehicle();
-             if (entity != this.player && entity.getControllingPassenger() == this.player && entity == this.lastVehicle) {
-                 ServerLevel serverlevel = this.player.serverLevel();
+@@ -407,7 +_,40 @@
+                 double d8 = d5 - this.vehicleFirstGoodZ;
+                 double d9 = entity.getDeltaMovement().lengthSqr();
+                 double d10 = d6 * d6 + d7 * d7 + d8 * d8;
+-                if (d10 - d9 > 100.0 && !this.isSingleplayerOwner()) {
++
 +                // CraftBukkit - store current player position
 +                double prevX = player.getX();
 +                double prevY = player.getY();
@@ -86,14 +88,7 @@
 +                float prevYaw = player.getYRot();
 +                float prevPitch = player.getXRot();
 +                // CraftBukkit end
-                 double d0 = entity.getX();
-                 double d1 = entity.getY();
-                 double d2 = entity.getZ();
-@@ -407,7 +_,31 @@
-                 double d8 = d5 - this.vehicleFirstGoodZ;
-                 double d9 = entity.getDeltaMovement().lengthSqr();
-                 double d10 = d6 * d6 + d7 * d7 + d8 * d8;
--                if (d10 - d9 > 100.0 && !this.isSingleplayerOwner()) {
++
 +
 +                // CraftBukkit start - handle custom speeds and skipped ticks
 +                this.allowedPlayerTicks += (System.currentTimeMillis() / 50) - this.lastTick;
@@ -729,7 +724,7 @@
          LOGGER.info("{} lost connection: {}", this.player.getName().getString(), p_350554_.reason().getString());
          this.removePlayerFromWorld();
          super.onDisconnect(p_350554_);
-@@ -1185,12 +_,19 @@
+@@ -1185,12 +_,21 @@
  
      private void removePlayerFromWorld() {
          this.chatMessageChain.close();
@@ -741,8 +736,9 @@
              .broadcastSystemMessage(Component.translatable("multiplayer.player.left", this.player.getDisplayName()).withStyle(ChatFormatting.YELLOW), false);
 +        */
          this.player.disconnect();
--        this.server.getPlayerList().remove(this.player);
-+        String quitMessage = this.server.getPlayerList().remove(this.player);
+         this.server.getPlayerList().remove(this.player);
++        String quitMessage = this.server.getPlayerList().magma$removeString;
++        this.server.getPlayerList().magma$removeString = null;
 +        if ((quitMessage != null) && (quitMessage.length() > 0)) {
 +            this.server.getPlayerList().broadcastMessage(org.bukkit.craftbukkit.util.CraftChatMessage.fromString(quitMessage));
 +        }

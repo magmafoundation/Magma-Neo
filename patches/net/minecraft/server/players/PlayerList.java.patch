@@ -225,12 +225,14 @@
          this.playerIo.save(p_11277_);
          ServerStatsCounter serverstatscounter = this.stats.get(p_11277_.getUUID());
          if (serverstatscounter != null) {
-@@ -350,16 +_,29 @@
+@@ -350,16 +_,32 @@
          }
      }
  
--    public void remove(ServerPlayer p_11287_) {
-+    public String remove(ServerPlayer p_11287_) { // CraftBukkit - return string
++    // Magma
++    public String magma$removeString = null;
++
+     public void remove(ServerPlayer p_11287_) {
 +        net.neoforged.neoforge.event.EventHooks.firePlayerLoggedOut(p_11287_);
          ServerLevel serverlevel = p_11287_.serverLevel();
          p_11287_.awardStat(Stats.LEAVE_GAME);
@@ -285,7 +287,7 @@
 +        cserver.getScoreboardManager().removePlayer(p_11287_.getBukkitEntity());
 +        // CraftBukkit end
 +
-+        return playerQuitEvent.getQuitMessage(); // CraftBukkit
++        magma$removeString = playerQuitEvent.getQuitMessage(); // CraftBukkit
      }
  
 -    @Nullable

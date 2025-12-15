@@ -21,11 +21,13 @@ import org.apache.logging.log4j.Logger;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
+import org.bukkit.craftbukkit.potion.CraftPotionUtil;
 import org.bukkit.craftbukkit.util.CraftMagicNumbers;
 import org.bukkit.craftbukkit.util.CraftSpawnCategory;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.SpawnCategory;
+import org.bukkit.potion.PotionType;
 import org.magmafoundation.magma.util.ResourceLocationUtil;
 
 public class NeoInject {
@@ -57,6 +59,8 @@ public class NeoInject {
         addNeoForgeEntities();
         log("Injecting NeoForge Mob Categorys into Bukkit");
         addNeoForgeMobCategorys();
+        log("Injecting NeoForge Potion Types into Bukkit");
+        addNeoForgePotionTypes();
     }
 
     private static void log(String message) {
@@ -159,6 +163,30 @@ public class NeoInject {
                 SPAWN_CATEGORY_MOB_CATEGORY.put(bukkitCategory, category);
                 bukkitCategory.isModded = true;
                 log("Added NeoForge Mob Category: " + bukkitCategory.name());
+            }
+        }
+    }
+
+    private static void addNeoForgePotionTypes() {
+        var potionRegistry = BuiltInRegistries.POTION;
+        for (var potion : potionRegistry) {
+            ResourceLocation potionResourceName = potionRegistry.getKey(potion);
+            String potionName = ResourceLocationUtil.standardize(potionResourceName);
+            if (!isModded(potionResourceName)) {
+                continue;
+            }
+
+            try {
+                PotionType.valueOf(potionName);
+            } catch (Exception e) {
+                PotionType potionType = EnumHelper.addEnum(PotionType.class, potionName, List.of(String.class), List.of(potionResourceName.toString()));
+                if (potionType != null) {
+                    CraftPotionUtil.modded.put(potionResourceName, potionType);
+                    log("Added NeoForge Potion Type: " + potionType.name() + " - " + potionType.getKey());
+
+                } else {
+                    log("Failed to add NeoForge Potion Type: " + potionName);
+                }
             }
         }
     }

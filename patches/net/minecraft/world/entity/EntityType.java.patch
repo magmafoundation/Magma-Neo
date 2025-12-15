@@ -79,16 +79,15 @@
          Consumer<T> consumer;
          if (p_20594_ != null) {
              consumer = createDefaultStackConfig(p_20593_, p_20594_, p_20595_);
-@@ -892,7 +_,7 @@
+@@ -892,6 +_,7 @@
              };
          }
  
--        return this.spawn(p_20593_, consumer, p_20596_, p_20597_, p_20598_, p_20599_);
-+        return this.spawn(p_20593_, consumer, p_20596_, p_20597_, p_20598_, p_20599_, spawnReason); // CraftBukkit
++        magma$setSpawnReason(spawnReason);
+         return this.spawn(p_20593_, consumer, p_20596_, p_20597_, p_20598_, p_20599_);
      }
  
-     public static <T extends Entity> Consumer<T> createDefaultStackConfig(ServerLevel p_263583_, ItemStack p_263568_, @Nullable Player p_263575_) {
-@@ -915,19 +_,37 @@
+@@ -915,7 +_,15 @@
          Consumer<T> p_263579_, ServerLevel p_263571_, ItemStack p_263582_, @Nullable Player p_263574_
      ) {
          CustomData customdata = p_263582_.getOrDefault(DataComponents.ENTITY_DATA, CustomData.EMPTY);
@@ -96,34 +95,21 @@
 +        return !customdata.isEmpty() ? p_263579_.andThen(p_329995_ -> {
 +            try { updateCustomEntityTag(p_263571_, p_263574_, p_329995_, customdata); } catch (Throwable t) { LOGGER.warn("Error loading spawn egg NBT", t); } // CraftBukkit - SPIGOT-5665
 +        }) : p_263579_;
-     }
- 
-     @Nullable
-     public T spawn(ServerLevel p_262634_, BlockPos p_262707_, MobSpawnType p_262597_) {
--        return this.spawn(p_262634_, null, p_262707_, p_262597_, false, false);
-+        // CraftBukkit start
-+        return this.spawn(p_262634_, p_262707_, p_262597_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT);
 +    }
 +
-+    @Nullable
-+    public T spawn(ServerLevel worldserver, BlockPos blockposition, MobSpawnType enummobspawn, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason spawnReason) {
-+        return this.spawn(worldserver, (Consumer<T>) null, blockposition, enummobspawn, false, false, spawnReason); // CraftBukkit - decompile error
-+        // CraftBukkit end
++    // Magma
++    private org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason magma$spawnReason = org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT;
++    public void magma$setSpawnReason(org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason reason) {
++        this.magma$spawnReason = reason;
      }
  
      @Nullable
+@@ -927,7 +_,9 @@
      public T spawn(ServerLevel p_262704_, @Nullable Consumer<T> p_262621_, BlockPos p_262672_, MobSpawnType p_262644_, boolean p_262690_, boolean p_262590_) {
-+        // CraftBukkit start
-+        return this.spawn(p_262704_, p_262621_, p_262672_, p_262644_, p_262690_, p_262590_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT);
-+    }
-+
-+    @Nullable
-+    public T spawn(ServerLevel p_262704_, @Nullable Consumer<T> p_262621_, BlockPos p_262672_, MobSpawnType p_262644_, boolean p_262690_, boolean p_262590_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason spawnReason) {
-+        // CraftBukkit end
          T t = this.create(p_262704_, p_262621_, p_262672_, p_262644_, p_262690_, p_262590_);
          if (t != null) {
 -            p_262704_.addFreshEntityWithPassengers(t);
-+            p_262704_.addFreshEntityWithPassengers(t, spawnReason);
++            p_262704_.addFreshEntityWithPassengers(t, magma$spawnReason);
 +            return !t.isRemoved() ? t : null; // Don't return an entity when CreatureSpawnEvent is canceled
 +            // CraftBukkit end
          }

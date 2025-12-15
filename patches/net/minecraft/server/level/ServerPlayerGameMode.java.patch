@@ -253,7 +253,7 @@
 +
 +            BlockState blockstate = block.playerWillDestroy(this.level, p_9281_, blockstate1, this.player);
 +
-+            boolean flag = this.level.removeBlock(p_9281_, false);
++            boolean flag = removeBlock(p_9281_, blockstate, false);
 +
 +            if (this.isCreative()) {
 +                // return true; // CraftBukkit

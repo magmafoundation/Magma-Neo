@@ -3,7 +3,10 @@ package org.bukkit.craftbukkit.potion;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
+import java.util.HashMap;
+import java.util.Map;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import org.bukkit.potion.PotionData;
@@ -38,6 +41,8 @@ public class CraftPotionUtil {
             .put(PotionType.TURTLE_MASTER, PotionType.LONG_TURTLE_MASTER)
             .put(PotionType.SLOW_FALLING, PotionType.LONG_SLOW_FALLING)
             .build();
+
+    public static Map<ResourceLocation, PotionType> modded = new HashMap<>();
 
     public static PotionType fromBukkit(PotionData data) {
         if (data == null) {

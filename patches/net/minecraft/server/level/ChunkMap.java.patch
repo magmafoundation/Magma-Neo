@@ -91,7 +91,7 @@
          p_294215_.connection.chunkSender.dropChunk(p_294215_, p_294758_);
      }
  
-@@ -907,19 +_,35 @@
+@@ -907,18 +_,35 @@
      }
  
      private CompletableFuture<Optional<CompoundTag>> readChunk(ChunkPos p_214964_) {
@@ -125,32 +125,32 @@
              return false;
          } else {
              for (ServerPlayer serverplayer : this.playerMap.getAllPlayers()) {
--                if (this.playerIsCloseEnoughForSpawning(serverplayer, p_183880_)) {
-+                if (this.playerIsCloseEnoughForSpawning(serverplayer, p_183880_, blockRange)) {
++                magma$range.set(blockRange);
+                 if (this.playerIsCloseEnoughForSpawning(serverplayer, p_183880_)) {
                      return true;
                  }
-             }
-@@ -936,7 +_,7 @@
+@@ -936,6 +_,7 @@
              Builder<ServerPlayer> builder = ImmutableList.builder();
  
              for (ServerPlayer serverplayer : this.playerMap.getAllPlayers()) {
--                if (this.playerIsCloseEnoughForSpawning(serverplayer, p_183889_)) {
-+                if (this.playerIsCloseEnoughForSpawning(serverplayer, p_183889_, 16384.0D)) { // Spigot
++                magma$range.set(16384.0D);
+                 if (this.playerIsCloseEnoughForSpawning(serverplayer, p_183889_)) {
                      builder.add(serverplayer);
                  }
-             }
-@@ -945,12 +_,12 @@
+@@ -945,12 +_,15 @@
          }
      }
  
--    private boolean playerIsCloseEnoughForSpawning(ServerPlayer p_183752_, ChunkPos p_183753_) {
-+    private boolean playerIsCloseEnoughForSpawning(ServerPlayer p_183752_, ChunkPos p_183753_, double range) { // Spigot
++    // Magma
++    private final com.google.common.util.concurrent.AtomicDouble magma$range = new com.google.common.util.concurrent.AtomicDouble(0);
++
+     private boolean playerIsCloseEnoughForSpawning(ServerPlayer p_183752_, ChunkPos p_183753_) {
          if (p_183752_.isSpectator()) {
              return false;
          } else {
              double d0 = euclideanDistanceSquared(p_183753_, p_183752_);
 -            return d0 < 16384.0;
-+            return d0 < range; // Spigot
++            return d0 < magma$range.getAndSet(0); // Spigot
          }
      }
  
