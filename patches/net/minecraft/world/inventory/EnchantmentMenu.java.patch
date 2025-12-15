@@ -1,5 +1,13 @@
 --- a/net/minecraft/world/inventory/EnchantmentMenu.java
 +++ b/net/minecraft/world/inventory/EnchantmentMenu.java
+@@ -9,6 +_,7 @@
+ import net.minecraft.core.Holder;
+ import net.minecraft.core.HolderSet;
+ import net.minecraft.core.IdMap;
++import net.minecraft.core.Registry;
+ import net.minecraft.core.RegistryAccess;
+ import net.minecraft.core.registries.Registries;
+ import net.minecraft.resources.ResourceLocation;
 @@ -39,6 +_,13 @@
              super.setChanged();
              EnchantmentMenu.this.slotsChanged(this);
@@ -34,7 +42,7 @@
              }
  
              @Override
-@@ -92,32 +_,36 @@
+@@ -92,6 +_,9 @@
          this.addDataSlot(DataSlot.shared(this.levelClue, 0));
          this.addDataSlot(DataSlot.shared(this.levelClue, 1));
          this.addDataSlot(DataSlot.shared(this.levelClue, 2));
@@ -44,11 +52,8 @@
      }
  
      @Override
-     public void slotsChanged(Container p_39461_) {
-         if (p_39461_ == this.enchantSlots) {
-             ItemStack itemstack = p_39461_.getItem(0);
--            if (!itemstack.isEmpty() && itemstack.isEnchantable()) {
-+            if (!itemstack.isEmpty()) { // CraftBukkit - relax condition
+@@ -101,23 +_,24 @@
+             if (!itemstack.isEmpty() && itemstack.isEnchantable()) {
                  this.access.execute((p_344366_, p_344367_) -> {
                      IdMap<Holder<Enchantment>> idmap = p_344366_.registryAccess().registryOrThrow(Registries.ENCHANTMENT).asHolderIdMap();
 -                    int j = 0;
@@ -117,12 +122,14 @@
                      this.broadcastChanges();
                  });
              } else {
-@@ -161,16 +_,27 @@
+@@ -161,16 +_,13 @@
                          (p_347276_, p_347277_) -> {
                              ItemStack itemstack2 = itemstack;
                              List<EnchantmentInstance> list = this.getEnchantmentList(p_347276_.registryAccess(), itemstack, p_39466_, this.costs[p_39466_]);
 -                            if (!list.isEmpty()) {
--                                p_39465_.onEnchantmentPerformed(itemstack, i);
++                            if (true || !list.isEmpty()) {
++                                if (mixinFixCB(p_39465_, p_347276_, list, itemstack2, i)) return;
+                                 p_39465_.onEnchantmentPerformed(itemstack, i);
 -                                if (itemstack.is(Items.BOOK)) {
 -                                    itemstack2 = itemstack.transmuteCopy(Items.ENCHANTED_BOOK);
 -                                    this.enchantSlots.setItem(0, itemstack2);
@@ -131,23 +138,6 @@
 -                                for (EnchantmentInstance enchantmentinstance : list) {
 -                                    itemstack2.enchant(enchantmentinstance.enchantment, enchantmentinstance.level);
 -                                }
-+                            // CraftBukkit start
-+                            net.minecraft.core.Registry<net.minecraft.core.Holder<net.minecraft.world.item.enchantment.Enchantment>> registry = (net.minecraft.core.Registry<net.minecraft.core.Holder<net.minecraft.world.item.enchantment.Enchantment>>) p_347276_.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).asHolderIdMap();
-+                            if (true || !list.isEmpty()) {
-+                                java.util.Map<org.bukkit.enchantments.Enchantment, Integer> enchants = new java.util.HashMap<org.bukkit.enchantments.Enchantment, Integer>();
-+                                for (EnchantmentInstance instance : list) {
-+                                    enchants.put(org.bukkit.craftbukkit.enchantments.CraftEnchantment.minecraftHolderToBukkit(instance.enchantment), instance.level);
-+                                }
-+                                org.bukkit.craftbukkit.inventory.CraftItemStack item = org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(itemstack2);
-+                                org.bukkit.enchantments.Enchantment hintedEnchantment = org.bukkit.craftbukkit.enchantments.CraftEnchantment.minecraftHolderToBukkit(registry.byId(enchantClue[i]));
-+                                int hintedEnchantmentLevel = levelClue[i];
-+                                org.bukkit.event.enchantment.EnchantItemEvent event = new org.bukkit.event.enchantment.EnchantItemEvent((org.bukkit.entity.Player) p_39465_.getBukkitEntity(), this.getBukkitView(), access.getLocation().getBlock(), item, this.costs[i], enchants, hintedEnchantment, hintedEnchantmentLevel, i);
-+                                p_347276_.getCraftServer().getPluginManager().callEvent(event);
-+                                int level = event.getExpLevelCost();
-+                                if (event.isCancelled() || (level > p_39465_.experienceLevel && !p_39465_.getAbilities().instabuild) || event.getEnchantsToAdd().isEmpty()) {
-+                                    return;
-+                                }
-+                                // CraftBukkit end
 +                                // Neo: Allow items to transform themselves when enchanted, instead of relying on hardcoded transformations for Items.BOOK
 +                                itemstack2 = itemstack.getItem().applyEnchantments(itemstack, list);
 +                                this.enchantSlots.setItem(0, itemstack2);
@@ -155,6 +145,31 @@
  
                                  itemstack1.consume(i, p_39465_);
                                  if (itemstack1.isEmpty()) {
+@@ -199,6 +_,24 @@
+         }
+     }
+ 
++    // Magma start - moved from clickMenuButton as it was causing issues with mixins
++    private boolean mixinFixCB(Player p_39465_, Level p_347276_, List<EnchantmentInstance> list, ItemStack itemstack2, int i) {
++        net.minecraft.core.Registry<net.minecraft.core.Holder<net.minecraft.world.item.enchantment.Enchantment>> registry = (net.minecraft.core.Registry<net.minecraft.core.Holder<net.minecraft.world.item.enchantment.Enchantment>>) p_347276_.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).asHolderIdMap();
++        java.util.Map<org.bukkit.enchantments.Enchantment, Integer> enchants = new java.util.HashMap<>();
++        for (EnchantmentInstance instance : list) {
++            enchants.put(org.bukkit.craftbukkit.enchantments.CraftEnchantment.minecraftHolderToBukkit(instance.enchantment), instance.level);
++        }
++        org.bukkit.craftbukkit.inventory.CraftItemStack item = org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(itemstack2);
++        org.bukkit.enchantments.Enchantment hintedEnchantment = org.bukkit.craftbukkit.enchantments.CraftEnchantment.minecraftHolderToBukkit(registry.byId(enchantClue[i]));
++        org.bukkit.event.enchantment.EnchantItemEvent event = new org.bukkit.event.enchantment.EnchantItemEvent((org.bukkit.entity.Player) p_39465_.getBukkitEntity(), this.getBukkitView(), access.getLocation().getBlock(), item, this.costs[i], enchants, hintedEnchantment, levelClue[i], i);
++        p_347276_.getCraftServer().getPluginManager().callEvent(event);
++        if (event.isCancelled() || (event.getExpLevelCost() > p_39465_.experienceLevel && !p_39465_.getAbilities().instabuild) || event.getEnchantsToAdd().isEmpty()) {
++            return true;
++        }
++        return false;
++    }
++    // Magma end
++
+     private List<EnchantmentInstance> getEnchantmentList(RegistryAccess p_345264_, ItemStack p_39472_, int p_39473_, int p_39474_) {
+         this.random.setSeed((long)(this.enchantmentSeed.get() + p_39473_));
+         Optional<HolderSet.Named<Enchantment>> optional = p_345264_.registryOrThrow(Registries.ENCHANTMENT).getTag(EnchantmentTags.IN_ENCHANTING_TABLE);
 @@ -231,6 +_,7 @@
  
      @Override
