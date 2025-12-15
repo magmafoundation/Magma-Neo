@@ -1,13 +1,5 @@
 --- a/net/minecraft/world/inventory/EnchantmentMenu.java
 +++ b/net/minecraft/world/inventory/EnchantmentMenu.java
-@@ -9,6 +_,7 @@
- import net.minecraft.core.Holder;
- import net.minecraft.core.HolderSet;
- import net.minecraft.core.IdMap;
-+import net.minecraft.core.Registry;
- import net.minecraft.core.RegistryAccess;
- import net.minecraft.core.registries.Registries;
- import net.minecraft.resources.ResourceLocation;
 @@ -39,6 +_,13 @@
              super.setChanged();
              EnchantmentMenu.this.slotsChanged(this);
