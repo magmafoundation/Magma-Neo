@@ -93,7 +93,7 @@
                  this.discard();
                  return;
              }
-@@ -376,7 +_,13 @@
+@@ -376,7 +_,14 @@
          boolean flag = entity.getType() == EntityType.ENDERMAN;
          int i = entity.getRemainingFireTicks();
          if (this.isOnFire() && !flag) {
@@ -102,7 +102,8 @@
 +            org.bukkit.event.entity.EntityCombustByEntityEvent combustEvent = new org.bukkit.event.entity.EntityCombustByEntityEvent(this.getBukkitEntity(), entity.getBukkitEntity(), 5.0F);
 +            org.bukkit.Bukkit.getPluginManager().callEvent(combustEvent);
 +            if (!combustEvent.isCancelled()) {
-+                entity.igniteForSeconds(combustEvent.getDuration(), false);
++                entity.magma$igniteForSecondsCallEvent.set(false);
++                entity.igniteForSeconds(combustEvent.getDuration());
 +            }
 +            // CraftBukkit end
          }

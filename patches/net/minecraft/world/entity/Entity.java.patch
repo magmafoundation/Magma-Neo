@@ -247,7 +247,7 @@
          }
  
          this.checkBelowWorld();
-@@ -517,14 +_,46 @@
+@@ -517,14 +_,47 @@
  
      public void lavaHurt() {
          if (!this.fireImmune()) {
@@ -262,11 +262,13 @@
 +                this.level.getCraftServer().getPluginManager().callEvent(combustEvent);
 +
 +                if (!combustEvent.isCancelled()) {
-+                    this.igniteForSeconds(combustEvent.getDuration(), false);
++                    this.magma$igniteForSecondsCallEvent.set(false);
++                    this.igniteForSeconds(combustEvent.getDuration());
 +                }
 +            } else {
 +                // This will be called every single tick the entity is in lava, so don't throw an event
-+                this.igniteForSeconds(15.0F, false);
++                this.magma$igniteForSecondsCallEvent.set(false);
++                this.igniteForSeconds(15.0F);
 +            }
 +
 +            if (this.hurt(this.damageSources().lava().directBlock(level, lastLavaContact), 4.0F)) {
@@ -275,14 +277,13 @@
 +            // CraftBukkit end - we also don't throw an event unless the object in lava is living, to save on some event calls
          }
      }
++
++    // Magma
++    public java.util.concurrent.atomic.AtomicBoolean magma$igniteForSecondsCallEvent = new java.util.concurrent.atomic.AtomicBoolean(true);
  
      public final void igniteForSeconds(float p_345382_) {
 +        // CraftBukkit start
-+        this.igniteForSeconds(p_345382_, true);
-+    }
-+
-+    public final void igniteForSeconds(float p_345382_, boolean callEvent) {
-+        if (callEvent) {
++        if (magma$igniteForSecondsCallEvent.getAndSet(true)) {
 +            org.bukkit.event.entity.EntityCombustEvent event = new org.bukkit.event.entity.EntityCombustEvent(this.getBukkitEntity(), p_345382_);
 +            this.level.getCraftServer().getPluginManager().callEvent(event);
 +
@@ -849,7 +850,7 @@
      }
  
      public int getTicksFrozen() {
-@@ -2362,11 +_,41 @@
+@@ -2362,11 +_,42 @@
  
      public void thunderHit(ServerLevel p_19927_, LightningBolt p_19928_) {
          this.setRemainingFireTicks(this.remainingFireTicks + 1);
@@ -868,7 +869,8 @@
 +            org.bukkit.event.entity.EntityCombustByEntityEvent entityCombustEvent = new org.bukkit.event.entity.EntityCombustByEntityEvent(stormBukkitEntity, thisBukkitEntity, 8.0F);
 +            pluginManager.callEvent(entityCombustEvent);
 +            if (!entityCombustEvent.isCancelled()) {
-+                this.igniteForSeconds(entityCombustEvent.getDuration(), false);
++                this.magma$igniteForSecondsCallEvent.set(false);
++                this.igniteForSeconds(entityCombustEvent.getDuration());
 +            }
 +            // CraftBukkit end
 +        }

@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/Container.java
 +++ b/net/minecraft/world/Container.java
-@@ -91,4 +_,30 @@
+@@ -91,4 +_,40 @@
              return level.getBlockEntity(blockpos) != p_272877_ ? false : p_272670_.canInteractWithBlock(blockpos, (double)p_320837_);
          }
      }
@@ -22,11 +22,21 @@
 +        return java.util.Collections.emptyList();
 +    }
 +
-+    org.bukkit.inventory.InventoryHolder getOwner();
++    default org.bukkit.inventory.InventoryHolder getOwner() {
++        return this instanceof BlockEntity blockEntity ? org.magmafoundation.magma.util.InventoryHelper.getHolder(blockEntity) : null;
++    }
 +
-+    void setMaxStackSize(int size);
++    default void setMaxStackSize(int size) {
 +
-+    org.bukkit.Location getLocation();
++    }
++
++    default org.bukkit.Location getLocation() {
++        if(this instanceof BlockEntity blockEntity) {
++            BlockPos pos = blockEntity.getBlockPos();
++            return new org.bukkit.Location(blockEntity.getLevel().getWorld(), pos.getX(), pos.getY(), pos.getZ());
++        }
++        return null;
++    }
 +
 +    int MAX_STACK = 99;
 +    // CraftBukkit end

@@ -148,16 +148,13 @@
      }
  
      protected void collectImplicitComponents(DataComponentMap.Builder p_338210_) {
-@@ -313,6 +_,15 @@
+@@ -313,6 +_,12 @@
          }
      }
  
 +    // CraftBukkit start - add method
 +    public org.bukkit.inventory.InventoryHolder getOwner() {
-+        if (level == null) return null;
-+        org.bukkit.block.BlockState state = level.getWorld().getBlockAt(worldPosition.getX(), worldPosition.getY(), worldPosition.getZ()).getState();
-+        if (state instanceof org.bukkit.inventory.InventoryHolder) return (org.bukkit.inventory.InventoryHolder) state;
-+        return null;
++        return org.magmafoundation.magma.util.InventoryHelper.getHolder(level, worldPosition);
 +    }
 +    // CraftBukkit end
 +

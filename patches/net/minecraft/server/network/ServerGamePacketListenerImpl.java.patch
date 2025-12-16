@@ -387,7 +387,7 @@
                              boolean flag2 = false;
                              if (!this.player.isChangingDimension()
 -                                && d10 > 0.0625
-+                                && d10 > org.spigotmc.SpigotConfig.movedWronglyThreshold
++                                && d10 > org.spigotmc.SpigotConfig.movedWronglyThreshold || d10 > 0.0625
                                  && !this.player.isSleeping()
                                  && !this.player.gameMode.isCreative()
                                  && this.player.gameMode.getGameModeForPlayer() != GameType.SPECTATOR) {
