@@ -1,5 +1,16 @@
 --- a/net/minecraft/world/level/block/BedBlock.java
 +++ b/net/minecraft/world/level/block/BedBlock.java
+@@ -78,6 +_,10 @@
+         return blockstate.getBlock() instanceof BedBlock ? blockstate.getValue(FACING) : null;
+     }
+ 
++    private BlockState finalBlockState;
++    private BlockPos finalBlockPos;
++    private Level finalLevel;
++
+     @Override
+     protected InteractionResult useWithoutItem(BlockState p_49515_, Level p_49516_, BlockPos p_49517_, Player p_49518_, BlockHitResult p_49520_) {
+         if (p_49516_.isClientSide) {
 @@ -91,7 +_,8 @@
                  }
              }
@@ -10,18 +21,17 @@
                  p_49516_.removeBlock(p_49517_, false);
                  BlockPos blockpos = p_49517_.relative(p_49515_.getValue(FACING).getOpposite());
                  if (p_49516_.getBlockState(blockpos).is(this)) {
-@@ -108,7 +_,16 @@
+@@ -108,7 +_,15 @@
  
                  return InteractionResult.SUCCESS;
              } else {
-+                // CraftBukkit start
-+                BlockState finalBlockState = p_49515_;
-+                BlockPos finalBlockPos = p_49517_;
-+                // CraftBukkit end
++                finalBlockPos = p_49517_;
++                finalBlockState = p_49515_;
++                finalLevel = p_49516_;
                  p_49518_.startSleepInBed(p_49517_).ifLeft(p_49477_ -> {
 +                    // CraftBukkit start - handling bed explosion from below here
-+                    if (!p_49516_.dimensionType().bedWorks()) {
-+                        this.explodeBed(finalBlockState, p_49516_, finalBlockPos);
++                    if (!finalLevel.dimensionType().bedWorks()) {
++                        this.explodeBed(finalBlockState, finalLevel, finalBlockPos);
 +                    } else
 +                    // CraftBukkit end
                      if (p_49477_.getMessage() != null) {
