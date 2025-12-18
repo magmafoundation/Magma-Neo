@@ -1,0 +1,8 @@
+@FieldsAreNonnullByDefault
+@MethodsReturnNonnullByDefault
+@ParametersAreNonnullByDefault
+package org.magmafoundation.magma.asm;
+
+import javax.annotation.ParametersAreNonnullByDefault;
+import net.minecraft.FieldsAreNonnullByDefault;
+import net.minecraft.MethodsReturnNonnullByDefault;

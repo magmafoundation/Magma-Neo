@@ -4,9 +4,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class Magma {
-    private static final Logger LOGGER = LogManager.getLogger();
+    public static final Logger LOGGER = LogManager.getLogger();
 
     private static String version = "";
+    private static final String BUKKIT_VERSION = "v1_21_R1";
 
     static {
         version = Magma.class.getPackage().getImplementationVersion();
@@ -18,5 +19,9 @@ public class Magma {
 
     public static Logger getLogger() {
         return LOGGER;
+    }
+
+    public static String getBukkitVersion() {
+        return BUKKIT_VERSION;
     }
 }
