@@ -699,7 +699,7 @@
              }
  
              this.dead = true;
-@@ -1361,46 +_,75 @@
+@@ -1361,17 +_,26 @@
          if (!this.level().isClientSide) {
              boolean flag = false;
              if (p_21269_ instanceof WitherBoss) {
@@ -718,7 +718,6 @@
  
                  if (!flag) {
                      ItemEntity itementity = new ItemEntity(this.level(), this.getX(), this.getY(), this.getZ(), new ItemStack(Items.WITHER_ROSE));
--                    this.level().addFreshEntity(itementity);
 +
 +                    // CraftBukkit start
 +                    org.bukkit.event.entity.EntityDropItemEvent event = new org.bukkit.event.entity.EntityDropItemEvent(this.getBukkitEntity(), (org.bukkit.entity.Item) itementity.getBukkitEntity());
@@ -727,9 +726,10 @@
 +                        return;
 +                    }
 +                    // CraftBukkit end
+                     this.level().addFreshEntity(itementity);
                  }
              }
-         }
+@@ -1379,28 +_,49 @@
      }
  
      protected void dropAllDeathLoot(ServerLevel p_348524_, DamageSource p_21192_) {
