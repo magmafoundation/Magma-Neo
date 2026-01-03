@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/entity/projectile/ThrownEgg.java
 +++ b/net/minecraft/world/entity/projectile/ThrownEgg.java
-@@ -57,27 +_,57 @@
+@@ -57,27 +_,58 @@
      protected void onHit(HitResult p_37488_) {
          super.onHit(p_37488_);
          if (!this.level().isClientSide) {
@@ -51,8 +51,8 @@
                              break;
                          }
  
--                        this.level().addFreshEntity(chicken);
-+                        this.level().addFreshEntity(chicken, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.EGG); // CraftBukkit
++                        this.level().setSpawnReason(org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.EGG); // Magma
+                         this.level().addFreshEntity(chicken);
                      }
                  }
              }

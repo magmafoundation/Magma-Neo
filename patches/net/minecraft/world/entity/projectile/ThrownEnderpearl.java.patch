@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/entity/projectile/ThrownEnderpearl.java
 +++ b/net/minecraft/world/entity/projectile/ThrownEnderpearl.java
-@@ -66,23 +_,30 @@
+@@ -66,23 +_,31 @@
  
                  if (entity instanceof ServerPlayer serverplayer) {
                      if (serverplayer.connection.isAcceptingMessages()) {
@@ -18,8 +18,8 @@
                              Endermite endermite = EntityType.ENDERMITE.create(serverlevel);
                              if (endermite != null) {
                                  endermite.moveTo(entity.getX(), entity.getY(), entity.getZ(), entity.getYRot(), entity.getXRot());
--                                serverlevel.addFreshEntity(endermite);
-+                                serverlevel.addFreshEntity(endermite, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.ENDER_PEARL);
++                                serverlevel.setSpawnReason(org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.ENDER_PEARL); // Magma
+                                 serverlevel.addFreshEntity(endermite);
                              }
                          }
  
