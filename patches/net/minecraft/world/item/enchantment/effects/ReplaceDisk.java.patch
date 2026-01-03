@@ -5,7 +5,7 @@
              if (blockpos1.distToCenterSqr(p_353044_.x(), (double)blockpos1.getY() + 0.5, p_353044_.z()) < (double)Mth.square(i)
                  && this.predicate.map(p_353051_ -> p_353051_.test(p_353045_, blockpos1)).orElse(true)
 -                && p_353045_.setBlockAndUpdate(blockpos1, this.blockState.getState(randomsource, blockpos1))) {
-+                && org.bukkit.craftbukkit.event.CraftEventFactory.handleBlockFormEvent(p_353045_, blockpos1,  this.blockState.getState(randomsource, blockpos1), p_353038_)) { // CraftBukkit - Call EntityBlockFormEvent for Frost Walker
++                && p_353045_.setBlockAndUpdate(blockpos1, this.blockState.getState(randomsource, blockpos1)) || org.bukkit.craftbukkit.event.CraftEventFactory.handleBlockFormEvent(p_353045_, blockpos1,  this.blockState.getState(randomsource, blockpos1), p_353038_)) {
                  this.triggerGameEvent.ifPresent(p_353037_ -> p_353045_.gameEvent(p_353038_, (Holder<GameEvent>)p_353037_, blockpos1));
              }
          }

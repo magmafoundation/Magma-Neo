@@ -954,7 +954,7 @@
                  }
  
                  return p_21194_;
-@@ -1677,13 +_,221 @@
+@@ -1677,13 +_,222 @@
          }
      }
  
@@ -1116,7 +1116,8 @@
 +            if (f > 0 || !human) {
 +                if (human) {
 +                    // PAIL: Be sure to drag all this code from the Player subclass each update.
-+                    ((Player) this).causeFoodExhaustion(damagesource.getFoodExhaustion(), org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.DAMAGED); // CraftBukkit - EntityExhaustionEvent
++                    ((Player) this).setExhaustionReason(org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.DAMAGED); // Magma
++                    ((Player) this).causeFoodExhaustion(damagesource.getFoodExhaustion());
 +                    if (f < 3.4028235E37F) {
 +                        ((Player) this).awardStat(Stats.DAMAGE_TAKEN, Math.round(f * 10.0F));
 +                    }

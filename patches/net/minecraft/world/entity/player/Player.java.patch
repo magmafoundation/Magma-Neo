@@ -320,7 +320,7 @@
                  if (this.useItem.isEmpty()) {
                      if (interactionhand == InteractionHand.MAIN_HAND) {
                          this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
-@@ -949,20 +_,35 @@
+@@ -949,19 +_,35 @@
          }
      }
  
@@ -358,11 +358,10 @@
              }
  
              if (f1 != 0.0F) {
--                this.causeFoodExhaustion(p_36312_.getFoodExhaustion());
-+                this.causeFoodExhaustion(p_36312_.getFoodExhaustion(), org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.DAMAGED); // CraftBukkit - EntityExhaustionEvent
++                this.setExhaustionReason(org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.DAMAGED); // Magma
+                 this.causeFoodExhaustion(p_36312_.getFoodExhaustion());
                  this.getCombatTracker().recordDamage(p_36312_, f1);
                  this.setHealth(this.getHealth() - f1);
-                 if (f1 < 3.4028235E37F) {
 @@ -970,7 +_,9 @@
                  }
  
@@ -535,12 +534,13 @@
                                  if (itemstack == this.getMainHandItem()) {
                                      this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
                                  } else {
-@@ -1305,12 +_,18 @@
+@@ -1305,12 +_,19 @@
                              }
                          }
  
 -                        this.causeFoodExhaustion(0.1F);
-+                        this.causeFoodExhaustion(this.level().spigotConfig.combatExhaustion, org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.ATTACK); // CraftBukkit - EntityExhaustionEvent // Spigot
++                        this.setExhaustionReason(org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.ATTACK); // Magma
++                        this.causeFoodExhaustion(this.level().spigotConfig.combatExhaustion);
                      } else {
                          this.level()
                              .playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.PLAYER_ATTACK_NODAMAGE, this.getSoundSource(), 1.0F, 1.0F);
@@ -592,15 +592,17 @@
          super.stopSleeping();
          if (this.level() instanceof ServerLevel && p_36227_) {
              ((ServerLevel)this.level()).updateSleepingPlayerList();
-@@ -1452,9 +_,9 @@
+@@ -1452,9 +_,11 @@
          super.jumpFromGround();
          this.awardStat(Stats.JUMP);
          if (this.isSprinting()) {
 -            this.causeFoodExhaustion(0.2F);
-+            this.causeFoodExhaustion(this.level().spigotConfig.jumpSprintExhaustion, org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.JUMP_SPRINT); // CraftBukkit - EntityExhaustionEvent // Spigot
++            this.setExhaustionReason(org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.JUMP_SPRINT); // Magma
++            this.causeFoodExhaustion(this.level().spigotConfig.jumpSprintExhaustion);
          } else {
 -            this.causeFoodExhaustion(0.05F);
-+            this.causeFoodExhaustion(this.level().spigotConfig.jumpWalkExhaustion, org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.JUMP); // CraftBukkit - EntityExhaustionEvent // Spigot
++            this.setExhaustionReason(org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.JUMP); // Magma
++            this.causeFoodExhaustion(this.level().spigotConfig.jumpWalkExhaustion);
          }
      }
  
@@ -711,22 +713,23 @@
          this.experienceLevel += p_36276_;
          if (this.experienceLevel < 0) {
              this.experienceLevel = 0;
-@@ -1661,10 +_,21 @@
+@@ -1661,10 +_,22 @@
          }
      }
  
-+    // CraftBukkit start
-     public void causeFoodExhaustion(float p_36400_) {
-+        this.causeFoodExhaustion(p_36400_, org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.UNKNOWN);
++    // Magma start - mixin support
++    private org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason magma$ExhaustionReason = org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.UNKNOWN;
++    public void setExhaustionReason(org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason reason) {
++        magma$ExhaustionReason = reason;
 +    }
 +
-+    public void causeFoodExhaustion(float p_36400_, org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason reason) {
-+        // CraftBukkit end
+     public void causeFoodExhaustion(float p_36400_) {
          if (!this.abilities.invulnerable) {
              if (!this.level().isClientSide) {
 -                this.foodData.addExhaustion(p_36400_);
 +                // CraftBukkit start
-+                org.bukkit.event.entity.EntityExhaustionEvent event = org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerExhaustionEvent(this, reason, p_36400_);
++                org.bukkit.event.entity.EntityExhaustionEvent event = org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerExhaustionEvent(this, magma$ExhaustionReason, p_36400_);
++                magma$ExhaustionReason = org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.UNKNOWN;
 +                if (!event.isCancelled()) {
 +                    this.foodData.addExhaustion(event.getExhaustion());
 +                }

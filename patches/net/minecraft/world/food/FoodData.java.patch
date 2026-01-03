@@ -42,7 +42,7 @@
      public void tick(Player p_38711_) {
          Difficulty difficulty = p_38711_.level().getDifficulty();
          this.lastFoodLevel = this.foodLevel;
-@@ -38,29 +_,39 @@
+@@ -38,29 +_,41 @@
              if (this.saturationLevel > 0.0F) {
                  this.saturationLevel = Math.max(this.saturationLevel - 1.0F, 0.0F);
              } else if (difficulty != Difficulty.PEACEFUL) {
@@ -69,7 +69,8 @@
 -                this.addExhaustion(f);
 +                entityhuman.setHealRegainReason(org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.SATIATED); // Magma - add regain reason
 +                entityhuman.heal(f / 6.0F);
-+                entityhuman.causeFoodExhaustion(f, org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.REGEN); // CraftBukkit - EntityExhaustionEvent
++                entityhuman.setExhaustionReason(org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.REGEN); // Magma
++                entityhuman.causeFoodExhaustion(f);
                  this.tickTimer = 0;
              }
          } else if (flag && this.foodLevel >= 18 && p_38711_.isHurt()) {
@@ -80,7 +81,8 @@
 +            if (this.tickTimer >= this.unsaturatedRegenRate) { // CraftBukkit - add regen rate manipulation
 +                entityhuman.setHealRegainReason(org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.SATIATED); // Magma - add regain reason
 +                entityhuman.heal(1.0F);
-+                entityhuman.causeFoodExhaustion(entityhuman.level().spigotConfig.regenExhaustion, org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.REGEN); // CraftBukkit - EntityExhaustionEvent // Spigot
++                entityhuman.setExhaustionReason(org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.REGEN); // Magma
++                entityhuman.causeFoodExhaustion(entityhuman.level().spigotConfig.regenExhaustion);
                  this.tickTimer = 0;
              }
          } else if (this.foodLevel <= 0) {

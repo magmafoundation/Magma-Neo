@@ -31,7 +31,7 @@
      }
  
      public boolean is(HolderSet<Item> p_298683_) {
-@@ -351,18 +_,178 @@
+@@ -351,18 +_,179 @@
      }
  
      public InteractionResult useOn(UseOnContext p_41662_) {
@@ -183,7 +183,8 @@
 +                        try {
 +                            if (world.getBlockEntity(SignItem.openSign) instanceof net.minecraft.world.level.block.entity.SignBlockEntity tileentitysign) {
 +                                if (world.getBlockState(SignItem.openSign).getBlock() instanceof net.minecraft.world.level.block.SignBlock blocksign) {
-+                                    blocksign.openTextEdit(player, tileentitysign, true, org.bukkit.event.player.PlayerSignOpenEvent.Cause.PLACE);
++                                    blocksign.setOpenSignCause(org.bukkit.event.player.PlayerSignOpenEvent.Cause.PLACE); // Magma
++                                    blocksign.openTextEdit(player, tileentitysign, true);
 +                                }
 +                            }
 +                        } finally {
