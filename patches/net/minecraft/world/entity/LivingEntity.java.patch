@@ -928,18 +928,19 @@
              p_21163_ = CombatRules.getDamageAfterAbsorb(
                  this, p_21163_, p_21162_, (float)this.getArmorValue(), (float)this.getAttributeValue(Attributes.ARMOR_TOUGHNESS)
              );
-@@ -1640,7 +_,8 @@
+@@ -1636,6 +_,7 @@
+         return p_21163_;
+     }
+ 
++
+     protected float getDamageAfterMagicAbsorb(DamageSource p_21193_, float p_21194_) {
          if (p_21193_.is(DamageTypeTags.BYPASSES_EFFECTS)) {
              return p_21194_;
-         } else {
--            if (this.hasEffect(MobEffects.DAMAGE_RESISTANCE) && !p_21193_.is(DamageTypeTags.BYPASSES_RESISTANCE)) {
-+            // CraftBukkit - Moved to handleEntityDamage(DamageSource, float)
-+            if (false && this.hasEffect(MobEffects.DAMAGE_RESISTANCE) && !p_21193_.is(DamageTypeTags.BYPASSES_RESISTANCE)) {
-                 int i = (this.getEffect(MobEffects.DAMAGE_RESISTANCE).getAmplifier() + 1) * 5;
-                 int j = 25 - i;
+@@ -1646,8 +_,10 @@
                  float f = p_21194_ * (float)j;
-@@ -1648,6 +_,7 @@
+                 float f1 = p_21194_;
                  p_21194_ = Math.max(f / 25.0F, 0.0F);
++
                  float f2 = f1 - p_21194_;
                  if (f2 > 0.0F && f2 < 3.4028235E37F) {
 +                    this.damageContainers.peek().setReduction(net.neoforged.neoforge.common.damagesource.DamageContainer.Reduction.MOB_EFFECTS, f2);
