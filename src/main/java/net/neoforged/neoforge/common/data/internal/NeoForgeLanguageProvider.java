@@ -226,6 +226,7 @@ public final class NeoForgeLanguageProvider extends LanguageProvider {
         add(Tags.Items.FOODS_COOKED_FISH, "Cooked Fishes");
         add(Tags.Items.FOODS_COOKED_MEAT, "Cooked Meats");
         add(Tags.Items.FOODS_COOKIE, "Cookies");
+        add(Tags.Items.FOODS_DOUGH, "Doughs");
         add(Tags.Items.FOODS_EDIBLE_WHEN_PLACED, "Edible When Placed");
         add(Tags.Items.FOODS_FOOD_POISONING, "Food Poisoning Foods");
         add(Tags.Items.FOODS_FRUIT, "Fruits");
@@ -259,6 +260,7 @@ public final class NeoForgeLanguageProvider extends LanguageProvider {
         add(Tags.Items.INGOTS_NETHERITE, "Netherite Ingots");
         add(Tags.Items.LEATHERS, "Leathers");
         add(Tags.Items.MUSIC_DISCS, "Music Discs");
+        add(Tags.Items.LOOM_PATTERNS, "Loom Patterns");
         add(Tags.Items.MUSHROOMS, "Mushrooms");
         add(Tags.Items.NETHER_STARS, "Nether Stars");
         add(Tags.Items.NETHERRACKS, "Netherracks");

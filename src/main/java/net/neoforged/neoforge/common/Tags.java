@@ -513,6 +513,20 @@ public class Tags {
         public static final TagKey<Item> FOODS_BERRY = tag("foods/berry");
         public static final TagKey<Item> FOODS_BREAD = tag("foods/bread");
         public static final TagKey<Item> FOODS_COOKIE = tag("foods/cookie");
+        /**
+         * For all doughs regardless of type, specific types of dough should fall under their respective sub-tag.<br/>
+         * For example:<br/>
+         * - Wheat dough (which generally results in bread) would go in "#c:foods/dough/wheat"<br/>
+         * - Rye dough (which has rye as it's main ingredient) would go in "#c:foods/dough/rye"<br/>
+         * - Sub-tags should also be added to this tag, for example: "#c:foods/dough/wheat" should be added to "#c:foods/dough"<br/>
+         * <br/>
+         * There are some important assumptions that should be kept in mind.<br/>
+         * - It is assumed that "1 dough = result", which in the case of wheat dough would be "1 dough = 1 bread"<br/>
+         * - It is assumed that this dough can be baked into another item<br/>
+         * - It is *not* assumed that all doughs result in bread, there can be doughs in this tag that result in things like pizza, etc.
+         * This means that this tag should *not* be used for furnace recipes, mods should add their own dough to result recipes for their respective items.
+         */
+        public static final TagKey<Item> FOODS_DOUGH = tag("foods/dough");
         public static final TagKey<Item> FOODS_RAW_MEAT = tag("foods/raw_meat");
         public static final TagKey<Item> FOODS_COOKED_MEAT = tag("foods/cooked_meat");
         public static final TagKey<Item> FOODS_RAW_FISH = tag("foods/raw_fish");
@@ -588,6 +602,11 @@ public class Tags {
          * A pancake with a JUKEBOX_PLAYABLE component attached to play in Jukeboxes as an Easter Egg is not a music disc and would not go in this tag.
          */
         public static final TagKey<Item> MUSIC_DISCS = tag("music_discs");
+        /**
+         * For banner patterns to be used in recipes.
+         * This is a backport of 26.1 Minecraft's #minecraft:loom_patterns item tag.
+         */
+        public static final TagKey<Item> LOOM_PATTERNS = tag("loom_patterns");
         public static final TagKey<Item> NETHER_STARS = tag("nether_stars");
         public static final TagKey<Item> NETHERRACKS = tag("netherracks");
         public static final TagKey<Item> NUGGETS = tag("nuggets");
