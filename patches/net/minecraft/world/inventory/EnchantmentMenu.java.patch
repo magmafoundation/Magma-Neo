@@ -19,7 +19,7 @@
      public final int[] enchantClue = new int[]{-1, -1, -1};
      public final int[] levelClue = new int[]{-1, -1, -1};
 +    // CraftBukkit start
-+    private org.bukkit.craftbukkit.inventory.CraftInventoryView bukkitEntity = null;
++    private org.bukkit.craftbukkit.inventory.view.CraftEnchantmentView bukkitEntity = null;
 +    private org.bukkit.entity.Player player;
 +    // CraftBukkit end
  
@@ -186,13 +186,13 @@
 +
 +    // CraftBukkit start
 +    @Override
-+    public org.bukkit.craftbukkit.inventory.CraftInventoryView getBukkitView() {
++    public org.bukkit.craftbukkit.inventory.view.CraftEnchantmentView getBukkitView() {
 +        if (bukkitEntity != null) {
 +            return bukkitEntity;
 +        }
 +
 +        org.bukkit.craftbukkit.inventory.CraftInventoryEnchanting inventory = new org.bukkit.craftbukkit.inventory.CraftInventoryEnchanting(this.enchantSlots);
-+        bukkitEntity = new org.bukkit.craftbukkit.inventory.CraftInventoryView(this.player, inventory, this);
++        bukkitEntity = new org.bukkit.craftbukkit.inventory.view.CraftEnchantmentView(this.player, inventory, this);
 +        return bukkitEntity;
 +    }
 +    // CraftBukkit end

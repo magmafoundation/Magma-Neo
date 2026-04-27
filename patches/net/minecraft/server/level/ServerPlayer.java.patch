@@ -452,8 +452,17 @@
          if (this.isSleeping()) {
              this.serverLevel().getChunkSource().broadcastAndSend(this, new ClientboundAnimatePacket(this, 2));
          }
-@@ -1074,15 +_,46 @@
+@@ -1072,17 +_,55 @@
+         this.containerCounter = this.containerCounter % 100 + 1;
+     }
  
++    // Magma - start
++    public int nextContainerCounterInt() {
++        this.nextContainerCounter();
++        return containerCounter; // CraftBukkit
++    }
++    // Magma - end
++
      @Override
      public OptionalInt openMenu(@Nullable MenuProvider p_9033_) {
 +        return openMenu(p_9033_, (java.util.function.Consumer<net.minecraft.network.RegistryFriendlyByteBuf>) null);
@@ -537,12 +546,8 @@
  
      @Override
      public void openHorseInventory(AbstractHorse p_9059_, Container p_9060_) {
--        if (this.containerMenu != this.inventoryMenu) {
--            this.closeContainer();
--        }
--
 +        // CraftBukkit start - Inventory open hook
-         this.nextContainerCounter();
++        this.nextContainerCounter();
 +        AbstractContainerMenu container = new HorseInventoryMenu(this.containerCounter, this.getInventory(), p_9060_, p_9059_, p_9059_.getInventoryColumns());
 +        container.setTitle(p_9059_.getDisplayName());
 +        container = org.bukkit.craftbukkit.event.CraftEventFactory.callInventoryOpenEvent(this, container);
@@ -551,10 +556,11 @@
 +            return;
 +        }
 +        // CraftBukkit end
-+        if (this.containerMenu != this.inventoryMenu) {
-+            this.closeContainer();
-+        }
-+
+         if (this.containerMenu != this.inventoryMenu) {
+             this.closeContainer();
+         }
+ 
+-        this.nextContainerCounter();
 +        // this.nextContainerCounter(); // CraftBukkit - moved up
          int i = p_9059_.getInventoryColumns();
          this.connection.send(new ClientboundHorseScreenOpenPacket(this.containerCounter, i, p_9059_.getId()));

@@ -1510,7 +1510,7 @@
              if (!this.level().isClientSide) {
                  this.setLivingEntityFlag(1, true);
                  this.setLivingEntityFlag(2, p_21159_ == InteractionHand.OFF_HAND);
-@@ -3111,7 +_,28 @@
+@@ -3111,7 +_,31 @@
              } else {
                  if (!this.useItem.isEmpty() && this.isUsingItem()) {
                      this.triggerItemUseEffects(this.useItem, 16);
@@ -1520,15 +1520,18 @@
 +                    // Magma todo - ^ take a look at this
 +
 +                    // CraftBukkit start - fire PlayerItemConsumeEvent
-+                    if (this instanceof ServerPlayer) {
++                    if (this instanceof ServerPlayer serverPlayer) {
 +                        org.bukkit.inventory.ItemStack craftItem = org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(this.useItem);
 +                        org.bukkit.inventory.EquipmentSlot hand = org.bukkit.craftbukkit.CraftEquipmentSlot.getHand(interactionhand);
 +                        org.bukkit.event.player.PlayerItemConsumeEvent event = new org.bukkit.event.player.PlayerItemConsumeEvent((org.bukkit.entity.Player) this.getBukkitEntity(), craftItem, hand);
 +                        this.level().getCraftServer().getPluginManager().callEvent(event);
 +                        if (event.isCancelled()) {
 +                            // Update client
-+                            ((ServerPlayer) this).getBukkitEntity().updateInventory();
-+                            ((ServerPlayer) this).getBukkitEntity().updateScaledHealth();
++                            if (this.useItem.getItem() instanceof net.minecraft.world.item.SuspiciousStewItem itemSuspiciousStew) {
++                                itemSuspiciousStew.cancelUsingItem(serverPlayer, this.useItem);
++                            }
++                            serverPlayer.getBukkitEntity().updateInventory();
++                            serverPlayer.getBukkitEntity().updateScaledHealth();
 +                            return;
 +                        }
 +                        itemstack = (craftItem.equals(event.getItem())) ? this.useItem.finishUsingItem(this.level(), this) : org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(event.getItem()).finishUsingItem(this.level(), this);

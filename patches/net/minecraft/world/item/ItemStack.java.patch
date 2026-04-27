@@ -156,7 +156,7 @@
 +                        BlockState block = world.getBlockState(newblockposition);
 +
 +                        if (!(block.getBlock() instanceof net.minecraft.world.level.block.BaseEntityBlock)) {
-+                            block.onPlace(world, newblockposition, oldBlock, true);
++                            block.onPlace(world, newblockposition, oldBlock, true, p_41662_);
 +                        }
 +
 +                        world.notifyAndUpdatePhysics(newblockposition, null, oldBlock, block, world.getBlockState(newblockposition), updateFlag, 512);
@@ -246,7 +246,7 @@
      }
  
      public boolean isStackable() {
-@@ -411,33 +_,51 @@
+@@ -411,39 +_,62 @@
      }
  
      public boolean isDamaged() {
@@ -304,7 +304,18 @@
                  }
  
                  int i = this.getDamageValue() + p_220158_;
-@@ -456,8 +_,13 @@
+                 this.setDamageValue(i);
+                 if (i >= this.getMaxDamage()) {
+                     Item item = this.getItem();
++                    // CraftBukkit start - Check for item breaking
++                    if (this.count == 1 && p_220160_ != null && p_220160_ instanceof final ServerPlayer serverPlayer) {
++                        org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerItemBreakEvent(serverPlayer, this);
++                    }
++                    // CraftBukkit end
+                     this.shrink(1);
+                     p_348596_.accept(item);
+                 }
+@@ -456,8 +_,10 @@
              this.hurtAndBreak(
                  p_41623_,
                  serverlevel,
@@ -312,9 +323,6 @@
 -                p_348383_ -> p_41624_.onEquippedItemBroken(p_348383_, p_319898_)
 +                p_41624_,
 +                p_348383_ -> {
-+                    if (this.count == 1 && p_41624_ instanceof Player) {
-+                        org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerItemBreakEvent((net.minecraft.world.entity.player.Player) p_41624_, this);
-+                    }
 +                    p_41624_.onEquippedItemBroken(p_348383_, p_319898_);
 +                }
              );

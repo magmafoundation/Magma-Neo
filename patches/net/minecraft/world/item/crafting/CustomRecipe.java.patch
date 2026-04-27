@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/item/crafting/CustomRecipe.java
 +++ b/net/minecraft/world/item/crafting/CustomRecipe.java
-@@ -24,4 +_,11 @@
+@@ -24,4 +_,15 @@
      public CraftingBookCategory category() {
          return this.category;
      }
@@ -8,7 +8,11 @@
 +    // CraftBukkit start
 +    @Override
 +    public org.bukkit.inventory.Recipe toBukkitRecipe(org.bukkit.NamespacedKey id) {
-+        return new org.bukkit.craftbukkit.inventory.CraftComplexRecipe(id, this);
++        org.bukkit.craftbukkit.inventory.CraftItemStack result = org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(getResultItem(net.minecraft.core.RegistryAccess.EMPTY));
++        org.bukkit.craftbukkit.inventory.CraftComplexRecipe recipe = new org.bukkit.craftbukkit.inventory.CraftComplexRecipe(id, result, this);
++        recipe.setGroup(this.getGroup());
++        recipe.setCategory(org.bukkit.craftbukkit.inventory.CraftRecipe.getCategory(this.category()));
++        return recipe;
 +    }
 +    // CraftBukkit end
  }

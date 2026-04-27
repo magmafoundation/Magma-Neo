@@ -1,6 +1,6 @@
 --- a/net/minecraft/server/network/ServerCommonPacketListenerImpl.java
 +++ b/net/minecraft/server/network/ServerCommonPacketListenerImpl.java
-@@ -27,6 +_,24 @@
+@@ -27,6 +_,29 @@
  import org.slf4j.Logger;
  
  public abstract class ServerCommonPacketListenerImpl implements ServerCommonPacketListener, org.bukkit.craftbukkit.entity.CraftPlayer.TransferCookieConnection {
@@ -19,6 +19,11 @@
 +    @Override
 +    public void sendPacket(Packet<?> packet) {
 +        send(packet);
++    }
++
++    @Override
++    public void kickPlayer(Component reason) {
++        disconnect(reason);
 +    }
 +    // CraftBukkit end
 +

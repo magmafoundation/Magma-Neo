@@ -7,7 +7,7 @@
 +    // CraftBukkit start
 +    public static final int DEFAULT_DENIED_COST = -1;
 +    public int maximumRepairCost = 40;
-+    private org.bukkit.craftbukkit.inventory.CraftInventoryView bukkitEntity;
++    private org.bukkit.craftbukkit.inventory.view.CraftAnvilView bukkitEntity;
 +    // CraftBukkit end
  
      public AnvilMenu(int p_39005_, Inventory p_39006_) {
@@ -147,7 +147,7 @@
          }
      }
  
-@@ -298,4 +_,25 @@
+@@ -298,4 +_,26 @@
      public int getCost() {
          return this.cost.get();
      }
@@ -161,14 +161,15 @@
 +
 +    // CraftBukkit start
 +    @Override
-+    public org.bukkit.craftbukkit.inventory.CraftInventoryView getBukkitView() {
++    public org.bukkit.craftbukkit.inventory.view.CraftAnvilView getBukkitView() {
 +        if (bukkitEntity != null) {
 +            return bukkitEntity;
 +        }
 +
-+        org.bukkit.craftbukkit.inventory.CraftInventory inventory = new org.bukkit.craftbukkit.inventory.CraftInventoryAnvil(
-+                access.getLocation(), this.inputSlots, this.resultSlots, this);
-+        bukkitEntity = new org.bukkit.craftbukkit.inventory.CraftInventoryView(this.player.getBukkitEntity(), inventory, this);
++        org.bukkit.craftbukkit.inventory.CraftInventoryAnvil inventory = new org.bukkit.craftbukkit.inventory.CraftInventoryAnvil(
++                access.getLocation(), this.inputSlots, this.resultSlots);
++        bukkitEntity = new org.bukkit.craftbukkit.inventory.view.CraftAnvilView(this.player.getBukkitEntity(), inventory, this);
++        bukkitEntity.updateFromLegacy(inventory);
 +        return bukkitEntity;
 +    }
 +    // CraftBukkit end

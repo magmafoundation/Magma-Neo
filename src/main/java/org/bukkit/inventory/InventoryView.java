@@ -14,7 +14,10 @@ public interface InventoryView {
 
     /**
      * Represents various extra properties of certain inventory windows.
+     * 
+     * @deprecated use {@link InventoryView} and its children
      */
+    @Deprecated(forRemoval = true, since = "1.21")
     public enum Property {
         /**
          * The progress of the down-pointing arrow in a brewing inventory.

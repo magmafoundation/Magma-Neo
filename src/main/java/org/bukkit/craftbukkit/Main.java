@@ -170,19 +170,8 @@ public class Main {
             }
 
             float javaVersion = Float.parseFloat(System.getProperty("java.class.version"));
-            if (javaVersion < 61.0) {
-                System.err.println("Unsupported Java detected (" + javaVersion + "). This version of Minecraft requires at least Java 17. Check your Java version with the command 'java -version'.");
-                return;
-            }
             if (javaVersion > 66.0) {
                 System.err.println("Unsupported Java detected (" + javaVersion + "). Only up to Java 22 is supported.");
-                return;
-            }
-            String javaVersionName = System.getProperty("java.version");
-            // J2SE SDK/JRE Version String Naming Convention
-            boolean isPreRelease = javaVersionName.contains("-");
-            if (isPreRelease && javaVersion == 61.0) {
-                System.err.println("Unsupported Java detected (" + javaVersionName + "). You are running an outdated, pre-release version. Only general availability versions of Java are supported. Please update your Java version.");
                 return;
             }
 
@@ -213,7 +202,7 @@ public class Main {
                     Date buildDate = new Date(Integer.parseInt(Main.class.getPackage().getImplementationVendor()) * 1000L);
 
                     Calendar deadline = Calendar.getInstance();
-                    deadline.add(Calendar.DAY_OF_YEAR, -7);
+                    deadline.add(Calendar.DAY_OF_YEAR, -28);
                     if (buildDate.before(deadline.getTime())) {
                         System.err.println("*** Error, this build is outdated ***");
                         System.err.println("*** Please download a new build as per instructions from https://www.spigotmc.org/go/outdated-spigot ***");

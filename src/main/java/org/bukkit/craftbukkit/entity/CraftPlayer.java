@@ -269,6 +269,8 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
         ConnectionProtocol getProtocol();
 
         void sendPacket(Packet<?> packet);
+
+        void kickPlayer(Component reason);
     }
 
     public record CookieFuture(ResourceLocation key, CompletableFuture<byte[]> future) {

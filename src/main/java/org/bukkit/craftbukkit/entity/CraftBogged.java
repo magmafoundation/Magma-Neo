@@ -23,4 +23,14 @@ public class CraftBogged extends CraftAbstractSkeleton implements Bogged {
     public Skeleton.SkeletonType getSkeletonType() {
         return Skeleton.SkeletonType.BOGGED;
     }
+
+    @Override
+    public boolean isSheared() {
+        return getHandle().isSheared();
+    }
+
+    @Override
+    public void setSheared(boolean flag) {
+        getHandle().setSheared(flag);
+    }
 }

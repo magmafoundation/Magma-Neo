@@ -17,15 +17,21 @@
              }
          }
  
-@@ -143,6 +_,7 @@
+@@ -139,18 +_,19 @@
+     }
+ 
+     @Override
+-    protected void onPlace(BlockState p_49279_, Level p_49280_, BlockPos p_49281_, BlockState p_49282_, boolean p_49283_) {
++    protected void onPlace(BlockState p_49279_, Level p_49280_, BlockPos p_49281_, BlockState p_49282_, boolean p_49283_, net.minecraft.world.item.context.UseOnContext context) { // CraftBukkit - context
          if (!p_49282_.is(p_49279_.getBlock())) {
              if (inPortalDimension(p_49280_)) {
                  Optional<PortalShape> optional = PortalShape.findEmptyPortalShape(p_49280_, p_49281_, Direction.Axis.X);
 +                optional = net.neoforged.neoforge.event.EventHooks.onTrySpawnPortal(p_49280_, p_49281_, optional);
                  if (optional.isPresent()) {
-                     optional.get().createPortalBlocks();
+-                    optional.get().createPortalBlocks();
++                    optional.get().createPortalBlocks((context == null) ? null : context.getPlayer()); // CraftBukkit - player
                      return;
-@@ -150,7 +_,7 @@
+                 }
              }
  
              if (!p_49279_.canSurvive(p_49280_, p_49281_)) {

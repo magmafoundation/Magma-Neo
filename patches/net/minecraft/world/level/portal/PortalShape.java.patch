@@ -65,8 +65,8 @@
      }
  
 -    public void createPortalBlocks() {
-+    // CraftBukkit start - return boolean
-+    public boolean createPortalBlocks() {
++    // CraftBukkit start - return boolean, add entity
++    public boolean createPortalBlocks(Entity entity) {
 +        org.bukkit.World bworld = this.level.getMinecraftWorld().getWorld();
 +
 +        // Copy below for loop
@@ -76,7 +76,7 @@
 +            blocks.setBlock(blockposition, blockstate, 18);
 +        });
 +
-+        org.bukkit.event.world.PortalCreateEvent event = new org.bukkit.event.world.PortalCreateEvent((java.util.List<org.bukkit.block.BlockState>) (java.util.List) blocks.getList(), bworld, null, org.bukkit.event.world.PortalCreateEvent.CreateReason.FIRE);
++        org.bukkit.event.world.PortalCreateEvent event = new org.bukkit.event.world.PortalCreateEvent((java.util.List<org.bukkit.block.BlockState>) (java.util.List) blocks.getList(), bworld, (entity == null) ? null : entity.getBukkitEntity(), org.bukkit.event.world.PortalCreateEvent.CreateReason.FIRE);
 +        this.level.getMinecraftWorld().getServer().server.getPluginManager().callEvent(event);
 +
 +        if (event.isCancelled()) {

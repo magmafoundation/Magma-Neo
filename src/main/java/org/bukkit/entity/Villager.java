@@ -132,11 +132,7 @@ public interface Villager extends AbstractVillager {
 
         @NotNull
         private static Type getType(@NotNull String key) {
-            NamespacedKey namespacedKey = NamespacedKey.minecraft(key);
-            Type type = Registry.VILLAGER_TYPE.get(namespacedKey);
-
-            Preconditions.checkNotNull(type, "No villager type found for %s. This is a bug.", namespacedKey);
-            return type;
+            return Registry.VILLAGER_TYPE.getOrThrow(NamespacedKey.minecraft(key));
         }
 
         /**
@@ -242,11 +238,7 @@ public interface Villager extends AbstractVillager {
 
         @NotNull
         private static Profession getProfession(@NotNull String key) {
-            NamespacedKey namespacedKey = NamespacedKey.minecraft(key);
-            Profession profession = Registry.VILLAGER_PROFESSION.get(namespacedKey);
-
-            Preconditions.checkNotNull(profession, "No villager profession found for %s. This is a bug.", namespacedKey);
-            return profession;
+            return Registry.VILLAGER_PROFESSION.getOrThrow(NamespacedKey.minecraft(key));
         }
 
         /**

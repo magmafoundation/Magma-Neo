@@ -18,12 +18,19 @@
      }
  
      public BlockBehaviour.Properties properties() {
-@@ -156,9 +_,11 @@
+@@ -156,9 +_,17 @@
      }
  
      protected void onPlace(BlockState p_60566_, Level p_60567_, BlockPos p_60568_, BlockState p_60569_, boolean p_60570_) {
+-    }
 +        org.spigotmc.AsyncCatcher.catchOp("block onPlace"); // Spigot
-     }
++    }
++
++    // CraftBukkit start
++    protected void onPlace(BlockState iblockdata, Level world, BlockPos blockposition, BlockState iblockdata1, boolean flag, @Nullable net.minecraft.world.item.context.UseOnContext context) {
++        this.onPlace(iblockdata, world, blockposition, iblockdata1, flag);
++    }
++    // CraftBukkit end
  
      protected void onRemove(BlockState p_60515_, Level p_60516_, BlockPos p_60517_, BlockState p_60518_, boolean p_60519_) {
 +        org.spigotmc.AsyncCatcher.catchOp("block remove"); // Spigot
@@ -145,6 +152,21 @@
              return this.pushReaction;
          }
  
+@@ -692,7 +_,13 @@
+         }
+ 
+         public void onPlace(Level p_60697_, BlockPos p_60698_, BlockState p_60699_, boolean p_60700_) {
+-            this.getBlock().onPlace(this.asState(), p_60697_, p_60698_, p_60699_, p_60700_);
++            // CraftBukkit start
++            this.onPlace(p_60697_, p_60698_, p_60699_, p_60700_, null);
++        }
++
++        public void onPlace(Level p_60697_, BlockPos p_60698_, BlockState p_60699_, boolean p_60700_, @Nullable net.minecraft.world.item.context.UseOnContext context) {
++            this.getBlock().onPlace(this.asState(), p_60697_, p_60698_, p_60699_, p_60700_, context);
++            // CraftBukkit end
+         }
+ 
+         public void onRemove(Level p_60754_, BlockPos p_60755_, BlockState p_60756_, boolean p_60757_) {
 @@ -724,6 +_,9 @@
          }
  

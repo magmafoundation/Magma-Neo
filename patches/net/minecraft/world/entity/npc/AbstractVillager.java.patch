@@ -1,16 +1,13 @@
 --- a/net/minecraft/world/entity/npc/AbstractVillager.java
 +++ b/net/minecraft/world/entity/npc/AbstractVillager.java
-@@ -38,6 +_,16 @@
+@@ -38,6 +_,13 @@
  import org.slf4j.Logger;
  
  public abstract class AbstractVillager extends AgeableMob implements InventoryCarrier, Npc, Merchant {
 +
 +    // CraftBukkit start
-+    private org.bukkit.craftbukkit.inventory.CraftMerchant craftMerchant;
-+
-+    @Override
 +    public org.bukkit.craftbukkit.inventory.CraftMerchant getCraftMerchant() {
-+        return (craftMerchant == null) ? craftMerchant = new org.bukkit.craftbukkit.inventory.CraftMerchant(this) : craftMerchant;
++        return (org.bukkit.craftbukkit.entity.CraftAbstractVillager) getBukkitEntity();
 +    }
 +    // CraftBukkit end
 +

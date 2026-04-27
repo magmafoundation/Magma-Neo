@@ -145,7 +145,7 @@
                      if (!this.hasPassenger(entity) && entity.isPushable() && entity instanceof AbstractMinecart) {
                          entity.push(this);
                      }
-@@ -332,23 +_,34 @@
+@@ -332,25 +_,45 @@
      }
  
      protected double getMaxSpeed() {
@@ -183,7 +183,18 @@
 +            // CraftBukkit end
          }
      }
++
++    // CraftBukkit start
++    @Override
++    public Vec3 getKnownMovement() {
++        double d0 = this.getMaxSpeed();
++        Vec3 vec3d = super.getKnownMovement();
++        return new Vec3(Mth.clamp(vec3d.x, -d0, d0), vec3d.y, Mth.clamp(vec3d.z, -d0, d0));
++    }
++    // CraftBukkit end
  
+     protected void moveAlongTrack(BlockPos p_38156_, BlockState p_38157_) {
+         this.resetFallDistance();
 @@ -361,18 +_,19 @@
          d1 = (double)p_38156_.getY();
          boolean flag = false;

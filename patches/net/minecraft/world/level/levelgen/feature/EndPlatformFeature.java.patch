@@ -16,7 +16,7 @@
          BlockPos.MutableBlockPos blockpos$mutableblockpos = p_352961_.mutable();
  
          for (int i = -2; i <= 2; i++) {
-@@ -26,15 +_,33 @@
+@@ -26,15 +_,34 @@
                  for (int k = -1; k < 3; k++) {
                      BlockPos blockpos = blockpos$mutableblockpos.set(p_352961_).move(j, k, i);
                      Block block = k == -1 ? Blocks.OBSIDIAN : Blocks.AIR;
@@ -38,19 +38,20 @@
 -        }
 +
 +        // CraftBukkit start
-+        if (magma$entity == null) {
-+            // SPIGOT-7746: Entity will only be null during world generation, which is async, so just generate without event
-+            blockList.updateList();
-+            return;
++        // SPIGOT-7746: Entity will only be null during world generation, which is async, so just generate without event
++        if (magma$entity != null) {
++            org.bukkit.World bworld = p_352905_.getLevel().getWorld();
++            org.bukkit.event.world.PortalCreateEvent portalEvent = new org.bukkit.event.world.PortalCreateEvent((java.util.List<org.bukkit.block.BlockState>) (java.util.List) blockList.getList(), bworld, magma$entity.getBukkitEntity(), org.bukkit.event.world.PortalCreateEvent.CreateReason.END_PLATFORM);
++            p_352905_.getLevel().getCraftServer().getPluginManager().callEvent(portalEvent);
++            if (portalEvent.isCancelled()) {
++                return;
++            }
 +        }
-+
-+        org.bukkit.World bworld = p_352905_.getLevel().getWorld();
-+        org.bukkit.event.world.PortalCreateEvent portalEvent = new org.bukkit.event.world.PortalCreateEvent((java.util.List<org.bukkit.block.BlockState>) (java.util.List) blockList.getList(), bworld, magma$entity.getBukkitEntity(), org.bukkit.event.world.PortalCreateEvent.CreateReason.END_PLATFORM);
-+
-+        p_352905_.getLevel().getCraftServer().getPluginManager().callEvent(portalEvent);
-+        if (!portalEvent.isCancelled()) {
-+            blockList.updateList();
++        // SPIGOT-7856: End platform not dropping items after replacing blocks
++        if (p_352931_) {
++            blockList.getList().forEach((state) -> p_352905_.destroyBlock(state.getPosition(), true, null));
 +        }
++        blockList.updateList();
 +        // CraftBukkit end
      }
  }

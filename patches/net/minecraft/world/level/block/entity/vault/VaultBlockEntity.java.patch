@@ -1,0 +1,30 @@
+--- a/net/minecraft/world/level/block/entity/vault/VaultBlockEntity.java
++++ b/net/minecraft/world/level/block/entity/vault/VaultBlockEntity.java
+@@ -286,6 +_,13 @@
+                     if (!list.isEmpty()) {
+                         p_324373_.awardStat(Stats.ITEM_USED.get(p_324551_.getItem()));
+                         p_324551_.consume(p_323660_.keyItem().getCount(), p_324373_);
++                        // CraftBukkit start
++                        org.bukkit.event.block.BlockDispenseLootEvent vaultDispenseLootEvent = org.bukkit.craftbukkit.event.CraftEventFactory.callBlockDispenseLootEvent(p_323533_, p_323777_, p_324373_, list);
++                        if (vaultDispenseLootEvent.isCancelled()) {
++                            return;
++                        }
++                        list = vaultDispenseLootEvent.getDispensedLoot().stream().map(org.bukkit.craftbukkit.inventory.CraftItemStack::asNMSCopy).toList();
++                        // CraftBukkit end
+                         unlock(p_323533_, p_324589_, p_323777_, p_323660_, p_323829_, p_324341_, list);
+                         p_323829_.addToRewardedPlayers(p_324373_);
+                         p_324341_.updateConnectedPlayersWithinRange(p_323533_, p_323777_, p_323829_, p_323660_, p_323660_.deactivationRange());
+@@ -312,6 +_,13 @@
+                 ItemStack itemstack = getRandomDisplayItemFromLootTable(
+                     p_323551_, p_323602_, p_324332_.overrideLootTableToDisplay().orElse(p_324332_.lootTable())
+                 );
++                // CraftBukkit start
++                org.bukkit.event.block.VaultDisplayItemEvent event = org.bukkit.craftbukkit.event.CraftEventFactory.callVaultDisplayItemEvent(p_323551_, p_323602_, itemstack);
++                if (event.isCancelled()) {
++                    return;
++                }
++                itemstack = org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(event.getDisplayItem());
++                // CraftBukkit end
+                 p_323644_.setDisplayItem(itemstack);
+             }
+         }

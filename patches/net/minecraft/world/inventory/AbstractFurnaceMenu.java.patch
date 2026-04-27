@@ -5,16 +5,16 @@
      private final RecipeBookType recipeBookType;
  
 +    // CraftBukkit start
-+    private org.bukkit.craftbukkit.inventory.CraftInventoryView bukkitEntity = null;
++    private org.bukkit.craftbukkit.inventory.view.CraftFurnaceView bukkitEntity = null;
 +    private Inventory player;
 +    @Override
-+    public org.bukkit.craftbukkit.inventory.CraftInventoryView getBukkitView() {
++    public org.bukkit.craftbukkit.inventory.view.CraftFurnaceView getBukkitView() {
 +        if (bukkitEntity != null) {
 +            return bukkitEntity;
 +        }
 +
 +        org.bukkit.craftbukkit.inventory.CraftInventoryFurnace inventory = new org.bukkit.craftbukkit.inventory.CraftInventoryFurnace((AbstractFurnaceBlockEntity) this.container);
-+        bukkitEntity = new org.bukkit.craftbukkit.inventory.CraftInventoryView(this.player.player.getBukkitEntity(), inventory, this);
++        bukkitEntity = new org.bukkit.craftbukkit.inventory.view.CraftFurnaceView(this.player.player.getBukkitEntity(), inventory, this);
 +        return bukkitEntity;
 +    }
 +    // CraftBukkit end
