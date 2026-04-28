@@ -88,7 +88,7 @@ public final class CraftChatMessage {
                             hex.append(c);
 
                             if (hex.length() == 7) {
-                                modifier = RESET.withColor(TextColor.parseColor(hex.toString()).result().get());
+                                this.modifier = StringMessage.RESET.withColor(TextColor.parseColor(this.hex.toString()).result().orElse(null)); // Paper
                                 hex = null;
                             }
                         } else if (format.isFormat() && format != ChatFormatting.RESET) {
@@ -262,6 +262,7 @@ public final class CraftChatMessage {
 
     public static String fromComponent(Component component) {
         if (component == null) return "";
+        if (component instanceof io.papermc.paper.adventure.AdventureComponent) component = ((io.papermc.paper.adventure.AdventureComponent) component).deepConverted();
         StringBuilder out = new StringBuilder();
 
         boolean hadFormat = false;

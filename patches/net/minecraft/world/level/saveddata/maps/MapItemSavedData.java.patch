@@ -143,7 +143,7 @@
 +                            cursor.getX(),
 +                            cursor.getY(),
 +                            cursor.getDirection(),
-+                            org.bukkit.craftbukkit.util.CraftChatMessage.fromStringOrOptional(cursor.getCaption())
++                            Optional.ofNullable(io.papermc.paper.adventure.PaperAdventure.asVanilla(cursor.caption()))
 +                        ));
 +                    }
 +                }

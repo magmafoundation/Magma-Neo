@@ -57,6 +57,13 @@ public class CraftMinecartCommand extends CraftMinecart implements CommandMineca
         return CraftChatMessage.fromComponent(getHandle().getCommandBlock().getName());
     }
 
+    // Paper start
+    @Override
+    public net.kyori.adventure.text.@org.jetbrains.annotations.NotNull Component name() {
+        return io.papermc.paper.adventure.PaperAdventure.asAdventure(this.getHandle().getCommandBlock().getName());
+    }
+    // Paper end
+
     @Override
     public boolean isOp() {
         return true;

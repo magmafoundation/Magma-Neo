@@ -1,8 +1,11 @@
 --- a/net/minecraft/world/level/block/SugarCaneBlock.java
 +++ b/net/minecraft/world/level/block/SugarCaneBlock.java
-@@ -58,11 +_,17 @@
+@@ -56,13 +_,19 @@
+                 i++;
+             }
  
-             if (i < 3) {
+-            if (i < 3) {
++            if (i < p_222549_.paperConfig().maxGrowthHeight.reeds) { // Paper - Configurable cactus/bamboo/reed growth heigh
                  int j = p_222548_.getValue(AGE);
 -                if (j == 15) {
 -                    p_222549_.setBlockAndUpdate(p_222550_.above(), this.defaultBlockState());

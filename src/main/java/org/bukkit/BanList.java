@@ -37,6 +37,9 @@ public interface BanList<T> {
 
     /**
      * Gets a {@link BanEntry} by target.
+     * <p>
+     * Bans by name for ban type {@link Type#NAME NAME} are no longer supported and this method will return
+     * null when trying to request them. The replacement is bans by UUID.
      *
      * @param target entry parameter to search for
      * @return the corresponding entry, or null if none found
@@ -58,6 +61,9 @@ public interface BanList<T> {
     /**
      * Adds a ban to this list. If a previous ban exists, this will
      * update the previous entry.
+     * <p>
+     * Bans by name for ban type {@link Type#NAME NAME} are no longer supported and this method will return
+     * null when trying to request them. The replacement is bans by UUID.
      *
      * @param target  the target of the ban
      * @param reason  reason for the ban, null indicates implementation default
@@ -138,6 +144,9 @@ public interface BanList<T> {
     /**
      * Gets if a {@link BanEntry} exists for the target, indicating an active
      * ban status.
+     * <p>
+     * Bans by name for ban type {@link Type#NAME NAME} are no longer supported.
+     * The replacement is bans by UUID.
      *
      * @param target the target to find
      * @return true if a {@link BanEntry} exists for the target, indicating an
@@ -160,6 +169,9 @@ public interface BanList<T> {
     /**
      * Removes the specified target from this list, therefore indicating a
      * "not banned" status.
+     * <p>
+     * Bans by name for ban type {@link Type#NAME NAME} are no longer supported.
+     * The replacement is bans by UUID.
      *
      * @param target the target to remove from this list
      */

@@ -30,7 +30,7 @@
 +                org.bukkit.craftbukkit.util.CraftIconCache icon = server.server.getServerIcon();
 +
 +                ServerListPingEvent() {
-+                    super(connection.hostname, ((java.net.InetSocketAddress) connection.getRemoteAddress()).getAddress(), server.getMotd(), server.getPlayerList().getMaxPlayers());
++                    super(connection.hostname, ((java.net.InetSocketAddress) connection.getRemoteAddress()).getAddress(), server.server.getMotd(), server.getPlayerList().getMaxPlayers()); // Paper - Adventure
 +                }
 +
 +                @Override

@@ -1,7 +1,10 @@
 --- a/net/minecraft/CrashReport.java
 +++ b/net/minecraft/CrashReport.java
-@@ -34,6 +_,7 @@
+@@ -32,8 +_,10 @@
+     private final SystemReport systemReport = new SystemReport();
+ 
      public CrashReport(String p_127509_, Throwable p_127510_) {
++        io.papermc.paper.util.StacktraceDeobfuscator.INSTANCE.deobfuscateThrowable(p_127510_); // Paper
          this.title = p_127509_;
          this.exception = p_127510_;
 +        this.systemReport.setDetail("CraftBukkit Information", new org.bukkit.craftbukkit.CraftCrashReport()); // CraftBukkit

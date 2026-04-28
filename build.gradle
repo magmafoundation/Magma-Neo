@@ -83,7 +83,11 @@ immaculate {
             def skipFiles = [
                 'a/net/minecraft/server/level/ChunkMap.java',
                 'a/net/minecraft/world/level/block/entity/LecternBlockEntity.java',
-                'a/net/minecraft/world/level/block/ChestBlock.java'
+                'a/net/minecraft/world/level/block/ChestBlock.java',
+                // Nested custom-query payload helpers, not top-level interface rewrites.
+                'a/net/minecraft/network/protocol/login/ClientboundCustomQueryPacket.java',
+                'a/net/minecraft/network/protocol/login/ServerboundCustomQueryAnswerPacket.java',
+                'a/net/minecraft/network/chat/PlayerChatMessage.java'
             ]
             for (def skipFile : skipFiles) {
                 if (fileContents.contains(skipFile)) {

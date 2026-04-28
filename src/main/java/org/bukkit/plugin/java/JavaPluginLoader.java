@@ -44,17 +44,17 @@ import org.bukkit.plugin.UnknownDependencyException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.magmafoundation.magma.deps.snakeyaml.error.YAMLException;
-import org.spigotmc.CustomTimingsHandler; // Spigot
+// Spigot
 
 /**
  * Represents a Java plugin loader, allowing plugins in the form of .jar
  */
+@Deprecated(forRemoval = true) // Paper - The PluginLoader system will not function in the near future. This implementation will be moved.
 public final class JavaPluginLoader implements PluginLoader {
     final Server server;
     private final Pattern[] fileFilters = new Pattern[] { Pattern.compile("\\.jar$") };
     private final List<PluginClassLoader> loaders = new CopyOnWriteArrayList<PluginClassLoader>();
-//    private final LibraryLoader libraryLoader;
-    public static final CustomTimingsHandler pluginParentTimer = new CustomTimingsHandler("** Plugins"); // Spigot
+    private final LibraryLoader libraryLoader;
 
     /**
      * This class was not meant to be constructed explicitly
@@ -66,19 +66,20 @@ public final class JavaPluginLoader implements PluginLoader {
         Preconditions.checkArgument(instance != null, "Server cannot be null");
         server = instance;
 
-//        LibraryLoader libraryLoader = null;
-//        try {
-//            libraryLoader = new LibraryLoader(server.getLogger());
-//        } catch (NoClassDefFoundError ex) {
-//            // Provided depends were not added back
-//            server.getLogger().warning("Could not initialize LibraryLoader (missing dependencies?)");
-//        }
-//        this.libraryLoader = libraryLoader;
+        LibraryLoader libraryLoader = null;
+        try {
+            libraryLoader = new LibraryLoader(server.getLogger());
+        } catch (NoClassDefFoundError ex) {
+            // Provided depends were not added back
+            server.getLogger().warning("Could not initialize LibraryLoader (missing dependencies?)");
+        }
+        this.libraryLoader = libraryLoader;
     }
 
     @Override
     @NotNull
     public Plugin loadPlugin(@NotNull final File file) throws InvalidPluginException {
+        if (true) throw new UnsupportedOperationException(); // Paper
         Preconditions.checkArgument(file != null, "File cannot be null");
 
         if (!file.exists()) {
@@ -92,7 +93,7 @@ public final class JavaPluginLoader implements PluginLoader {
             throw new InvalidPluginException(ex);
         }
 
-        final File parentFile = file.getParentFile();
+        final File parentFile = this.server.getPluginsFolder(); // Paper
         final File dataFolder = new File(parentFile, description.getName());
         @SuppressWarnings("deprecation")
         final File oldDataFolder = new File(parentFile, description.getRawName());
@@ -139,8 +140,7 @@ public final class JavaPluginLoader implements PluginLoader {
 
         final PluginClassLoader loader;
         try {
-//            loader = new PluginClassLoader(this, getClass().getClassLoader(), description, dataFolder, file, (libraryLoader != null) ? libraryLoader.createLoader(description) : null);
-            loader = new PluginClassLoader(this, getClass().getClassLoader(), description, dataFolder, file, null);
+            loader = new PluginClassLoader(getClass().getClassLoader(), description, dataFolder, file, (libraryLoader != null) ? libraryLoader.createLoader(description) : null, null, null); // Paper
         } catch (InvalidPluginException ex) {
             throw ex;
         } catch (Throwable ex) {
@@ -287,27 +287,21 @@ public final class JavaPluginLoader implements PluginLoader {
                 }
             }
 
-            final CustomTimingsHandler timings = new CustomTimingsHandler("Plugin: " + plugin.getDescription().getFullName() + " Event: " + listener.getClass().getName() + "::" + method.getName() + "(" + eventClass.getSimpleName() + ")", pluginParentTimer); // Spigot
-            EventExecutor executor = new EventExecutor() {
+            EventExecutor executor = new co.aikar.timings.TimedEventExecutor(new EventExecutor() { // Paper
                 @Override
-                public void execute(@NotNull Listener listener, @NotNull Event event) throws EventException {
+                public void execute(@NotNull Listener listener, @NotNull Event event) throws EventException { // Paper
                     try {
                         if (!eventClass.isAssignableFrom(event.getClass())) {
                             return;
                         }
-                        // Spigot start
-                        boolean isAsync = event.isAsynchronous();
-                        if (!isAsync) timings.startTiming();
                         method.invoke(listener, event);
-                        if (!isAsync) timings.stopTiming();
-                        // Spigot end
                     } catch (InvocationTargetException ex) {
                         throw new EventException(ex.getCause());
                     } catch (Throwable t) {
                         throw new EventException(t);
                     }
                 }
-            };
+            }, plugin, method, eventClass); // Paper
             if (useTimings) {
                 eventSet.add(new TimedRegisteredListener(listener, executor, eh.priority(), plugin, eh.ignoreCancelled()));
             } else {

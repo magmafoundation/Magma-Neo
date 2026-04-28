@@ -9,7 +9,7 @@
      public static final Codec<ResourceKey<Level>> RESOURCE_KEY_CODEC = ResourceKey.codec(Registries.DIMENSION);
      public static final ResourceKey<Level> OVERWORLD = ResourceKey.create(Registries.DIMENSION, ResourceLocation.withDefaultNamespace("overworld"));
      public static final ResourceKey<Level> NETHER = ResourceKey.create(Registries.DIMENSION, ResourceLocation.withDefaultNamespace("the_nether"));
-@@ -114,7 +_,59 @@
+@@ -114,7 +_,66 @@
      private final RegistryAccess registryAccess;
      private final DamageSources damageSources;
      private long subTickCount;
@@ -33,8 +33,15 @@
 +    public final it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<org.bukkit.entity.SpawnCategory> ticksPerSpawnCategory = new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>();
 +    public boolean populating;
 +    public org.spigotmc.SpigotWorldConfig spigotConfig; // Spigot
++    // Paper start - add paper world config
++    public io.papermc.paper.configuration.WorldConfiguration paperConfig;
++    public io.papermc.paper.configuration.WorldConfiguration paperConfig() {
++        return this.paperConfig;
++    }
++    public java.util.function.Function<org.spigotmc.SpigotWorldConfig, io.papermc.paper.configuration.WorldConfiguration> paperConfigFunction;
++    // Paper end - add paper world config
 +
-+    public org.bukkit.craftbukkit.SpigotTimings.WorldTimingsHandler timings; // Spigot
++    public co.aikar.timings.WorldTimingsHandler timings; // Paper
 +    public static BlockPos lastPhysicsProblem; // Spigot
 +    protected org.spigotmc.TickLimiter entityLimiter; // Spigot
 +    protected org.spigotmc.TickLimiter tileLimiter; // Spigot
@@ -141,6 +148,60 @@
      }
  
      @Override
+@@ -167,6 +_,13 @@
+         return null;
+     }
+ 
++    // Paper start
++    public net.minecraft.world.phys.BlockHitResult.Type clipDirect(Vec3 start, Vec3 end, net.minecraft.world.phys.shapes.CollisionContext context) {
++        // To be patched over
++        return this.clip(new ClipContext(start, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, context)).getType();
++    }
++    // Paper end
++
+     public boolean isInWorldBounds(BlockPos p_46740_) {
+         return !this.isOutsideBuildHeight(p_46740_) && isInWorldBoundsHorizontal(p_46740_);
+     }
+@@ -191,6 +_,39 @@
+         return (LevelChunk)this.getChunk(p_46727_, p_46728_, ChunkStatus.FULL);
+     }
+ 
++    // Paper start - if loaded
++    @Nullable
++    @Override
++    public final ChunkAccess getChunkIfLoadedImmediately(int x, int z) {
++        return ((net.minecraft.server.level.ServerLevel)this).chunkSource.getChunkAtIfLoadedImmediately(x, z);
++    }
++
++    @Override
++    @Nullable
++    public final BlockState getBlockStateIfLoaded(BlockPos pos) {
++        // CraftBukkit start - tree generation
++        if (this.captureTreeGeneration) {
++            org.bukkit.craftbukkit.block.CraftBlockState previous = this.capturedBlockStates.get(pos);
++            if (previous != null) {
++                return previous.getHandle();
++            }
++        }
++        // CraftBukkit end
++        if (this.isOutsideBuildHeight(pos)) {
++            return Blocks.VOID_AIR.defaultBlockState();
++        } else {
++            ChunkAccess chunk = this.getChunkIfLoadedImmediately(pos.getX() >> 4, pos.getZ() >> 4);
++            return chunk == null ? null : chunk.getBlockState(pos);
++        }
++    }
++    // Paper end
++
++    @Override
++    public final FluidState getFluidIfLoaded(BlockPos blockposition) {
++        ChunkAccess chunk = this.getChunkIfLoadedImmediately(blockposition.getX() >> 4, blockposition.getZ() >> 4);
++        return chunk == null ? null : chunk.getFluidState(blockposition);
++    }
++
+     @Nullable
+     @Override
+     public ChunkAccess getChunk(int p_46502_, int p_46503_, ChunkStatus p_331611_, boolean p_46505_) {
 @@ -202,13 +_,35 @@
          }
      }
@@ -329,7 +390,7 @@
          if (this.isOutsideBuildHeight(p_46732_)) {
              return Blocks.VOID_AIR.defaultBlockState();
          } else {
-@@ -489,39 +_,84 @@
+@@ -489,39 +_,83 @@
          (this.tickingBlockEntities ? this.pendingBlockEntityTickers : this.blockEntityTickers).add(p_151526_);
      }
  
@@ -394,6 +455,7 @@
  
 +        timings.tileEntityTick.stopTiming(); // Spigot
          this.tickingBlockEntities = false;
++        co.aikar.timings.TimingHistory.tileEntityTicks += this.blockEntityTickers.size(); // Paper
          profilerfiller.pop();
 +        spigotConfig.currentPrimedTnt = 0; // Spigot
      }
@@ -401,9 +463,7 @@
      public <T extends Entity> void guardEntityTick(Consumer<T> p_46654_, T p_46655_) {
          try {
 +            net.neoforged.neoforge.server.timings.TimeTracker.ENTITY_UPDATE.trackStart(p_46655_);
-+            org.bukkit.craftbukkit.SpigotTimings.tickEntityTimer.startTiming(); // Spigot
              p_46654_.accept(p_46655_);
-+            org.bukkit.craftbukkit.SpigotTimings.tickEntityTimer.stopTiming(); // Spigot
          } catch (Throwable throwable) {
              CrashReport crashreport = CrashReport.forThrowable(throwable, "Ticking entity");
              CrashReportCategory crashreportcategory = crashreport.addCategory("Entity being ticked");

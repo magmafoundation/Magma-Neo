@@ -1,50 +1,79 @@
-import java.util.regex.Matcher
-
 project.plugins.apply('dev.lukebemish.immaculate')
 
 abstract class GeneratePackageInfos extends DefaultTask {
+    private static final List<String> PACKAGE_ROOTS = [
+            'net/neoforged/',
+            'org/bukkit/',
+            'com/mojang/',
+            'org/spigotmc/',
+            'org/magmafoundation/',
+            'io/izzel/arclight/',
+            'com/destroystokyo/paper/',
+            'io/papermc/paper/',
+            'ca/spottedleaf/concurrentutil/'
+    ]
+
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     abstract ConfigurableFileCollection getFiles();
 
+    protected static String resolvePackageName(File javaFile) {
+        def normalizedPath = javaFile.toString().replace(File.separatorChar, '/' as char)
+        def packagePath = PACKAGE_ROOTS.findResult { root ->
+            def start = normalizedPath.indexOf(root)
+            if (start < 0) {
+                return null
+            }
+
+            def end = normalizedPath.lastIndexOf('/')
+            if (end <= start) {
+                return null
+            }
+
+            return normalizedPath.substring(start, end)
+        }
+
+        if (packagePath != null) {
+            return packagePath.replace('/', '.')
+        }
+
+        def declaredPackage = javaFile.readLines().findResult { line ->
+            def trimmed = line.trim()
+            if (trimmed.startsWith('package ') && trimmed.endsWith(';')) {
+                return trimmed.substring('package '.length(), trimmed.length() - 1).trim()
+            }
+            return null
+        }
+
+        if (declaredPackage != null && !declaredPackage.isEmpty()) {
+            return declaredPackage
+        }
+
+        throw new GradleException("Cannot infer package name from path or source declaration: ${javaFile}")
+    }
+
     @TaskAction
     void generatePackageInfos() {
-        getFiles().each { javaFile ->
-            def packageInfoFile = new File(javaFile.parent, 'package-info.java')
-            if (!packageInfoFile.exists()) {
-                def pkgName = javaFile.toString().replaceAll(Matcher.quoteReplacement(File.separator), '/')
-                if(pkgName.contains("net/neoforged/")) {
-                    pkgName = pkgName.substring(pkgName.indexOf('net/neoforged/'), pkgName.lastIndexOf('/'))
-                }
-                else if (pkgName.contains("org/bukkit/")) {
-                    pkgName = pkgName.substring(pkgName.indexOf('org/bukkit/'), pkgName.lastIndexOf('/'))
-                }
-                else if (pkgName.contains("com/mojang/")) {
-                    pkgName = pkgName.substring(pkgName.indexOf('com/mojang/'), pkgName.lastIndexOf('/'))
-                }
-                else if(pkgName.contains("org/spigotmc/")) {
-                    pkgName = pkgName.substring(pkgName.indexOf('org/spigotmc/'), pkgName.lastIndexOf('/'))
-                }
-                else if (pkgName.contains("org/magmafoundation/")) {
-                    pkgName = pkgName.substring(pkgName.indexOf('org/magmafoundation/'), pkgName.lastIndexOf('/'))
-                }
-                else if(pkgName.contains("io/izzel/arclight")) {
-                    pkgName = pkgName.substring(pkgName.indexOf('io/izzel/arclight'), pkgName.lastIndexOf('/'))
-                }
-                pkgName = pkgName.replaceAll('/', '.')
+        getFiles().each { fileEntry ->
+            File javaFile = fileEntry instanceof File ? fileEntry : new File(fileEntry.toString())
+            if (javaFile.name.endsWith('.java') && javaFile.name != 'package-info.java') {
+                def packageInfoFile = new File(javaFile.parent, 'package-info.java')
+                if (!packageInfoFile.exists()) {
+                    def pkgName = GeneratePackageInfos.resolvePackageName(javaFile)
 
-                def pkgInfoText = """
-                    |@FieldsAreNonnullByDefault
-                    |@MethodsReturnNonnullByDefault
-                    |@ParametersAreNonnullByDefault
-                    |package $pkgName;
-                    |
-                    |import javax.annotation.ParametersAreNonnullByDefault;
-                    |import net.minecraft.FieldsAreNonnullByDefault;
-                    |import net.minecraft.MethodsReturnNonnullByDefault;
-                """.stripMargin().trim()
+                    def pkgInfoText = """
+                        |@FieldsAreNonnullByDefault
+                        |@MethodsReturnNonnullByDefault
+                        |@ParametersAreNonnullByDefault
+                        |package $pkgName;
+                        |
+                        |import javax.annotation.ParametersAreNonnullByDefault;
+                        |import net.minecraft.FieldsAreNonnullByDefault;
+                        |import net.minecraft.MethodsReturnNonnullByDefault;
+                    """.stripMargin().trim()
 
-                packageInfoFile.text = pkgInfoText
+                    packageInfoFile.text = pkgInfoText
+                }
             }
         }
     }

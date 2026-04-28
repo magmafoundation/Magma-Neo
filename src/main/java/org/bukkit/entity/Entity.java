@@ -30,7 +30,7 @@ import org.jetbrains.annotations.Nullable;
  * Not all methods are guaranteed to work/may have side effects when
  * {@link #isInWorld()} is false.
  */
-public interface Entity extends Metadatable, CommandSender, Nameable, PersistentDataHolder {
+public interface Entity extends Metadatable, CommandSender, Nameable, PersistentDataHolder, net.kyori.adventure.text.event.HoverEventSource<net.kyori.adventure.text.event.HoverEvent.ShowEntity>, net.kyori.adventure.sound.Sound.Emitter { // Paper
     /**
      * Gets the entity's current position
      *
@@ -179,9 +179,13 @@ public interface Entity extends Metadatable, CommandSender, Nameable, Persistent
     public List<org.bukkit.entity.Entity> getNearbyEntities(double x, double y, double z);
 
     /**
-     * Returns a unique id for this entity
+     * Returns the network protocol ID for this entity. This is
+     * not to be used as an identifier for the entity except in
+     * network-related operations. Use {@link #getUniqueId()} as
+     * an entity identifier instead.
      *
-     * @return Entity id
+     * @return the network protocol ID
+     * @see #getUniqueId()
      */
     public int getEntityId();
 
@@ -776,4 +780,30 @@ public interface Entity extends Metadatable, CommandSender, Nameable, Persistent
     @Override
     Spigot spigot();
     // Spigot end
+
+    // Paper start
+    /**
+     * Gets the entity's display name formatted with their team prefix/suffix and
+     * the entity's default hover/click events.
+     *
+     * @return the team display name
+     */
+    net.kyori.adventure.text.@NotNull Component teamDisplayName();
+
+    @NotNull
+    @Override
+    default net.kyori.adventure.text.event.HoverEvent<net.kyori.adventure.text.event.HoverEvent.ShowEntity> asHoverEvent(final @NotNull java.util.function.UnaryOperator<net.kyori.adventure.text.event.HoverEvent.ShowEntity> op) {
+        return net.kyori.adventure.text.event.HoverEvent.showEntity(op.apply(net.kyori.adventure.text.event.HoverEvent.ShowEntity.of(this.getType().getKey(), this.getUniqueId(), this.customName())));
+    }
+
+    /**
+     * Gets the location where this entity originates from.
+     * <p>
+     * This value can be null if the entity hasn't yet been added to the world.
+     *
+     * @return Location where entity originates or null if not yet added
+     */
+    @Nullable
+    Location getOrigin();
+    // Paper end
 }

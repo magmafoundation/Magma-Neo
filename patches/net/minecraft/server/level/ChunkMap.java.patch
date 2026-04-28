@@ -1,6 +1,6 @@
 --- a/net/minecraft/server/level/ChunkMap.java
 +++ b/net/minecraft/server/level/ChunkMap.java
-@@ -142,6 +_,27 @@
+@@ -142,6 +_,33 @@
      public int serverViewDistance;
      private final WorldGenContext worldGenContext;
  
@@ -24,6 +24,12 @@
 +        }
 +    };
 +    // CraftBukkit end
++
++    // Paper start
++    public final ChunkHolder getUnloadingChunkHolder(int chunkX, int chunkZ) {
++        return this.pendingUnloads.get(ca.spottedleaf.moonrise.common.util.CoordinateUtils.getChunkKey(chunkX, chunkZ));
++    }
++    // Paper end
 +
      public ChunkMap(
          ServerLevel p_214836_,
@@ -51,6 +57,19 @@
          this.mainThreadExecutor = p_214841_;
          ProcessorMailbox<Runnable> processormailbox1 = ProcessorMailbox.create(p_214840_, "worldgen");
          ProcessorHandle<Runnable> processorhandle = ProcessorHandle.of("main", p_214841_::tell);
+@@ -204,6 +_,12 @@
+         this.worldGenContext = new WorldGenContext(p_214836_, p_214843_, p_214839_, this.lightEngine, this.mainThreadMailbox);
+     }
+ 
++    // Paper start
++    public int getMobCountNear(final ServerPlayer player, final net.minecraft.world.entity.MobCategory mobCategory) {
++        return -1;
++    }
++    // Paper end
++
+     protected ChunkGenerator generator() {
+         return this.worldGenContext.generator();
+     }
 @@ -395,6 +_,7 @@
                  this.modified = true;
              }
@@ -59,6 +78,14 @@
              return p_140179_;
          }
      }
+@@ -493,6 +_,7 @@
+ 
+         int l = 0;
+         ObjectIterator<ChunkHolder> objectiterator = this.visibleChunkMap.values().iterator();
++        level.timings.tracker1.startTiming(); // Paper
+ 
+         while (l < 20 && p_140354_.getAsBoolean() && objectiterator.hasNext()) {
+             if (this.saveChunkIfNeeded(objectiterator.next())) {
 @@ -510,6 +_,7 @@
                  if (this.pendingUnloads.remove(p_140182_, p_140183_) && chunkaccess != null) {
                      if (chunkaccess instanceof LevelChunk levelchunk) {
@@ -188,6 +215,21 @@
 +        org.spigotmc.AsyncCatcher.catchOp("entity untrack"); // Spigot
          if (p_140332_ instanceof ServerPlayer serverplayer) {
              this.updatePlayerStatus(serverplayer, false);
+ 
+@@ -1135,11 +_,14 @@
+                 chunkmap$trackedentity.serverEntity.sendChanges();
+             }
+         }
++        level.timings.tracker1.stopTiming(); // Paper
+ 
+         if (!list.isEmpty()) {
++            level.timings.tracker2.startTiming(); // Paper
+             for (ChunkMap.TrackedEntity chunkmap$trackedentity1 : this.entityMap.values()) {
+                 chunkmap$trackedentity1.updatePlayers(list);
+             }
++            level.timings.tracker2.stopTiming(); // Paper
+         }
+     }
  
 @@ -1199,6 +_,20 @@
          });

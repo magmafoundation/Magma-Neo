@@ -1,5 +1,6 @@
 package org.spigotmc;
 
+import io.papermc.paper.util.StacktraceDeobfuscator;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MonitorInfo;
 import java.lang.management.ThreadInfo;
@@ -109,7 +110,7 @@ public class WatchdogThread extends Thread {
         }
         log.log(Level.SEVERE, "\tStack:");
         //
-        for (StackTraceElement stack : thread.getStackTrace()) {
+        for (StackTraceElement stack : StacktraceDeobfuscator.INSTANCE.deobfuscateStacktrace(thread.getStackTrace())) { // Paper
             log.log(Level.SEVERE, "\t\t" + stack);
         }
     }

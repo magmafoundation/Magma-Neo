@@ -21,6 +21,12 @@ import org.jetbrains.annotations.Nullable;
  * Represents a human entity, such as an NPC or a player
  */
 public interface HumanEntity extends LivingEntity, AnimalTamer, InventoryHolder {
+
+    // Paper start
+    @Override
+    org.bukkit.inventory.@NotNull EntityEquipment getEquipment();
+    // Paper end
+
     /**
      * Returns the name of this player
      *

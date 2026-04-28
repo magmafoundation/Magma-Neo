@@ -48,3 +48,13 @@
          return this.tags.put(p_128366_, p_128367_);
      }
  
+@@ -234,6 +_,9 @@
+         this.tags.put(p_128363_, NbtUtils.createUUID(p_128364_));
+     }
+ 
++    /**
++     * You must use {@link #hasUUID(String)} before or else it <b>will</b> throw an NPE.
++     */
+     public UUID getUUID(String p_128343_) {
+         return NbtUtils.loadUUID(this.get(p_128343_));
+     }

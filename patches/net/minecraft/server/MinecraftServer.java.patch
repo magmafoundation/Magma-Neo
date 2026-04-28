@@ -1,6 +1,23 @@
 --- a/net/minecraft/server/MinecraftServer.java
 +++ b/net/minecraft/server/MinecraftServer.java
-@@ -262,9 +_,33 @@
+@@ -169,6 +_,7 @@
+ 
+ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTask> implements ServerInfo, ChunkIOErrorReporter, CommandSource, AutoCloseable {
+     public static final Logger LOGGER = LogUtils.getLogger();
++    public static final net.kyori.adventure.text.logger.slf4j.ComponentLogger COMPONENT_LOGGER = net.kyori.adventure.text.logger.slf4j.ComponentLogger.logger(LOGGER.getName()); // Paper
+     public static final String VANILLA_BRAND = "vanilla";
+     private static final float AVERAGE_TICK_TIME_SMOOTHING = 0.8F;
+     private static final int TICK_STATS_SPAN = 100;
+@@ -223,7 +_,7 @@
+     private boolean pvp;
+     private boolean allowFlight;
+     @Nullable
+-    private String motd;
++    private net.kyori.adventure.text.Component motd; // Paper - Adventure
+     private int playerIdleTimeout;
+     private final long[] tickTimesNanos = new long[100];
+     private long aggregatedTickTimesNanos = 0L;
+@@ -262,9 +_,34 @@
      private volatile boolean isSaving;
      private static final AtomicReference<RuntimeException> fatalException = new AtomicReference<>();
  
@@ -9,8 +26,7 @@
 +    public org.bukkit.craftbukkit.CraftServer server;
 +    public static joptsimple.OptionSet options;
 +    public org.bukkit.command.ConsoleCommandSender console;
-+    public jline.console.ConsoleReader reader;
-+    public static int currentTick = (int) (System.currentTimeMillis() / 50);
++    public static int currentTick; // Paper - improve tick loop
 +    public java.util.Queue<Runnable> processQueue = new java.util.concurrent.ConcurrentLinkedQueue<Runnable>();
 +    public int autosavePeriod;
 +    public Commands vanillaCommandDispatcher;
@@ -20,9 +36,11 @@
 +    // Spigot start
 +    public static final int TPS = 20;
 +    public static final int TICK_TIME = 1000000000 / TPS;
-+    private static final int SAMPLE_INTERVAL = 100;
++    private static final int SAMPLE_INTERVAL = 20; // Paper - improve server tick loop
++    @Deprecated(forRemoval = true) // Paper
 +    public final double[] recentTps = new double[ 3 ];
 +    // Spigot end
++    public final io.papermc.paper.configuration.PaperConfigurations paperConfigurations; // Paper - add paper configuration files
 +
 +    // Magma start
 +    private static org.magmafoundation.magma.Metrics metrics;
@@ -44,7 +62,7 @@
              this.tickRateManager = new ServerTickRateManager(this);
              this.progressListenerFactory = p_236730_;
              this.storageSource = p_236724_;
-@@ -315,8 +_,39 @@
+@@ -315,8 +_,40 @@
              this.structureTemplateManager = new StructureTemplateManager(p_236726_.resourceManager(), p_236724_, p_236728_, holdergetter);
              this.serverThread = p_236723_;
              this.executor = Util.backgroundExecutor();
@@ -56,15 +74,13 @@
 +        this.options = options;
 +        this.worldLoader = worldLoader;
 +        this.vanillaCommandDispatcher = p_236726_.dataPackResources().commands; // CraftBukkit
++        // Paper start - Handled by TerminalConsoleAppender
 +        // Try to see if we're actually running in a terminal, disable jline if not
++         /*
 +        if (System.console() == null && System.getProperty("jline.terminal") == null) {
 +            System.setProperty("jline.terminal", "jline.UnsupportedTerminal");
 +            org.bukkit.craftbukkit.Main.useJline = false;
 +        }
-+
-+        // Magma start todo - when fully implemented, uncomment this
-+        // metrics = new org.magmafoundation.magma.Metrics();
-+        // Magma end
 +
 +        try {
 +            reader = new jline.console.ConsoleReader(System.in, System.out);
@@ -81,8 +97,11 @@
 +                LOGGER.warn((String) null, ex);
 +            }
 +        }
++         */
++        // Paper end
 +        Runtime.getRuntime().addShutdownHook(new org.bukkit.craftbukkit.util.ServerShutdownThread(this));
 +        // CraftBukkit end
++        this.paperConfigurations = services.paperConfigurations(); // Paper - add paper configuration files
      }
  
      private void readScoreboard(DimensionDataStorage p_129842_) {
@@ -125,7 +144,7 @@
                  ServerLevel serverlevel1 = new ServerLevel(
                      this,
                      this.executor,
-@@ -421,17 +_,57 @@
+@@ -421,17 +_,58 @@
                  );
                  worldborder.addListener(new BorderChangeListener.DelegateBorderChangeListener(serverlevel1.getWorldBorder()));
                  this.levels.put(resourcekey1, serverlevel1);
@@ -137,6 +156,7 @@
 -    }
 +
 +        this.server.enablePlugins(org.bukkit.plugin.PluginLoadOrder.POSTWORLD);
++        if (io.papermc.paper.plugin.PluginInitializerManager.instance().pluginRemapper != null) io.papermc.paper.plugin.PluginInitializerManager.instance().pluginRemapper.pluginsEnabled(); // Paper - Remap plugins
 +        this.server.getPluginManager().callEvent(new org.bukkit.event.server.ServerLoadEvent(org.bukkit.event.server.ServerLoadEvent.LoadType.STARTUP));
 +        this.connection.acceptConnections();
 +    }
@@ -280,7 +300,7 @@
      }
  
      public GameType getDefaultGameType() {
-@@ -582,18 +_,40 @@
+@@ -582,18 +_,42 @@
          this.stopServer();
      }
  
@@ -306,11 +326,13 @@
          }
  
          LOGGER.info("Stopping server");
++        co.aikar.timings.MinecraftTimings.stopServer(); // Paper
 +        // CraftBukkit start
 +        if (this.server != null) {
 +            this.server.disablePlugins();
 +        }
 +        // CraftBukkit end
++        if (io.papermc.paper.plugin.PluginInitializerManager.instance().pluginRemapper != null) io.papermc.paper.plugin.PluginInitializerManager.instance().pluginRemapper.shutdown(); // Paper - Plugin remapping
          this.getConnection().stop();
          this.isSaving = true;
          if (this.playerList != null) {
@@ -329,11 +351,14 @@
                      serverlevel2.close();
                  } catch (IOException ioexception1) {
                      LOGGER.error("Exception closing the level", (Throwable)ioexception1);
-@@ -635,6 +_,15 @@
+@@ -635,6 +_,18 @@
          } catch (IOException ioexception) {
              LOGGER.error("Failed to unlock level {}", this.storageSource.getLevelId(), ioexception);
          }
 +        // Spigot start
++        io.papermc.paper.util.MCUtil.asyncExecutor.shutdown(); // Paper
++        try { io.papermc.paper.util.MCUtil.asyncExecutor.awaitTermination(30, java.util.concurrent.TimeUnit.SECONDS); // Paper
++        } catch (java.lang.InterruptedException ignored) {} // Paper
 +        if (org.spigotmc.SpigotConfig.saveUserCacheOnStopOnly) {
 +            LOGGER.info("Saving usercache.json");
 +            this.getProfileCache().save();
@@ -345,7 +370,7 @@
      }
  
      public String getLocalIp() {
-@@ -660,16 +_,28 @@
+@@ -660,16 +_,83 @@
          }
      }
  
@@ -354,6 +379,58 @@
 +    {
 +        return ( avg * exp ) + ( tps * ( 1 - exp ) );
 +    }
++
++    // Paper start - Further improve server tick loop
++    private static final long SEC_IN_NANO = 1000000000;
++    private static final long MAX_CATCHUP_BUFFER = TICK_TIME * TPS * 60L;
++    private long lastTick = 0;
++    private long catchupTime = 0;
++    public final RollingAverage tps1 = new RollingAverage(60);
++    public final RollingAverage tps5 = new RollingAverage(60 * 5);
++    public final RollingAverage tps15 = new RollingAverage(60 * 15);
++
++    public static class RollingAverage {
++        private final int size;
++        private long time;
++        private java.math.BigDecimal total;
++        private int index = 0;
++        private final java.math.BigDecimal[] samples;
++        private final long[] times;
++
++        RollingAverage(int size) {
++            this.size = size;
++            this.time = size * SEC_IN_NANO;
++            this.total = dec(TPS).multiply(dec(SEC_IN_NANO)).multiply(dec(size));
++            this.samples = new java.math.BigDecimal[size];
++            this.times = new long[size];
++            for (int i = 0; i < size; i++) {
++                this.samples[i] = dec(TPS);
++                this.times[i] = SEC_IN_NANO;
++            }
++        }
++
++        private static java.math.BigDecimal dec(long t) {
++            return new java.math.BigDecimal(t);
++        }
++
++        public void add(java.math.BigDecimal x, long t) {
++            time -= times[index];
++            total = total.subtract(samples[index].multiply(dec(times[index])));
++            samples[index] = x;
++            times[index] = t;
++            time += t;
++            total = total.add(x.multiply(dec(t)));
++            if (++index == size) {
++                index = 0;
++            }
++        }
++
++        public double getAverage() {
++            return total.divide(dec(time), 30, java.math.RoundingMode.HALF_UP).doubleValue();
++        }
++    }
++    private static final java.math.BigDecimal TPS_BASE = new java.math.BigDecimal(1E9).multiply(new java.math.BigDecimal(SAMPLE_INTERVAL));
++    // Paper end
 +    // Spigot End
 +
      protected void runServer() {
@@ -370,11 +447,14 @@
  
 +            // Spigot start
 +            Arrays.fill( recentTps, 20 );
-+            long tickSection = Util.getMillis(), tickCount = 1;
++            // Paper start - further improve server tick loop
++            long tickSection = Util.getNanos();
++            long currentTime;
++            // Paper end - further improve server tick loop
              while (this.running) {
                  long i;
                  if (!this.isPaused() && this.tickRateManager.isSprinting() && this.tickRateManager.checkShouldSprintThisTick()) {
-@@ -682,11 +_,23 @@
+@@ -682,11 +_,29 @@
                      if (k > OVERLOADED_THRESHOLD_NANOS + 20L * i
                          && this.nextTickTimeNanos - this.lastOverloadWarningNanos >= OVERLOADED_WARNING_INTERVAL_NANOS + 100L * i) {
                          long j = k / i;
@@ -385,24 +465,31 @@
                      }
                  }
 +                // Spigot start
-+                if ( tickCount++ % SAMPLE_INTERVAL == 0 )
-+                {
-+                    long curTime = Util.getMillis();
-+                    double currentTps = 1E3 / ( curTime - tickSection ) * SAMPLE_INTERVAL;
-+                    recentTps[0] = calcTps( recentTps[0], 0.92, currentTps ); // 1/exp(5sec/1min)
-+                    recentTps[1] = calcTps( recentTps[1], 0.9835, currentTps ); // 1/exp(5sec/5min)
-+                    recentTps[2] = calcTps( recentTps[2], 0.9945, currentTps ); // 1/exp(5sec/15min)
-+                    tickSection = curTime;
++                // Paper start - further improve server tick loop
++                currentTime = Util.getNanos();
++                if (++MinecraftServer.currentTick % MinecraftServer.SAMPLE_INTERVAL == 0) {
++                    final long diff = currentTime - tickSection;
++                    final java.math.BigDecimal currentTps = TPS_BASE.divide(new java.math.BigDecimal(diff), 30, java.math.RoundingMode.HALF_UP);
++                    tps1.add(currentTps, diff);
++                    tps5.add(currentTps, diff);
++                    tps15.add(currentTps, diff);
++                    // Backwards compat with bad plugins
++                    this.recentTps[0] = tps1.getAverage();
++                    this.recentTps[1] = tps5.getAverage();
++                    this.recentTps[2] = tps15.getAverage();
++                    tickSection = currentTime;
 +                }
++                // Paper end - further improve server tick loop
 +                // Spigot end
  
                  boolean flag = i == 0L;
                  if (this.debugCommandProfilerDelayStart) {
-@@ -694,6 +_,7 @@
+@@ -694,6 +_,8 @@
                      this.debugCommandProfiler = new MinecraftServer.TimeProfiler(Util.getNanos(), this.tickCount);
                  }
  
-+                MinecraftServer.currentTick = (int) (System.currentTimeMillis() / 50); // CraftBukkit
++                //MinecraftServer.currentTick = (int) (System.currentTimeMillis() / 50); // CraftBukkit // Paper - don't overwrite current tick time
++                lastTick = currentTime;
                  this.nextTickTimeNanos += i;
                  this.startMetricsRecordingTick();
                  this.profiler.push("tick");
@@ -431,21 +518,33 @@
 +                org.spigotmc.WatchdogThread.doStop(); // Spigot
 +                // CraftBukkit start - Restore terminal to original settings
 +                try {
-+                    reader.getTerminal().restore();
++                    net.minecrell.terminalconsole.TerminalConsoleAppender.close(); // Paper - Use TerminalConsoleAppender
 +                } catch (Exception ignored) {
 +                }
 +                // CraftBukkit end
                  this.onServerExit();
              }
          }
-@@ -789,7 +_,15 @@
+@@ -789,7 +_,27 @@
      }
  
      private boolean haveTime() {
 -        return this.runningTask() || Util.getNanos() < (this.mayHaveDelayedTasks ? this.delayedTasksMaxNextTickTimeNanos : this.nextTickTimeNanos);
 +        // CraftBukkit start
++        if (isOversleep) return canOversleep(); // Paper - because of our changes, this logic is broken
 +        return this.forceTicks || this.runningTask() || Util.getNanos() < (this.mayHaveDelayedTasks ? this.delayedTasksMaxNextTickTimeNanos : this.nextTickTimeNanos);
 +    }
++
++    // Paper start
++    boolean isOversleep = false;
++    private boolean canOversleep() {
++        return this.mayHaveDelayedTasks && Util.getNanos() < this.delayedTasksMaxNextTickTimeNanos;
++    }
++
++    private boolean canSleepForTickNoOversleep() {
++        return this.forceTicks || this.runningTask() || Util.getNanos() < this.nextTickTimeNanos;
++    }
++    // Paper end
 +
 +    private void executeModerately() {
 +
@@ -455,6 +554,17 @@
      }
  
      public static boolean throwIfFatalException() {
+@@ -811,8 +_,8 @@
+     }
+ 
+     protected void waitUntilNextTick() {
+-        this.runAllTasks();
+-        this.managedBlock(() -> !this.haveTime());
++        //this.runAllTasks(); // Paper - move this into the tick method for timings
++        this.managedBlock(() -> !this.canSleepForTickNoOversleep()); // Paper - move oversleep into full server tick
+     }
+ 
+     @Override
 @@ -892,6 +_,7 @@
      }
  
@@ -463,12 +573,23 @@
      }
  
      public boolean isPaused() {
-@@ -899,23 +_,28 @@
+@@ -899,13 +_,27 @@
      }
  
      public void tickServer(BooleanSupplier p_129871_) {
-+        org.bukkit.craftbukkit.SpigotTimings.serverTickTimer.startTiming(); // Spigot
++        co.aikar.timings.TimingsManager.FULL_SERVER_TICK.startTiming(); // Paper
          long i = Util.getNanos();
++
++        // Paper start - move oversleep into full server tick
++        isOversleep = true;
++        co.aikar.timings.MinecraftTimings.serverOversleep.startTiming();
++        this.managedBlock(() -> {
++            return !this.canOversleep();
++        });
++        isOversleep = false;
++        co.aikar.timings.MinecraftTimings.serverOversleep.stopTiming();
++        // Paper end
++
          this.tickCount++;
 +        net.neoforged.neoforge.event.EventHooks.fireServerTickPre(p_129871_, this);
          this.tickRateManager.tick();
@@ -480,25 +601,25 @@
          }
  
          this.ticksUntilAutosave--;
-         if (this.ticksUntilAutosave <= 0) {
-             this.ticksUntilAutosave = this.computeNextAutosaveInterval();
-+            org.bukkit.craftbukkit.SpigotTimings.worldSaveTimer.startTiming(); // Spigot
-             LOGGER.debug("Autosave started");
-             this.profiler.push("save");
-             this.saveEverything(true, false, false);
-             this.profiler.pop();
+@@ -918,6 +_,12 @@
              LOGGER.debug("Autosave finished");
-+            org.bukkit.craftbukkit.SpigotTimings.worldSaveTimer.stopTiming(); // Spigot
          }
  
++        // Paper start - move executeAll() into full server tick timing
++        try (co.aikar.timings.Timing ignored = co.aikar.timings.MinecraftTimings.processTasksTimer.startTiming()) {
++            this.runAllTasks();
++        }
++        // Paper end
++
          this.profiler.push("tallying");
-@@ -927,6 +_,9 @@
+         long j = Util.getNanos() - i;
+         int k = this.tickCount % 100;
+@@ -927,6 +_,8 @@
          this.smoothedTickTimeMillis = this.smoothedTickTimeMillis * 0.8F + (float)j / (float)TimeUtil.NANOSECONDS_PER_MILLISECOND * 0.19999999F;
          this.logTickMethodTime(i);
          this.profiler.pop();
-+        org.spigotmc.WatchdogThread.tick(); // Spigot
 +        net.neoforged.neoforge.event.EventHooks.fireServerTickPost(p_129871_, this);
-+        org.spigotmc.CustomTimingsHandler.tick(); // Spigot
++        co.aikar.timings.TimingsManager.FULL_SERVER_TICK.stopTiming(); // Paper
      }
  
      private void logTickMethodTime(long p_321837_) {
@@ -519,7 +640,12 @@
      private int computeNextAutosaveInterval() {
          float f;
          if (this.tickRateManager.isSprinting()) {
-@@ -966,7 +_,8 @@
+@@ -962,11 +_,12 @@
+     private ServerStatus buildServerStatus() {
+         ServerStatus.Players serverstatus$players = this.buildPlayerStatus();
+         return new ServerStatus(
+-            Component.nullToEmpty(this.motd),
++            io.papermc.paper.adventure.PaperAdventure.asVanilla(this.motd), // Paper - Adventure
              Optional.of(serverstatus$players),
              Optional.of(ServerStatus.Version.current()),
              Optional.ofNullable(this.statusIcon),
@@ -529,29 +655,30 @@
          );
      }
  
-@@ -992,11 +_,35 @@
+@@ -992,11 +_,36 @@
  
      public void tickChildren(BooleanSupplier p_129954_) {
          this.getPlayerList().getPlayers().forEach(p_341570_ -> p_341570_.connection.suspendFlushing());
-+        org.bukkit.craftbukkit.SpigotTimings.schedulerTimer.startTiming(); // Spigot
++        co.aikar.timings.MinecraftTimings.bukkitSchedulerTimer.startTiming(); // Spigot // Paper
 +        this.server.getScheduler().mainThreadHeartbeat(this.tickCount); // CraftBukkit
-+        org.bukkit.craftbukkit.SpigotTimings.schedulerTimer.stopTiming(); // Spigot
++        co.aikar.timings.MinecraftTimings.bukkitSchedulerTimer.stopTiming(); // Spigot // Paper
++        io.papermc.paper.adventure.providers.ClickCallbackProviderImpl.CALLBACK_MANAGER.handleQueue(this.tickCount); // Paper
          this.profiler.push("commandFunctions");
-+        org.bukkit.craftbukkit.SpigotTimings.commandFunctionsTimer.startTiming(); // Spigot
++        co.aikar.timings.MinecraftTimings.commandFunctionsTimer.startTiming(); // Spigot // Paper
          this.getFunctions().tick();
-+        org.bukkit.craftbukkit.SpigotTimings.commandFunctionsTimer.stopTiming(); // Spigot
++        co.aikar.timings.MinecraftTimings.commandFunctionsTimer.stopTiming(); // Spigot // Paper
          this.profiler.popPush("levels");
  
 -        for (ServerLevel serverlevel : this.getAllLevels()) {
 +        // CraftBukkit start
 +        // Run tasks that are waiting on processing
-+        org.bukkit.craftbukkit.SpigotTimings.processQueueTimer.startTiming(); // Spigot
++        co.aikar.timings.MinecraftTimings.processQueueTimer.startTiming(); // Spigot
 +        while (!processQueue.isEmpty()) {
 +            processQueue.remove().run();
 +        }
-+        org.bukkit.craftbukkit.SpigotTimings.processQueueTimer.stopTiming(); // Spigot
++        co.aikar.timings.MinecraftTimings.processQueueTimer.stopTiming(); // Spigot
 +
-+        org.bukkit.craftbukkit.SpigotTimings.timeUpdateTimer.startTiming(); // Spigot
++        co.aikar.timings.MinecraftTimings.timeUpdateTimer.startTiming(); // Spigot // Paper
 +        // Send time updates to everyone, it will get the right time from the world the player is in.
 +        if (this.tickCount % 20 == 0) {
 +            for (int i = 0; i < this.getPlayerList().players.size(); ++i) {
@@ -559,7 +686,7 @@
 +                entityplayer.connection.send(new ClientboundSetTimePacket(entityplayer.level().getGameTime(), entityplayer.getPlayerTime(), entityplayer.level().getGameRules().getBoolean(GameRules.RULE_DAYLIGHT))); // Add support for per player time
 +            }
 +        }
-+        org.bukkit.craftbukkit.SpigotTimings.timeUpdateTimer.stopTiming(); // Spigot
++        co.aikar.timings.MinecraftTimings.timeUpdateTimer.stopTiming(); // Spigot // Paper
 +
 +        for(ServerLevel serverlevel : this.getWorldArray()) {
 +            long tickStart = Util.getNanos();
@@ -589,25 +716,25 @@
          }
  
          this.profiler.popPush("connection");
-+        org.bukkit.craftbukkit.SpigotTimings.connectionTimer.startTiming(); // Spigot
++        co.aikar.timings.MinecraftTimings.connectionTimer.startTiming(); // Spigot // Paper
          this.getConnection().tick();
-+        org.bukkit.craftbukkit.SpigotTimings.connectionTimer.stopTiming(); // Spigot
++        co.aikar.timings.MinecraftTimings.connectionTimer.stopTiming(); // Spigot // Paper
          this.profiler.popPush("players");
-+        org.bukkit.craftbukkit.SpigotTimings.playerListTimer.startTiming(); // Spigot
++        co.aikar.timings.MinecraftTimings.playerListTimer.startTiming(); // Spigot // Paper
          this.playerList.tick();
 -        if (SharedConstants.IS_RUNNING_IN_IDE && this.tickRateManager.runsNormally()) {
-+        org.bukkit.craftbukkit.SpigotTimings.playerListTimer.stopTiming(); // Spigot
++        co.aikar.timings.MinecraftTimings.playerListTimer.stopTiming(); // Spigot // Paper
 +        if (net.neoforged.neoforge.gametest.GameTestHooks.isGametestEnabled() && this.tickRateManager.runsNormally()) {
              GameTestTicker.SINGLETON.tick();
          }
  
          this.profiler.popPush("server gui refresh");
  
-+        org.bukkit.craftbukkit.SpigotTimings.tickablesTimer.startTiming(); // Spigot
++        co.aikar.timings.MinecraftTimings.tickablesTimer.startTiming(); // Spigot // Paper
          for (int i = 0; i < this.tickables.size(); i++) {
              this.tickables.get(i).run();
          }
-+        org.bukkit.craftbukkit.SpigotTimings.tickablesTimer.stopTiming(); // Spigot
++        co.aikar.timings.MinecraftTimings.tickablesTimer.stopTiming(); // Spigot // Paper
  
          this.profiler.popPush("send chunks");
  
@@ -666,6 +793,37 @@
      }
  
      public SystemReport fillSystemReport(SystemReport p_177936_) {
+@@ -1152,7 +_,7 @@
+ 
+     @Override
+     public void sendSystemMessage(Component p_236736_) {
+-        LOGGER.info(p_236736_.getString());
++        MinecraftServer.LOGGER.info(io.papermc.paper.adventure.PaperAdventure.ANSI_SERIALIZER.serialize(io.papermc.paper.adventure.PaperAdventure.asAdventure(p_236736_))); // Paper - Log message with colors
+     }
+ 
+     public KeyPair getKeyPair() {
+@@ -1288,10 +_,20 @@
+ 
+     @Override
+     public String getMotd() {
+-        return this.motd;
++        return net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(this.motd); // Paper - Adventure
+     }
+ 
+     public void setMotd(String p_129990_) {
++        // Paper start - Adventure
++        this.motd = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserializeOr(p_129990_, net.kyori.adventure.text.Component.empty());
++    }
++
++    public net.kyori.adventure.text.Component motd() {
++        return this.motd;
++    }
++
++    public void motd(net.kyori.adventure.text.Component p_129990_) {
++        // Paper end - Adventure
+         this.motd = p_129990_;
+     }
+ 
 @@ -1314,7 +_,7 @@
      }
  
@@ -787,18 +945,32 @@
      public RegistryAccess.Frozen registryAccess() {
          return this.registries.compositeAccess();
      }
-@@ -1939,6 +_,11 @@
-         }
+@@ -1931,16 +_,21 @@
      }
  
-+    // CraftBukkit start
-+    public final java.util.concurrent.ExecutorService chatExecutor = java.util.concurrent.Executors.newCachedThreadPool(
-+            new com.google.common.util.concurrent.ThreadFactoryBuilder().setDaemon(true).setNameFormat("Async Chat Thread - #%d").build());
-+    // CraftBukkit end
+     public void logChatMessage(Component p_241503_, ChatType.Bound p_241402_, @Nullable String p_241481_) {
+-        String s = p_241402_.decorate(p_241503_).getString();
++        // Paper start
++        net.kyori.adventure.text.Component s = io.papermc.paper.adventure.PaperAdventure.asAdventure(p_241402_.decorate(p_241503_));
 +
-     public ChatDecorator getChatDecorator() {
-         return ChatDecorator.PLAIN;
+         if (p_241481_ != null) {
+-            LOGGER.info("[{}] {}", p_241481_, s);
++            MinecraftServer.COMPONENT_LOGGER.info("[{}] {}", p_241481_, s);
+         } else {
+-            LOGGER.info("{}", s);
++            MinecraftServer.COMPONENT_LOGGER.info("{}", s);
++            // Paper end
+         }
      }
++
++    public final ChatDecorator improvedChatDecorator = new io.papermc.paper.adventure.ImprovedChatDecorator(this); // Paper - adventure
+ 
+     public ChatDecorator getChatDecorator() {
+-        return ChatDecorator.PLAIN;
++        return this.improvedChatDecorator; // Paper - support async chat decoration events
+     }
+ 
+     public boolean logIPs() {
 @@ -2010,6 +_,15 @@
  
      public static record ServerResourcePackInfo(UUID id, String url, String hash, boolean isRequired, @Nullable Component prompt) {

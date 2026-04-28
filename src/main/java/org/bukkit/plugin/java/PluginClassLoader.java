@@ -22,11 +22,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
-import java.util.logging.Level;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.InvalidPluginException;
 import org.bukkit.plugin.PluginDescriptionFile;
-import org.bukkit.plugin.SimplePluginManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.magmafoundation.magma.asm.SwitchTableFixer;
@@ -37,7 +35,8 @@ import org.magmafoundation.magma.remapping.loaders.RemappingClassLoader;
 /**
  * A ClassLoader for plugins, to allow shared classes across multiple plugins
  */
-final class PluginClassLoader extends URLClassLoader implements RemappingClassLoader {
+@org.jetbrains.annotations.ApiStatus.Internal // Paper
+public final class PluginClassLoader extends URLClassLoader implements io.papermc.paper.plugin.provider.classloader.ConfiguredPluginClassLoader, RemappingClassLoader { // Paper
     private final JavaPluginLoader loader;
     private final Map<String, Class<?>> classes = new ConcurrentHashMap<String, Class<?>>();
     private final PluginDescriptionFile description;
@@ -51,6 +50,9 @@ final class PluginClassLoader extends URLClassLoader implements RemappingClassLo
     private JavaPlugin pluginInit;
     private IllegalStateException pluginState;
     private final Set<String> seenIllegalAccess = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private java.util.logging.Logger logger; // Paper - add field
+    private io.papermc.paper.plugin.provider.classloader.PluginClassLoaderGroup classLoaderGroup; // Paper
+    public io.papermc.paper.plugin.provider.entrypoint.DependencyContext dependencyContext; // Paper
 
     static {
         ClassLoader.registerAsParallelCapable();
@@ -68,18 +70,23 @@ final class PluginClassLoader extends URLClassLoader implements RemappingClassLo
     }
     // Magma end
 
-    PluginClassLoader(@NotNull final JavaPluginLoader loader, @Nullable final ClassLoader parent, @NotNull final PluginDescriptionFile description, @NotNull final File dataFolder, @NotNull final File file, @Nullable ClassLoader libraryLoader) throws IOException, InvalidPluginException, MalformedURLException {
+    @org.jetbrains.annotations.ApiStatus.Internal // Paper
+    public PluginClassLoader(@Nullable final ClassLoader parent, @NotNull final PluginDescriptionFile description, @NotNull final File dataFolder, @NotNull final File file, @Nullable ClassLoader libraryLoader, JarFile jarFile, io.papermc.paper.plugin.provider.entrypoint.DependencyContext dependencyContext) throws IOException, InvalidPluginException, MalformedURLException { // Paper - use JarFile provided by SpigotPluginProvider
         super(new URL[] { file.toURI().toURL() }, parent);
-        Preconditions.checkArgument(loader != null, "Loader cannot be null");
+        this.loader = null; // Paper - pass null into loader field
 
-        this.loader = loader;
         this.description = description;
         this.dataFolder = dataFolder;
         this.file = file;
-        this.jar = new JarFile(file);
+        this.jar = jarFile; // Paper - use JarFile provided by SpigotPluginProvider
         this.manifest = jar.getManifest();
         this.url = file.toURI().toURL();
         this.libraryLoader = libraryLoader;
+
+        // Paper start
+        this.dependencyContext = dependencyContext;
+        this.classLoaderGroup = io.papermc.paper.plugin.provider.classloader.PaperClassLoaderStorage.instance().registerSpigotGroup(this);
+        // Paper end
 
         Class<?> jarClass;
         try {
@@ -125,6 +132,28 @@ final class PluginClassLoader extends URLClassLoader implements RemappingClassLo
         return findResources(name);
     }
 
+    // Paper start
+    @Override
+    public Class<?> loadClass(@NotNull String name, boolean resolve, boolean checkGlobal, boolean checkLibraries) throws ClassNotFoundException {
+        return this.loadClass0(name, resolve, checkGlobal, checkLibraries);
+    }
+
+    @Override
+    public io.papermc.paper.plugin.configuration.PluginMeta getConfiguration() {
+        return this.description;
+    }
+
+    @Override
+    public void init(JavaPlugin plugin) {
+        this.initialize(plugin);
+    }
+
+    @Override
+    public JavaPlugin getPlugin() {
+        return this.plugin;
+    }
+    // Paper end
+
     @Override
     protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
         return loadClass0(name, resolve, true, true);
@@ -148,27 +177,10 @@ final class PluginClassLoader extends URLClassLoader implements RemappingClassLo
 
         if (checkGlobal) {
             // This ignores the libraries of other plugins, unless they are transitive dependencies.
-            Class<?> result = loader.getClassByName(name, resolve, description);
+            Class<?> result = this.classLoaderGroup.getClassByName(name, resolve, this); // Paper
 
             if (result != null) {
-                // If the class was loaded from a library instead of a PluginClassLoader, we can assume that its associated plugin is a transitive dependency and can therefore skip this check.
-                if (result.getClassLoader() instanceof PluginClassLoader) {
-                    PluginDescriptionFile provider = ((PluginClassLoader) result.getClassLoader()).description;
-
-                    if (provider != description
-                            && !seenIllegalAccess.contains(provider.getName())
-                            && !((SimplePluginManager) loader.server.getPluginManager()).isTransitiveDepend(description, provider)) {
-
-                        seenIllegalAccess.add(provider.getName());
-                        if (plugin != null) {
-                            plugin.getLogger().log(Level.WARNING, "Loaded class {0} from {1} which is not a depend or softdepend of this plugin.", new Object[] { name, provider.getFullName() });
-                        } else {
-                            // In case the bad access occurs on construction
-                            loader.server.getLogger().log(Level.WARNING, "[{0}] Loaded class {1} from {2} which is not a depend or softdepend of this plugin.", new Object[] { description.getName(), name, provider.getFullName() });
-                        }
-                    }
-                }
-
+                // Paper - Totally delete the illegal access logic, we are never going to enforce it anyways here.
                 return result;
             }
         }
@@ -233,8 +245,8 @@ final class PluginClassLoader extends URLClassLoader implements RemappingClassLo
                 result = super.findClass(name);
             }
 
-            loader.setClass(name, result);
             classes.put(name, result);
+            this.setClass(name, result); // Paper
         }
 
         return result;
@@ -243,6 +255,12 @@ final class PluginClassLoader extends URLClassLoader implements RemappingClassLo
     @Override
     public void close() throws IOException {
         try {
+            // Paper start
+            Collection<Class<?>> classes = getClasses();
+            for (Class<?> clazz : classes) {
+                removeClass(clazz);
+            }
+            // Paper end
             super.close();
         } finally {
             jar.close();
@@ -254,7 +272,7 @@ final class PluginClassLoader extends URLClassLoader implements RemappingClassLo
         return classes.values();
     }
 
-    synchronized void initialize(@NotNull JavaPlugin javaPlugin) {
+    public synchronized void initialize(@NotNull JavaPlugin javaPlugin) { // Paper
         Preconditions.checkArgument(javaPlugin != null, "Initializing plugin cannot be null");
         Preconditions.checkArgument(javaPlugin.getClass().getClassLoader() == this, "Cannot initialize plugin outside of this class loader");
         if (this.plugin != null || this.pluginInit != null) {
@@ -264,6 +282,37 @@ final class PluginClassLoader extends URLClassLoader implements RemappingClassLo
         pluginState = new IllegalStateException("Initial initialization");
         this.pluginInit = javaPlugin;
 
-        javaPlugin.init(loader, loader.server, description, dataFolder, file, this);
+        javaPlugin.init(null, org.bukkit.Bukkit.getServer(), description, dataFolder, file, this); // Paper
     }
+
+    // Paper start
+    @Override
+    public String toString() {
+        JavaPlugin currPlugin = plugin != null ? plugin : pluginInit;
+        return "PluginClassLoader{" +
+                "plugin=" + currPlugin +
+                ", pluginEnabled=" + (currPlugin == null ? "uninitialized" : currPlugin.isEnabled()) +
+                ", url=" + file +
+                '}';
+    }
+
+    void setClass(@NotNull final String name, @NotNull final Class<?> clazz) {
+        if (org.bukkit.configuration.serialization.ConfigurationSerializable.class.isAssignableFrom(clazz)) {
+            Class<? extends org.bukkit.configuration.serialization.ConfigurationSerializable> serializable = clazz.asSubclass(org.bukkit.configuration.serialization.ConfigurationSerializable.class);
+            org.bukkit.configuration.serialization.ConfigurationSerialization.registerClass(serializable);
+        }
+    }
+
+    private void removeClass(@NotNull Class<?> clazz) {
+        if (org.bukkit.configuration.serialization.ConfigurationSerializable.class.isAssignableFrom(clazz)) {
+            Class<? extends org.bukkit.configuration.serialization.ConfigurationSerializable> serializable = clazz.asSubclass(org.bukkit.configuration.serialization.ConfigurationSerializable.class);
+            org.bukkit.configuration.serialization.ConfigurationSerialization.unregisterClass(serializable);
+        }
+    }
+
+    @Override
+    public @Nullable io.papermc.paper.plugin.provider.classloader.PluginClassLoaderGroup getGroup() {
+        return this.classLoaderGroup;
+    }
+    // Paper end
 }

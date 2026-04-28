@@ -26,6 +26,7 @@ dependencyResolutionManagement {
     repositories {
         mavenCentral()
         maven { url = 'https://repo.magmafoundation.org/releases' }
+        maven { url = "https://repo.papermc.io/repository/maven-public/" }
     }
 }
 

@@ -73,10 +73,48 @@ import org.bukkit.potion.PotionType;
 @SuppressWarnings("deprecation")
 public final class CraftMagicNumbers implements UnsafeValues {
     public static final CraftMagicNumbers INSTANCE = new CraftMagicNumbers();
+    public static final boolean DISABLE_OLD_API_SUPPORT = Boolean.getBoolean("paper.disableOldApiSupport"); // Paper
 
     private final Commodore commodore = new Commodore();
 
     private CraftMagicNumbers() {}
+
+    // Paper start
+    @Override
+    public net.kyori.adventure.text.flattener.ComponentFlattener componentFlattener() {
+        return io.papermc.paper.adventure.PaperAdventure.FLATTENER;
+    }
+
+    @Override
+    public net.kyori.adventure.text.serializer.gson.GsonComponentSerializer colorDownsamplingGsonComponentSerializer() {
+        return net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.colorDownsamplingGson();
+    }
+
+    @Override
+    public net.kyori.adventure.text.serializer.gson.GsonComponentSerializer gsonComponentSerializer() {
+        return net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.gson();
+    }
+
+    @Override
+    public net.kyori.adventure.text.serializer.plain.PlainComponentSerializer plainComponentSerializer() {
+        return io.papermc.paper.adventure.PaperAdventure.PLAIN;
+    }
+
+    @Override
+    public net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer plainTextSerializer() {
+        return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
+    }
+
+    @Override
+    public net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer legacyComponentSerializer() {
+        return net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection();
+    }
+
+    @Override
+    public net.kyori.adventure.text.Component resolveWithContext(final net.kyori.adventure.text.Component component, final org.bukkit.command.CommandSender context, final org.bukkit.entity.Entity scoreboardSubject, final boolean bypassPermissions) throws IOException {
+        return io.papermc.paper.adventure.PaperAdventure.resolveWithContext(component, context, scoreboardSubject, bypassPermissions);
+    }
+    // Paper end
 
     public static net.minecraft.world.level.block.state.BlockState getBlock(MaterialData material) {
         return getBlock(material.getItemType(), material.getData());
@@ -159,7 +197,14 @@ public final class CraftMagicNumbers implements UnsafeValues {
     public static ResourceLocation key(Material mat) {
         return CraftNamespacedKey.toMinecraft(mat.getKey());
     }
+
     // ========================================================================
+    // Paper start
+    @Override
+    public void reportTimings() {
+        co.aikar.timings.TimingsExport.reportTimings();
+    }
+    // Paper end
 
     public static byte toLegacyData(net.minecraft.world.level.block.state.BlockState data) {
         return CraftLegacy.toLegacyData(data);
@@ -303,7 +348,7 @@ public final class CraftMagicNumbers implements UnsafeValues {
             throw new InvalidPluginException("Unsupported API version " + pdf.getAPIVersion());
         }
 
-        if (toCheck.isOlderThan(minimumVersion)) {
+        if (!DISABLE_OLD_API_SUPPORT && toCheck.isOlderThan(ApiVersion.FLATTENING)) { // Paper
             // Older than supported
             throw new InvalidPluginException("Plugin API version " + pdf.getAPIVersion() + " is lower than the minimum allowed version. Please update or replace it.");
         }
@@ -323,6 +368,12 @@ public final class CraftMagicNumbers implements UnsafeValues {
 
     @Override
     public byte[] processClass(PluginDescriptionFile pdf, String path, byte[] clazz) {
+        // Paper start
+        if (DISABLE_OLD_API_SUPPORT) {
+            // Make sure we still go through our reflection rewriting if needed
+            return io.papermc.paper.pluginremap.reflect.ReflectionRemapper.processClass(clazz);
+        }
+        // Paper end
         try {
             clazz = commodore.convert(clazz, pdf.getName(), ApiVersion.getOrCreateVersion(pdf.getAPIVersion()), ((CraftServer) Bukkit.getServer()).activeCompatibilities);
         } catch (Exception ex) {
@@ -364,6 +415,16 @@ public final class CraftMagicNumbers implements UnsafeValues {
         return nmsItemStack.getItem().getDescriptionId(nmsItemStack);
     }
 
+    // Paper start
+    @Override
+    public boolean isSupportedApiVersion(String apiVersion) {
+        if (apiVersion == null) return false;
+        final ApiVersion toCheck = ApiVersion.getOrCreateVersion(apiVersion);
+        final ApiVersion minimumVersion = MinecraftServer.getServer().server.minimumAPI;
+        return !toCheck.isNewerThan(ApiVersion.CURRENT) && !toCheck.isOlderThan(minimumVersion);
+    }
+    // Paper end
+
     @Override
     public String getTranslationKey(final Attribute attribute) {
         return CraftAttribute.bukkitToMinecraft(attribute).getDescriptionId();
@@ -393,6 +454,13 @@ public final class CraftMagicNumbers implements UnsafeValues {
     public DamageSource.Builder createDamageSourceBuilder(DamageType damageType) {
         return new CraftDamageSourceBuilder(damageType);
     }
+
+    // Paper start
+    @Override
+    public String getTimingsServerName() {
+        return io.papermc.paper.configuration.GlobalConfiguration.get().timings.serverName;
+    }
+    // Paper end
 
     @Override
     public String get(Class<?> aClass, String s) {

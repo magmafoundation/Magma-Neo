@@ -30,6 +30,33 @@ import org.jetbrains.annotations.Nullable;
  */
 @Deprecated
 public interface UnsafeValues {
+    // Paper start
+    net.kyori.adventure.text.flattener.ComponentFlattener componentFlattener();
+
+    @Deprecated(forRemoval = true)
+    net.kyori.adventure.text.serializer.plain.PlainComponentSerializer plainComponentSerializer();
+
+    @Deprecated(forRemoval = true)
+    net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer plainTextSerializer();
+
+    @Deprecated(forRemoval = true)
+    net.kyori.adventure.text.serializer.gson.GsonComponentSerializer gsonComponentSerializer();
+
+    @Deprecated(forRemoval = true)
+    net.kyori.adventure.text.serializer.gson.GsonComponentSerializer colorDownsamplingGsonComponentSerializer();
+
+    @Deprecated(forRemoval = true)
+    net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer legacyComponentSerializer();
+
+    net.kyori.adventure.text.Component resolveWithContext(net.kyori.adventure.text.Component component, org.bukkit.command.CommandSender context, org.bukkit.entity.Entity scoreboardSubject, boolean bypassPermissions) throws java.io.IOException;
+    // Paper end
+
+    /**
+     * @deprecated Timings will be removed in the future
+     */
+    @Deprecated(forRemoval = true)
+    void reportTimings(); // Paper
+
     Material toLegacy(Material material);
 
     Material fromLegacy(Material material);
@@ -131,4 +158,29 @@ public interface UnsafeValues {
 
     @ApiStatus.Internal
     <B extends Keyed> B get(Registry<B> registry, NamespacedKey key);
+
+    // Paper start
+    @Deprecated(forRemoval = true)
+    boolean isSupportedApiVersion(String apiVersion);
+
+    @Deprecated(forRemoval = true)
+    static boolean isLegacyPlugin(org.bukkit.plugin.Plugin plugin) {
+        return !Bukkit.getUnsafe().isSupportedApiVersion(plugin.getDescription().getAPIVersion());
+    }
+    // Paper end
+
+    // Paper start
+    /**
+     * @deprecated Timings will be removed in the future
+     */
+    @Deprecated(forRemoval = true)
+    String getTimingsServerName();
+
+    /**
+     * Called once by the version command on first use, then cached.
+     */
+    default com.destroystokyo.paper.util.VersionFetcher getVersionFetcher() {
+        return new com.destroystokyo.paper.util.VersionFetcher.DummyVersionFetcher();
+    }
+    // Paper end
 }

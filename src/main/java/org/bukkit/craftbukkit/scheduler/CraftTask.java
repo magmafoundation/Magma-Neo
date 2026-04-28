@@ -2,10 +2,8 @@ package org.bukkit.craftbukkit.scheduler;
 
 import java.util.function.Consumer;
 import org.bukkit.Bukkit;
-import org.bukkit.craftbukkit.SpigotTimings;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
-import org.spigotmc.CustomTimingsHandler;
 
 public class CraftTask implements BukkitTask, Runnable { // Spigot
     private volatile CraftTask next = null;
@@ -24,12 +22,11 @@ public class CraftTask implements BukkitTask, Runnable { // Spigot
      */
     private volatile long period;
     private long nextRun;
-    private final Runnable rTask;
-    private final Consumer<BukkitTask> cTask;
-    private final Plugin plugin;
+    public final Runnable rTask; // Paper
+    public final Consumer<BukkitTask> cTask; // Paper
+    public org.openjdk.nashorn.internal.runtime.Timing timings; // Paper
     private final int id;
     private final long createdAt = System.nanoTime();
-    final CustomTimingsHandler timings; // Spigot
 
     CraftTask() {
         this(null, null, CraftTask.NO_REPEATING, CraftTask.NO_REPEATING);
@@ -56,7 +53,7 @@ public class CraftTask implements BukkitTask, Runnable { // Spigot
         }
         this.id = id;
         this.period = period;
-        this.timings = this.isSync() ? SpigotTimings.getPluginTaskTimings(this, period) : null; // Spigot
+        timings = task != null ? co.aikar.timings.MinecraftTimings.getPluginTaskTimings(this, period) : co.aikar.timings.NullTimingHandler.NULL; // Paper
     }
 
     @Override
@@ -76,11 +73,13 @@ public class CraftTask implements BukkitTask, Runnable { // Spigot
 
     @Override
     public void run() {
-        if (rTask != null) {
-            rTask.run();
-        } else {
-            cTask.accept(this);
-        }
+        try (co.aikar.timings.Timing ignored = timings.startTiming()) { // Paper
+            if (rTask != null) {
+                rTask.run();
+            } else {
+                cTask.accept(this);
+            }
+        } // Paper
     }
 
     long getCreatedAt() {
@@ -111,7 +110,7 @@ public class CraftTask implements BukkitTask, Runnable { // Spigot
         this.next = next;
     }
 
-    Class<?> getTaskClass() {
+    public Class<?> getTaskClass() { // Paper
         return (rTask != null) ? rTask.getClass() : ((cTask != null) ? cTask.getClass() : null);
     }
 
@@ -134,10 +133,4 @@ public class CraftTask implements BukkitTask, Runnable { // Spigot
         setPeriod(CraftTask.CANCEL);
         return true;
     }
-
-    // Spigot start
-    public String getTaskName() {
-        return (getTaskClass() == null) ? "Unknown" : getTaskClass().getName();
-    }
-    // Spigot end
 }

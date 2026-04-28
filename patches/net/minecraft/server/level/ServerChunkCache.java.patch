@@ -1,6 +1,6 @@
 --- a/net/minecraft/server/level/ServerChunkCache.java
 +++ b/net/minecraft/server/level/ServerChunkCache.java
-@@ -106,6 +_,16 @@
+@@ -106,6 +_,42 @@
          this.clearCache();
      }
  
@@ -14,10 +14,36 @@
 +    }
 +    // CraftBukkit end
 +
++    // Paper
++    // "real" get chunk if loaded
++    // Note: Partially copied from the getChunkAt method below
++    @Nullable
++    public LevelChunk getChunkAtIfCachedImmediately(int x, int z) {
++
++        long k = ChunkPos.asLong(x, z);
++        // Note: Bypass cache since we need to check ticket level, and to make this MT-Safe
++        ChunkHolder playerChunk = this.getVisibleChunkIfPresent(k);
++        if (playerChunk == null) {
++            return null;
++        }
++        return playerChunk.getFullChunkNowUnchecked();
++    }
++
++    @Nullable
++    public LevelChunk getChunkAtIfLoadedImmediately(int x, int z) {
++
++        ChunkHolder chunk = this.chunkMap.getUpdatingChunkIfPresent(ChunkPos.asLong(x, z));
++        if (chunk == null) {
++            return null;
++        }
++        return chunk.getFullChunkNow() != null ? chunk.getFullChunkNow() : null;
++    }
++    // Paper end
++
      public ThreadedLevelLightEngine getLightEngine() {
          return this.lightEngine;
      }
-@@ -150,9 +_,15 @@
+@@ -150,9 +_,17 @@
                  }
              }
  
@@ -26,10 +52,13 @@
 +                return chunkholder.currentlyLoading; // Neo: If the requested chunk is loading, bypass the future chain to prevent a deadlock.
 +
              profilerfiller.incrementCounter("getChunkCacheMiss");
-+            level.timings.syncChunkLoadTimer.startTiming(); // Spigot
              CompletableFuture<ChunkResult<ChunkAccess>> completablefuture = this.getChunkFutureMainThread(p_8360_, p_8361_, p_330876_, p_8363_);
-             this.mainThreadProcessor.managedBlock(completablefuture::isDone);
-+            level.timings.syncChunkLoadTimer.stopTiming(); // Spigot
+-            this.mainThreadProcessor.managedBlock(completablefuture::isDone);
++            if (!completablefuture.isDone()) { // Paper
++                this.level.timings.syncChunkLoad.startTiming(); // Paper
++                this.mainThreadProcessor.managedBlock(completablefuture::isDone);
++                this.level.timings.syncChunkLoad.stopTiming(); // Paper
++            } // Paper
              ChunkResult<ChunkAccess> chunkresult = completablefuture.join();
              ChunkAccess chunkaccess1 = chunkresult.orElse(null);
              if (chunkaccess1 == null && p_8363_) {
@@ -41,7 +70,15 @@
                  ChunkAccess chunkaccess1 = chunkholder.getChunkIfPresent(ChunkStatus.FULL);
                  if (chunkaccess1 != null) {
                      this.storeInCache(i, chunkaccess1, ChunkStatus.FULL);
-@@ -298,27 +_,53 @@
+@@ -293,32 +_,60 @@
+ 
+     public void save(boolean p_8420_) {
+         this.runDistanceManagerUpdates();
+-        this.chunkMap.saveAllChunks(p_8420_);
++        try (co.aikar.timings.Timing timed = level.timings.chunkSaveData.startTiming()) { // Paper - Timings
++            this.chunkMap.saveAllChunks(p_8420_);
++        } // Paper - Timings
+     }
  
      @Override
      public void close() throws IOException {
@@ -84,10 +121,10 @@
 +        this.level.timings.doChunkMap.stopTiming(); // Spigot
          this.level.getProfiler().popPush("chunks");
          if (p_201914_) {
++            this.level.timings.chunks.startTiming(); // Paper - timings
              this.tickChunks();
-+            this.level.timings.tracker.startTiming(); // Spigot
++            this.level.timings.chunks.stopTiming(); // Paper - timings
              this.chunkMap.tick();
-+            this.level.timings.tracker.stopTiming(); // Spigot
          }
  
 +        this.level.timings.doChunkUnload.startTiming(); // Spigot
@@ -97,7 +134,28 @@
          this.level.getProfiler().pop();
          this.clearCache();
      }
-@@ -356,14 +_,16 @@
+@@ -333,6 +_,7 @@
+             profilerfiller.push("filteringLoadedChunks");
+             List<ServerChunkCache.ChunkAndHolder> list = Lists.newArrayListWithCapacity(this.chunkMap.size());
+ 
++            if (this.level.getServer().tickRateManager().runsNormally()) this.level.timings.chunkTicks.startTiming(); // Paper
+             for (ChunkHolder chunkholder : this.chunkMap.getChunks()) {
+                 LevelChunk levelchunk = chunkholder.getTickingChunk();
+                 if (levelchunk != null) {
+@@ -342,10 +_,12 @@
+ 
+             if (this.level.tickRateManager().runsNormally()) {
+                 profilerfiller.popPush("naturalSpawnCount");
++                this.level.timings.countNaturalMobs.startTiming(); // Paper - timings
+                 int l = this.distanceManager.getNaturalSpawnChunkCount();
+                 NaturalSpawner.SpawnState naturalspawner$spawnstate = NaturalSpawner.createState(
+                     l, this.level.getAllEntities(), this::getFullChunk, new LocalMobCapCalculator(this.chunkMap)
+                 );
++                this.level.timings.countNaturalMobs.stopTiming(); // Paper - timings
+                 this.lastSpawnState = naturalspawner$spawnstate;
+                 profilerfiller.popPush("spawnAndTick");
+                 boolean flag1 = this.level.getGameRules().getBoolean(GameRules.RULE_DOMOBSPAWNING);
+@@ -356,9 +_,9 @@
                  for (ServerChunkCache.ChunkAndHolder serverchunkcache$chunkandholder : list) {
                      LevelChunk levelchunk1 = serverchunkcache$chunkandholder.chunk;
                      ChunkPos chunkpos = levelchunk1.getPos();
@@ -109,13 +167,31 @@
                              NaturalSpawner.spawnForChunk(this.level, levelchunk1, naturalspawner$spawnstate, this.spawnFriendlies, this.spawnEnemies, flag);
                          }
  
-                         if (this.level.shouldTickBlocksAt(chunkpos.toLong())) {
-+                            this.level.timings.doTickTiles.startTiming(); // Spigot
-                             this.level.tickChunk(levelchunk1, k);
-+                            this.level.timings.doTickTiles.stopTiming(); // Spigot
+@@ -367,15 +_,22 @@
                          }
                      }
                  }
++                this.level.timings.chunkTicks.stopTiming(); // Paper
+ 
+                 profilerfiller.popPush("customSpawners");
+                 if (flag1) {
+-                    this.level.tickCustomSpawners(this.spawnEnemies, this.spawnFriendlies);
++                    try (co.aikar.timings.Timing ignored = this.level.timings.miscMobSpawning.startTiming()) { // Paper - timings
++                        this.level.tickCustomSpawners(this.spawnEnemies, this.spawnFriendlies);
++                    } // Paper - timings
+                 }
+             }
+ 
+             profilerfiller.popPush("broadcast");
+-            list.forEach(p_184022_ -> p_184022_.holder.broadcastChanges(p_184022_.chunk));
++            list.forEach(p_184022_ ->{
++                this.level.timings.broadcastChunkUpdates.startTiming(); // Paper - timing
++                p_184022_.holder.broadcastChanges(p_184022_.chunk);
++                this.level.timings.broadcastChunkUpdates.stopTiming(); // Paper - timing
++            });
+             profilerfiller.pop();
+             profilerfiller.pop();
+         }
 @@ -435,11 +_,17 @@
      }
  

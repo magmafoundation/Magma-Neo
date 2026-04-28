@@ -26,6 +26,7 @@ import org.bukkit.scheduler.BukkitWorker;
 
 /**
  * The fundamental concepts for this implementation:
+ * <ul>
  * <li>Main thread owns {@link #head} and {@link #currentTick}, but it may be read from any thread</li>
  * <li>Main thread exclusively controls {@link #temp} and {@link #pending}.
  * They are never to be accessed outside of the main thread; alternatives exist to prevent locking.</li>
@@ -41,6 +42,7 @@ import org.bukkit.scheduler.BukkitWorker;
  * <li>Sync tasks are only to be removed from runners on the main thread when coupled with a removal from pending and temp.</li>
  * <li>Most of the design in this scheduler relies on queuing special tasks to perform any data changes on the main thread.
  * When executed from inside a synchronous method, the scheduler will be updated before next execution by virtue of the frequent {@link #parsePending()} calls.</li>
+ * </ul>
  */
 public class CraftScheduler implements BukkitScheduler {
     /**
@@ -269,7 +271,11 @@ public class CraftScheduler implements BukkitScheduler {
                         }
                         return false;
                     }
-                });
+                }) {
+            {
+                this.timings = co.aikar.timings.MinecraftTimings.getCancelTasksTimer();
+            }
+        }; // Paper
         handle(task, 0L);
         for (CraftTask taskPending = head.getNext(); taskPending != null; taskPending = taskPending.getNext()) {
             if (taskPending == task) {
@@ -305,7 +311,11 @@ public class CraftScheduler implements BukkitScheduler {
                             }
                         }
                     }
-                });
+                }) {
+            {
+                this.timings = co.aikar.timings.MinecraftTimings.getCancelTasksTimer(plugin);
+            }
+        }; // Paper
         handle(task, 0L);
         for (CraftTask taskPending = head.getNext(); taskPending != null; taskPending = taskPending.getNext()) {
             if (taskPending == task) {
@@ -412,9 +422,7 @@ public class CraftScheduler implements BukkitScheduler {
             if (task.isSync()) {
                 currentTask = task;
                 try {
-                    task.timings.startTiming(); // Spigot
                     task.run();
-                    task.timings.stopTiming(); // Spigot
                 } catch (final Throwable throwable) {
                     task.getOwner().getLogger().log(
                             Level.WARNING,
@@ -441,8 +449,10 @@ public class CraftScheduler implements BukkitScheduler {
                 runners.remove(task.getTaskId());
             }
         }
+        co.aikar.timings.MinecraftTimings.bukkitSchedulerFinishTimer.startTiming(); // Paper
         pending.addAll(temp);
         temp.clear();
+        co.aikar.timings.MinecraftTimings.bukkitSchedulerFinishTimer.stopTiming(); // Paper
         debugHead = debugHead.getNextHead(currentTick);
     }
 
@@ -479,6 +489,7 @@ public class CraftScheduler implements BukkitScheduler {
     }
 
     private void parsePending() {
+        co.aikar.timings.MinecraftTimings.bukkitSchedulerPendingTimer.startTiming();
         CraftTask head = this.head;
         CraftTask task = head.getNext();
         CraftTask lastTask = head;
@@ -497,6 +508,7 @@ public class CraftScheduler implements BukkitScheduler {
             task.setNext(null);
         }
         this.head = lastTask;
+        co.aikar.timings.MinecraftTimings.bukkitSchedulerPendingTimer.stopTiming();
     }
 
     private boolean isReady(final int currentTick) {

@@ -60,7 +60,7 @@
      private final Set<TagKey<Fluid>> fluidOnEyes = new HashSet<>();
      public int invulnerableTime;
      protected boolean firstTick = true;
-@@ -244,6 +_,39 @@
+@@ -244,6 +_,43 @@
      @Nullable
      private BlockState inBlockState = null;
  
@@ -79,7 +79,6 @@
 +    // Marks an entity, that it was removed by a plugin via Entity#remove
 +    // Main use case currently is for SPIGOT-7487, preventing dropping of leash when leash is removed
 +    public boolean pluginRemoved = false;
-+    public org.spigotmc.CustomTimingsHandler tickTimer = org.bukkit.craftbukkit.SpigotTimings.getEntityTimings(this); // Spigot
 +
 +    // Spigot start
 +    public final org.spigotmc.ActivationRange.ActivationType activationType = org.spigotmc.ActivationRange.initializeEntityActivationType(this);
@@ -96,6 +95,11 @@
 +        return level.hasChunk((int) Math.floor(this.getX()) >> 4, (int) Math.floor(this.getZ()) >> 4);
 +    }
 +    // CraftBukkit end
++    // Paper start
++    public final AABB getBoundingBoxAt(double x, double y, double z) {
++        return this.dimensions.makeBoundingBox(x, y, z);
++    }
++    // Paper end
 +
      public Entity(EntityType<?> p_19870_, Level p_19871_) {
          this.type = p_19870_;
@@ -307,14 +311,6 @@
      }
  
      public boolean isFree(double p_20230_, double p_20231_, double p_20232_) {
-@@ -599,6 +_,7 @@
-     }
- 
-     public void move(MoverType p_19973_, Vec3 p_19974_) {
-+        org.bukkit.craftbukkit.SpigotTimings.entityMoveTimer.startTiming(); // Spigot
-         if (this.noPhysics) {
-             this.setPos(this.getX() + p_19974_.x, this.getY() + p_19974_.y, this.getZ() + p_19974_.z);
-         } else {
 @@ -664,6 +_,28 @@
                      block.updateEntityAfterFallOn(this.level(), this);
                  }
@@ -353,7 +349,7 @@
                      BlockPos blockpos1 = this.getOnPos();
                      BlockState blockstate1 = this.level().getBlockState(blockpos1);
                      boolean flag1 = this.isStateClimbable(blockstate1);
-@@ -717,18 +_,19 @@
+@@ -717,16 +_,16 @@
                          this.setRemainingFireTicks(-this.getFireImmuneTicks());
                      }
  
@@ -372,10 +368,7 @@
 +                this.level.getProfiler().pop();
              }
          }
-+        org.bukkit.craftbukkit.SpigotTimings.entityMoveTimer.stopTiming(); // Spigot
      }
- 
-     private boolean isStateClimbable(BlockState p_286733_) {
 @@ -812,9 +_,7 @@
                  return blockpos;
              } else {

@@ -25,6 +25,42 @@ public interface Scoreboard {
     @NotNull
     Objective registerNewObjective(@NotNull String name, @NotNull String criteria);
 
+    // Paper start - Adventure
+    /**
+     * Registers an Objective on this Scoreboard
+     *
+     * @param name        Name of the Objective
+     * @param criteria    Criteria for the Objective
+     * @param displayName display name for the Objective.
+     * @return The registered Objective
+     * @throws IllegalArgumentException if name is longer than 32767
+     *                                  characters.
+     * @throws IllegalArgumentException if an objective by that name already
+     *                                  exists
+     * @deprecated use {@link #registerNewObjective(String, Criteria, net.kyori.adventure.text.Component)}
+     */
+    @NotNull
+    @Deprecated
+    Objective registerNewObjective(@NotNull String name, @NotNull String criteria, net.kyori.adventure.text.@Nullable Component displayName);
+
+    /**
+     * Registers an Objective on this Scoreboard
+     *
+     * @param name        Name of the Objective
+     * @param criteria    Criteria for the Objective
+     * @param displayName Name displayed to players for the Objective.
+     * @param renderType  Manner of rendering the Objective
+     * @return The registered Objective
+     * @throws IllegalArgumentException if name is longer than 32767
+     *                                  characters.
+     * @throws IllegalArgumentException if an objective by that name already
+     *                                  exists
+     * @deprecated use {@link #registerNewObjective(String, Criteria, net.kyori.adventure.text.Component, RenderType)}
+     */
+    @NotNull
+    @Deprecated
+    Objective registerNewObjective(@NotNull String name, @NotNull String criteria, net.kyori.adventure.text.@Nullable Component displayName, @NotNull RenderType renderType) throws IllegalArgumentException;
+
     /**
      * Registers an Objective on this Scoreboard
      *
@@ -36,7 +72,39 @@ public interface Scoreboard {
      *                                  characters.
      * @throws IllegalArgumentException if an objective by that name already
      *                                  exists
-     * @deprecated use {@link #registerNewObjective(String, Criteria, String)}
+     */
+    @NotNull
+    Objective registerNewObjective(@NotNull String name, @NotNull Criteria criteria, net.kyori.adventure.text.@Nullable Component displayName) throws IllegalArgumentException;
+
+    /**
+     * Registers an Objective on this Scoreboard
+     *
+     * @param name        Name of the Objective
+     * @param criteria    Criteria for the Objective
+     * @param displayName Name displayed to players for the Objective.
+     * @param renderType  Manner of rendering the Objective
+     * @return The registered Objective
+     * @throws IllegalArgumentException if name is longer than 32767
+     *                                  characters.
+     * @throws IllegalArgumentException if an objective by that name already
+     *                                  exists
+     */
+    @NotNull
+    Objective registerNewObjective(@NotNull String name, @NotNull Criteria criteria, net.kyori.adventure.text.@Nullable Component displayName, @NotNull RenderType renderType) throws IllegalArgumentException;
+    // Paper end - Adventure
+
+    /**
+     * Registers an Objective on this Scoreboard
+     *
+     * @param name        Name of the Objective
+     * @param criteria    Criteria for the Objective
+     * @param displayName Name displayed to players for the Objective.
+     * @return The registered Objective
+     * @throws IllegalArgumentException if name is longer than 32767
+     *                                  characters.
+     * @throws IllegalArgumentException if an objective by that name already
+     *                                  exists
+     * @deprecated use {@link #registerNewObjective(String, Criteria, net.kyori.adventure.text.Component)}
      */
     @Deprecated
     @NotNull
@@ -54,7 +122,7 @@ public interface Scoreboard {
      *                                  characters.
      * @throws IllegalArgumentException if an objective by that name already
      *                                  exists
-     * @deprecated use {@link #registerNewObjective(String, Criteria, String, RenderType)}
+     * @deprecated use {@link #registerNewObjective(String, Criteria, net.kyori.adventure.text.Component, RenderType)}
      */
     @Deprecated
     @NotNull
@@ -71,8 +139,10 @@ public interface Scoreboard {
      *                                  characters.
      * @throws IllegalArgumentException if an objective by that name already
      *                                  exists
+     * @deprecated in favour of {@link #registerNewObjective(String, Criteria, net.kyori.adventure.text.Component)}
      */
     @NotNull
+    @Deprecated // Paper
     Objective registerNewObjective(@NotNull String name, @NotNull Criteria criteria, @NotNull String displayName);
 
     /**
@@ -87,8 +157,10 @@ public interface Scoreboard {
      *                                  characters.
      * @throws IllegalArgumentException if an objective by that name already
      *                                  exists
+     * @deprecated in favour of {@link #registerNewObjective(String, Criteria, net.kyori.adventure.text.Component, RenderType)}
      */
     @NotNull
+    @Deprecated // Paper
     Objective registerNewObjective(@NotNull String name, @NotNull Criteria criteria, @NotNull String displayName, @NotNull RenderType renderType);
 
     /**

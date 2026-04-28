@@ -46,5 +46,6 @@ public @interface MinecraftExperimental {
     @ApiStatus.Internal
     public enum Requires {
 
+        BUNDLE, TRADE_REBALANCE // Paper
     }
 }

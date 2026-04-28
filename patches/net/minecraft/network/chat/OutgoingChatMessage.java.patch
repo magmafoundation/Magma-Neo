@@ -1,0 +1,45 @@
+--- a/net/minecraft/network/chat/OutgoingChatMessage.java
++++ b/net/minecraft/network/chat/OutgoingChatMessage.java
+@@ -7,6 +_,12 @@
+ 
+     void sendToPlayer(ServerPlayer p_250979_, boolean p_249307_, ChatType.Bound p_252281_);
+ 
++    // Paper start
++    default void sendToPlayer(ServerPlayer sender, boolean filterMaskEnabled, ChatType.Bound params, @org.jetbrains.annotations.Nullable Component unsigned) {
++        this.sendToPlayer(sender, filterMaskEnabled, params);
++    }
++    // Paper end
++
+     static OutgoingChatMessage create(PlayerChatMessage p_249173_) {
+         return (OutgoingChatMessage)(p_249173_.isSystem()
+             ? new OutgoingChatMessage.Disguised(p_249173_.decoratedContent())
+@@ -16,7 +_,13 @@
+     public static record Disguised(Component content) implements OutgoingChatMessage {
+         @Override
+         public void sendToPlayer(ServerPlayer p_249237_, boolean p_249574_, ChatType.Bound p_250880_) {
+-            p_249237_.connection.sendDisguisedChatMessage(this.content, p_250880_);
++            // Paper start
++            this.sendToPlayer(p_249237_, p_249574_, p_250880_, null);
++        }
++
++        public void sendToPlayer(ServerPlayer sender, boolean filterMaskEnabled, ChatType.Bound params, @org.jetbrains.annotations.Nullable Component unsigned) {
++            sender.connection.sendDisguisedChatMessage(unsigned != null ? unsigned : this.content, params);
++            // Paper end
+         }
+     }
+ 
+@@ -28,7 +_,14 @@
+ 
+         @Override
+         public void sendToPlayer(ServerPlayer p_249642_, boolean p_251123_, ChatType.Bound p_251482_) {
++            // Paper start
++            this.sendToPlayer(p_249642_, p_251123_, p_251482_, null);
++        }
++
++        public void sendToPlayer(ServerPlayer p_249642_, boolean p_251123_, ChatType.Bound p_251482_, @org.jetbrains.annotations.Nullable Component unsigned) {
++            // Paper end
+             PlayerChatMessage playerchatmessage = this.message.filter(p_251123_);
++            playerchatmessage = unsigned != null ? playerchatmessage.withUnsignedContent(unsigned) : playerchatmessage; // Paper
+             if (!playerchatmessage.isFullyFiltered()) {
+                 p_249642_.connection.sendPlayerChatMessage(playerchatmessage, p_251482_);
+             }

@@ -211,6 +211,24 @@ public class DummyGeneratorAccess implements WorldGenLevel {
         return Fluids.EMPTY.defaultFluidState(); // SPIGOT-6634
     }
 
+    // Paper start - if loaded util
+    @org.jetbrains.annotations.Nullable
+    @Override
+    public ChunkAccess getChunkIfLoadedImmediately(int x, int z) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public BlockState getBlockStateIfLoaded(BlockPos blockposition) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public FluidState getFluidIfLoaded(BlockPos blockposition) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+    // Paper end
+
     @Override
     public WorldBorder getWorldBorder() {
         throw new UnsupportedOperationException("Not supported yet.");

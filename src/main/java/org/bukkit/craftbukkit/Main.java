@@ -13,13 +13,18 @@ import java.util.logging.Logger;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.util.PathConverter;
-import org.fusesource.jansi.AnsiConsole;
 
 public class Main {
     public static boolean useJline = true;
     public static boolean useConsole = true;
 
     public static void main(String[] args) {
+        // Paper start
+        final String warnWhenLegacyFormattingDetected = String.join(".", "net", "kyori", "adventure", "text", "warnWhenLegacyFormattingDetected");
+        if (false && System.getProperty(warnWhenLegacyFormattingDetected) == null) {
+            System.setProperty(warnWhenLegacyFormattingDetected, String.valueOf(true));
+        }
+        // Paper end
         // Todo: Installation script
         OptionParser parser = new OptionParser() {
             {
@@ -123,6 +128,7 @@ public class Main {
                 acceptsAll(asList("forceUpgrade"), "Whether to force a world upgrade");
                 acceptsAll(asList("eraseCache"), "Whether to force cache erase during world upgrade");
                 acceptsAll(asList("recreateRegionFiles"), "Whether to recreate region files during world upgrade");
+                this.accepts("safeMode", "Loads level with vanilla datapack only"); // Paper
                 acceptsAll(asList("nogui"), "Disables the graphical console");
 
                 acceptsAll(asList("nojline"), "Disables jline and emulates the vanilla console");
@@ -142,6 +148,24 @@ public class Main {
                         .defaultsTo(new File("spigot.yml"))
                         .describedAs("Yml file");
                 // Spigot End
+
+                // Paper start
+                acceptsAll(asList("paper-dir", "paper-settings-directory"), "Directory for Paper settings")
+                        .withRequiredArg()
+                        .ofType(File.class)
+                        .defaultsTo(new File(io.papermc.paper.configuration.PaperConfigurations.CONFIG_DIR))
+                        .describedAs("Config directory");
+                acceptsAll(asList("paper", "paper-settings"), "File for Paper settings")
+                        .withRequiredArg()
+                        .ofType(File.class)
+                        .defaultsTo(new File("paper.yml"))
+                        .describedAs("Yml file");
+                acceptsAll(asList("add-plugin", "add-extra-plugin-jar"), "Specify paths to extra plugin jars to be loaded in addition to those in the plugins folder. This argument can be specified multiple times, once for each extra plugin jar path.")
+                        .withRequiredArg()
+                        .ofType(File.class)
+                        .defaultsTo(new File[] {})
+                        .describedAs("Jar file");
+                // Paper end
             }
         };
 
@@ -176,26 +200,37 @@ public class Main {
             }
 
             try {
+                // Paper start - Handled by TerminalConsoleAppender
+                /*
                 // This trick bypasses Maven Shade's clever rewriting of our getProperty call when using String literals
                 String jline_UnsupportedTerminal = new String(new char[] { 'j', 'l', 'i', 'n', 'e', '.', 'U', 'n', 's', 'u', 'p', 'p', 'o', 'r', 't', 'e', 'd', 'T', 'e', 'r', 'm', 'i', 'n', 'a', 'l' });
                 String jline_terminal = new String(new char[] { 'j', 'l', 'i', 'n', 'e', '.', 't', 'e', 'r', 'm', 'i', 'n', 'a', 'l' });
-
+                
                 useJline = !(jline_UnsupportedTerminal).equals(System.getProperty(jline_terminal));
-
+                
                 if (options.has("nojline")) {
                     System.setProperty("user.language", "en");
                     useJline = false;
                 }
-
+                
                 if (useJline) {
                     AnsiConsole.systemInstall();
                 } else {
                     // This ensures the terminal literal will always match the jline implementation
                     System.setProperty(jline.TerminalFactory.JLINE_TERMINAL, jline.UnsupportedTerminal.class.getName());
                 }
+                */
+
+                if (options.has("nojline")) {
+                    System.setProperty(net.minecrell.terminalconsole.TerminalConsoleAppender.JLINE_OVERRIDE_PROPERTY, "false");
+                    useJline = false;
+                }
+                // Paper end
 
                 if (options.has("noconsole")) {
                     useConsole = false;
+                    useJline = false; // Paper
+                    System.setProperty(net.minecrell.terminalconsole.TerminalConsoleAppender.JLINE_OVERRIDE_PROPERTY, "false"); // Paper
                 }
 
                 if (Main.class.getPackage().getImplementationVendor() != null && System.getProperty("IReallyKnowWhatIAmDoingISwear") == null) {
@@ -211,6 +246,7 @@ public class Main {
                     }
                 }
 
+                System.setProperty("library.jansi.version", "Paper"); // Paper - set meaningless jansi version to prevent git builds from crashing on Windows
                 System.out.println("Loading libraries, please wait...");
                 // net.minecraft.server.Main.main(options); - Magma not needed
             } catch (Throwable t) {

@@ -145,6 +145,13 @@ public class CraftEnchantment extends Enchantment implements Handleable<net.mine
         return !net.minecraft.world.item.enchantment.Enchantment.areCompatible(handle, ench.handle);
     }
 
+    // Paper start
+    @Override
+    public net.kyori.adventure.text.Component displayName(int level) {
+        return io.papermc.paper.adventure.PaperAdventure.asAdventure(getHandle().getFullname(level));
+    }
+    // Paper end
+
     @Override
     public String getTranslationKey() {
         return Util.makeDescriptionId("enchantment", handle.unwrapKey().get().location());

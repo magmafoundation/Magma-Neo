@@ -47,8 +47,14 @@ public class SpigotWorldConfig {
     }
 
     private int getInt(String path, int def) {
-        config.addDefault("world-settings.default." + path, def);
-        return config.getInt("world-settings." + worldName + "." + path, config.getInt("world-settings.default." + path));
+        // Paper start - get int without setting default
+        return this.getInt(path, def, true);
+    }
+
+    public int getInt(String path, int def, boolean setDef) {
+        if (setDef) this.config.addDefault("world-settings.default." + path, def);
+        return this.config.getInt("world-settings." + this.worldName + "." + path, this.config.getInt("world-settings.default." + path, def));
+        // Paper end
     }
 
     private <T> List getList(String path, T def) {
@@ -123,14 +129,14 @@ public class SpigotWorldConfig {
     public double itemMerge;
 
     private void itemMerge() {
-        itemMerge = getDouble("merge-radius.item", 2.5);
+        this.itemMerge = this.getDouble("merge-radius.item", 0.5);
         log("Item Merge Radius: " + itemMerge);
     }
 
     public double expMerge;
 
     private void expMerge() {
-        expMerge = getDouble("merge-radius.exp", 3.0);
+        this.expMerge = this.getDouble("merge-radius.exp", -1);
         log("Experience Merge Radius: " + expMerge);
     }
 
@@ -176,7 +182,7 @@ public class SpigotWorldConfig {
 
     public int animalActivationRange = 32;
     public int monsterActivationRange = 32;
-    public int raiderActivationRange = 48;
+    public int raiderActivationRange = 64;
     public int miscActivationRange = 16;
     public boolean tickInactiveVillagers = true;
     public boolean ignoreSpectatorActivation = false;
@@ -191,10 +197,10 @@ public class SpigotWorldConfig {
         log("Entity Activation Range: An " + animalActivationRange + " / Mo " + monsterActivationRange + " / Ra " + raiderActivationRange + " / Mi " + miscActivationRange + " / Tiv " + tickInactiveVillagers + " / Isa " + ignoreSpectatorActivation);
     }
 
-    public int playerTrackingRange = 48;
-    public int animalTrackingRange = 48;
-    public int monsterTrackingRange = 48;
-    public int miscTrackingRange = 32;
+    public int playerTrackingRange = 128;
+    public int animalTrackingRange = 96;
+    public int monsterTrackingRange = 96;
+    public int miscTrackingRange = 96;
     public int displayTrackingRange = 128;
     public int otherTrackingRange = 64;
 

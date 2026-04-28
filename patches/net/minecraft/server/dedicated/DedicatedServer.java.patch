@@ -27,7 +27,7 @@
          this.textFilterClient = TextFilterClient.createFromConfig(p_214793_.getProperties().textFilteringConfig);
          this.serverLinks = createServerLinks(p_214793_);
      }
-@@ -103,18 +_,74 @@
+@@ -103,18 +_,83 @@
          Thread thread = new Thread("Server console handler") {
              @Override
              public void run() {
@@ -38,6 +38,9 @@
 +                if (!org.bukkit.craftbukkit.Main.useConsole) {
 +                    return;
 +                }
++                // Paper start - Use TerminalConsoleAppender
++                new com.destroystokyo.paper.console.PaperConsole(DedicatedServer.this).start();
++                /*
 +                jline.console.ConsoleReader bufferedreader = reader;
 +                // MC-33041, SPIGOT-5538: if System.in is not valid due to javaw, then return
 +                try {
@@ -76,6 +79,8 @@
                  } catch (IOException ioexception1) {
                      DedicatedServer.LOGGER.error("Exception handling console input", (Throwable)ioexception1);
                  }
++                */
++                // Paper end
              }
          };
 +
@@ -87,6 +92,9 @@
 +        }
 +        global.addHandler(new org.bukkit.craftbukkit.util.ForwardLogHandler());
 +
++        // Paper start - Not needed with TerminalConsoleAppender
++        final org.apache.logging.log4j.Logger logger = org.apache.logging.log4j.LogManager.getRootLogger();
++        /*
 +        final org.apache.logging.log4j.core.Logger logger = ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager.getRootLogger());
 +        for (org.apache.logging.log4j.core.Appender appender : logger.getAppenders().values()) {
 +            if (appender instanceof org.apache.logging.log4j.core.appender.ConsoleAppender) {
@@ -97,7 +105,8 @@
 +        org.bukkit.craftbukkit.util.TerminalConsoleWriterThread writerThread = new org.bukkit.craftbukkit.util.TerminalConsoleWriterThread(System.out, this.reader);
 +        this.reader.setCompletionHandler(new org.bukkit.craftbukkit.util.TerminalCompletionHandler(writerThread, this.reader.getCompletionHandler()));
 +        writerThread.start();
-+
++        */
++        // Paper end - Not needed with TerminalConsoleAppender
 +        System.setOut(org.apache.logging.log4j.io.IoBuilder.forLogger(logger).setLevel(org.apache.logging.log4j.Level.INFO).buildPrintStream());
 +        System.setErr(org.apache.logging.log4j.io.IoBuilder.forLogger(logger).setLevel(org.apache.logging.log4j.Level.WARN).buildPrintStream());
 +        // CraftBukkit end
@@ -105,7 +114,7 @@
          thread.setDaemon(true);
          thread.setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandler(LOGGER));
          thread.start();
-@@ -132,6 +_,11 @@
+@@ -132,6 +_,18 @@
              this.setPreventProxyConnections(dedicatedserverproperties.preventProxyConnections);
              this.setLocalIp(dedicatedserverproperties.serverIp);
          }
@@ -114,6 +123,13 @@
 +        org.spigotmc.SpigotConfig.init((java.io.File) options.valueOf("spigot-settings"));
 +        org.spigotmc.SpigotConfig.registerCommands();
 +        // Spigot end
++        io.papermc.paper.util.ObfHelper.INSTANCE.getClass(); // Paper - load mappings for stacktrace deobf and etc.
++        // Paper start - initialize global and world-defaults configuration
++        this.paperConfigurations.initializeGlobalConfiguration(this.registryAccess());
++        this.paperConfigurations.initializeWorldDefaultsConfiguration(this.registryAccess());
++        // Paper end - initialize global and world-defaults configuration
++        io.papermc.paper.command.PaperCommands.registerCommands(this); // Paper - setup /paper command
++        com.destroystokyo.paper.Metrics.PaperMetrics.startMetrics(); // Paper - start metrics
  
          this.setPvpAllowed(dedicatedserverproperties.pvp);
          this.setFlightAllowed(dedicatedserverproperties.allowFlight);
@@ -179,7 +195,7 @@
                  Thread thread1 = new Thread(new ServerWatchdog(this));
                  thread1.setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandlerWithName(LOGGER));
                  thread1.setName("Server Watchdog");
-@@ -217,6 +_,12 @@
+@@ -217,10 +_,22 @@
                  LOGGER.info("JMX monitoring enabled");
              }
  
@@ -192,6 +208,16 @@
              return true;
          }
      }
+ 
++    // Paper start
++    public java.io.File getPluginsFolder() {
++        return (java.io.File) this.options.valueOf("plugins");
++    }
++    // Paper end
++
+     @Override
+     public boolean isSpawningAnimals() {
+         return this.getProperties().spawnAnimals && super.isSpawningAnimals();
 @@ -295,6 +_,11 @@
          if (this.queryThreadGs4 != null) {
              this.queryThreadGs4.stop();
@@ -208,7 +234,7 @@
      }
  
      public void handleConsoleInputs() {
-+        org.bukkit.craftbukkit.SpigotTimings.serverCommandTimer.startTiming(); // Spigot
++        co.aikar.timings.MinecraftTimings.serverCommandTimer.startTiming(); // Spigot
          while (!this.consoleInput.isEmpty()) {
              ConsoleInput consoleinput = this.consoleInput.remove(0);
 -            this.getCommands().performPrefixedCommand(consoleinput.source, consoleinput.msg);
@@ -221,11 +247,11 @@
 +            server.dispatchServerCommand(console, consoleinput);
 +            // CraftBukkit end
          }
-+        org.bukkit.craftbukkit.SpigotTimings.serverCommandTimer.stopTiming(); // Spigot
++        co.aikar.timings.MinecraftTimings.serverCommandTimer.stopTiming(); // Spigot
      }
  
      @Override
-@@ -532,14 +_,52 @@
+@@ -532,14 +_,83 @@
  
      @Override
      public String getPluginNames() {
@@ -266,7 +292,9 @@
 +    }
 +
 +    public String runCommand(RconConsoleSource rconConsoleSource, String p_139644_) {
++        org.bukkit.craftbukkit.util.Waitable[] waitableArray = new org.bukkit.craftbukkit.util.Waitable[1]; // Paper
 +        rconConsoleSource.prepareForCommand();
++        final java.util.concurrent.atomic.AtomicReference<String> command = new java.util.concurrent.atomic.AtomicReference<>(p_139644_); // Paper
 +        this.executeBlocking(() -> {
 +            CommandSourceStack wrapper = rconConsoleSource.createCommandSourceStack();
 +            org.bukkit.event.server.RemoteServerCommandEvent event = new org.bukkit.event.server.RemoteServerCommandEvent(rconConsoleSource.getBukkitSender(wrapper), p_139644_);
@@ -274,9 +302,38 @@
 +            if (event.isCancelled()) {
 +                return;
 +            }
++            // Paper start
++            command.set(event.getCommand());
++            if (event.getCommand().toLowerCase(java.util.Locale.ROOT).startsWith("timings") && event.getCommand().toLowerCase(java.util.Locale.ROOT).matches("timings (report|paste|get|merged|seperate)")) {
++                org.bukkit.command.BufferedCommandSender sender = new org.bukkit.command.BufferedCommandSender();
++                org.bukkit.craftbukkit.util.Waitable<String> waitable = new org.bukkit.craftbukkit.util.Waitable<String>() {
++                    @Override
++                    protected String evaluate() {
++                        return sender.getBuffer();
++                    }
++                };
++                waitableArray[0] = waitable;
++                co.aikar.timings.Timings.generateReport(new co.aikar.timings.TimingsReportListener(sender, waitable));
++            } else {
++                // Paper end
 +            ConsoleInput serverCommand = new ConsoleInput(event.getCommand(), wrapper);
 +            server.dispatchServerCommand(event.getSender(), serverCommand);
++            } // Paper
 +        });
++        // Paper start
++        if (waitableArray[0] != null) {
++            //noinspection unchecked
++            org.bukkit.craftbukkit.util.Waitable<String> waitable = waitableArray[0];
++            try {
++                return waitable.get();
++            } catch (java.util.concurrent.ExecutionException e) {
++                throw new RuntimeException("Exception processing rcon command " + command.get(), e.getCause());
++            } catch (InterruptedException e) {
++                Thread.currentThread().interrupt(); // Maintain interrupted state
++                throw new RuntimeException("Interrupted processing rcon command " + command.get(), e);
++            }
++        }
++        // Paper end
 +        return rconConsoleSource.getCommandResponse();
 +        // CraftBukkit end
      }

@@ -18,7 +18,7 @@
 +            if (p_261751_.isEmptyBlock(p_261616_.above()) && p_261751_.getRawBrightness(p_261616_.above(), 0) >= 9) {
                  int i = this.getHeightBelowUpToMax(p_261751_, p_261616_) + 1;
 -                if (i < 16) {
-+                if (i < 16 && net.neoforged.neoforge.common.CommonHooks.canCropGrow(p_261751_, p_261616_, p_261931_, p_261766_.nextFloat() < (p_261751_.spigotConfig.bambooModifier / (100.0f * 3)))) { // Spigot
++                if (i < p_261751_.paperConfig().maxGrowthHeight.bamboo.max && net.neoforged.neoforge.common.CommonHooks.canCropGrow(p_261751_, p_261616_, p_261931_, p_261766_.nextFloat() < (p_261751_.spigotConfig.bambooModifier / (100.0f * 3)))) { // Spigot // Paper - Configurable cactus/bamboo/reed growth height
                      this.growBamboo(p_261931_, p_261751_, p_261616_, p_261766_, i);
 +                    net.neoforged.neoforge.common.CommonHooks.fireCropGrowPost(p_261751_, p_261616_, p_261931_);
                  }
@@ -32,6 +32,24 @@
 +        if (!soilDecision.isDefault()) return soilDecision.isTrue();
          return p_262154_.getBlockState(p_261493_.below()).is(BlockTags.BAMBOO_PLANTABLE_ON);
      }
+ 
+@@ -163,7 +_,7 @@
+     public boolean isValidBonemealTarget(LevelReader p_262065_, BlockPos p_262033_, BlockState p_261700_) {
+         int i = this.getHeightAboveUpToMax(p_262065_, p_262033_);
+         int j = this.getHeightBelowUpToMax(p_262065_, p_262033_);
+-        return i + j + 1 < 16 && p_262065_.getBlockState(p_262033_.above(i)).getValue(STAGE) != 1;
++        return i + j + 1 < ((Level) p_262065_).paperConfig().maxGrowthHeight.bamboo.max && p_262065_.getBlockState(p_262033_.above(i)).getValue(STAGE) != 1; // Paper - Configurable cactus/bamboo/reed growth height
+     }
+ 
+     @Override
+@@ -181,7 +_,7 @@
+         for (int i1 = 0; i1 < l; i1++) {
+             BlockPos blockpos = p_261955_.above(i);
+             BlockState blockstate = p_261845_.getBlockState(blockpos);
+-            if (k >= 16 || blockstate.getValue(STAGE) == 1 || !p_261845_.isEmptyBlock(blockpos.above())) {
++            if (k >= p_261845_.paperConfig().maxGrowthHeight.bamboo.max || blockstate.getValue(STAGE) == 1 || !p_261845_.isEmptyBlock(blockpos.above())) { // Paper - Configurable cactus/bamboo/reed growth height
+                 return;
+             }
  
 @@ -193,7 +_,7 @@
  
@@ -66,10 +84,11 @@
          }
  
          int i = p_261855_.getValue(AGE) != 1 && !blockstate1.is(Blocks.BAMBOO) ? 0 : 1;
-         int j = (p_261759_ < 11 || !(p_261633_.nextFloat() < 0.25F)) && p_261759_ != 15 ? 0 : 1;
+-        int j = (p_261759_ < 11 || !(p_261633_.nextFloat() < 0.25F)) && p_261759_ != 15 ? 0 : 1;
 -        p_262076_.setBlock(
 -            p_262109_.above(), this.defaultBlockState().setValue(AGE, Integer.valueOf(i)).setValue(LEAVES, bambooleaves).setValue(STAGE, Integer.valueOf(j)), 3
 -        );
++        int j = (p_261759_ < p_262076_.paperConfig().maxGrowthHeight.bamboo.min || !(p_261633_.nextFloat() < 0.25F)) && p_261759_ != (p_262076_.paperConfig().maxGrowthHeight.bamboo.max - 1) ? 0 : 1; // Paper - Configurable cactus/bamboo/reed growth height
 +
 +        // CraftBukkit start
 +        if (org.bukkit.craftbukkit.event.CraftEventFactory.handleBlockSpreadEvent(

@@ -1,5 +1,38 @@
 --- a/net/minecraft/network/FriendlyByteBuf.java
 +++ b/net/minecraft/network/FriendlyByteBuf.java
+@@ -70,6 +_,7 @@
+ public class FriendlyByteBuf extends ByteBuf implements net.neoforged.neoforge.common.extensions.IFriendlyByteBufExtension {
+     public static final int DEFAULT_NBT_QUOTA = 2097152;
+     private final ByteBuf source;
++    @Nullable public final java.util.Locale adventure$locale; // Paper - track player's locale for server-side translations
+     public static final short MAX_STRING_LENGTH = 32767;
+     public static final int MAX_COMPONENT_STRING_LENGTH = 262144;
+     private static final int PUBLIC_KEY_SIZE = 256;
+@@ -79,6 +_,7 @@
+ 
+     public FriendlyByteBuf(ByteBuf p_130051_) {
+         this.source = p_130051_;
++        this.adventure$locale = PacketEncoder.ADVENTURE_LOCALE.get(); // Paper - track player's locale for server-side translations
+     }
+ 
+     @Deprecated
+@@ -106,8 +_,14 @@
+     }
+ 
+     public <T> void writeJsonWithCodec(Codec<T> p_273285_, T p_272770_) {
+-        DataResult<JsonElement> dataresult = p_273285_.encodeStart(JsonOps.INSTANCE, p_272770_);
+-        this.writeUtf(GSON.toJson(dataresult.getOrThrow(p_339402_ -> new EncoderException("Failed to encode: " + p_339402_ + " " + p_272770_))));
++        // Paper start - Adventure; add max length parameter
++        this.writeJsonWithCodec(p_273285_, p_272770_, MAX_STRING_LENGTH);
++    }
++
++    public <T> void writeJsonWithCodec(Codec<T> codec, T value, int maxLength) {
++        // Paper end - Adventure; add max length parameter
++        DataResult<JsonElement> dataresult = codec.encodeStart(JsonOps.INSTANCE, value);
++        this.writeUtf(GSON.toJson(dataresult.getOrThrow(p_339402_ -> new EncoderException("Failed to encode: " + p_339402_ + " " + maxLength)))); // Paper - Adventure; add max length parameter
+     }
+ 
+     public static <T> IntFunction<T> limitValue(IntFunction<T> p_182696_, int p_182697_) {
 @@ -511,7 +_,7 @@
  
          try {

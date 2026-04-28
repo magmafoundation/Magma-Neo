@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/entity/projectile/FishingHook.java
 +++ b/net/minecraft/world/entity/projectile/FishingHook.java
-@@ -66,6 +_,18 @@
+@@ -66,11 +_,27 @@
      private final int luck;
      private final int lureSpeed;
  
@@ -19,6 +19,15 @@
      private FishingHook(EntityType<? extends FishingHook> p_150141_, Level p_150142_, int p_150143_, int p_150144_) {
          super(p_150141_, p_150142_);
          this.noCulling = true;
+         this.luck = Math.max(0, p_150143_);
+         this.lureSpeed = Math.max(0, p_150144_);
++        // Paper start - Configurable fishing time ranges
++        this.minWaitTime = p_150142_.paperConfig().fishingTimeRange.minimum;
++        this.maxWaitTime = p_150142_.paperConfig().fishingTimeRange.maximum;
++        // Paper end - Configurable fishing time ranges
+     }
+ 
+     public FishingHook(EntityType<? extends FishingHook> p_150138_, Level p_150139_) {
 @@ -141,11 +_,13 @@
          super.tick();
          Player player = this.getPlayerOwner();
@@ -96,7 +105,7 @@
                  this.playSound(SoundEvents.FISHING_BOBBER_SPLASH, 0.25F, 1.0F + (this.random.nextFloat() - this.random.nextFloat()) * 0.4F);
                  double d3 = this.getY() + 0.5;
                  serverlevel.sendParticles(
-@@ -371,12 +_,16 @@
+@@ -371,12 +_,15 @@
              }
  
              if (this.timeUntilLured <= 0) {
@@ -111,8 +120,7 @@
 -            this.timeUntilLured = Mth.nextInt(this.random, 100, 600);
 -            this.timeUntilLured = this.timeUntilLured - this.lureSpeed;
 +            // CraftBukkit start - logic to modify fishing wait time
-+            this.timeUntilLured = Mth.nextInt(this.random, this.minWaitTime, this.maxWaitTime);
-+            this.timeUntilLured -= (this.applyLure) ? this.lureSpeed : 0;
++            this.timeUntilLured -= (this.applyLure) ? (this.lureSpeed >= this.maxWaitTime ? this.timeUntilLured - 1 : this.lureSpeed ) : 0; // Paper - Fix Lure infinite loop
 +            // CraftBukkit end
          }
      }

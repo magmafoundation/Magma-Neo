@@ -163,6 +163,7 @@ public class CraftWorld extends CraftRegionAccessor implements World {
     private final BlockMetadataStore blockMetadata = new BlockMetadataStore(this);
     private final Object2IntOpenHashMap<SpawnCategory> spawnCategoryLimit = new Object2IntOpenHashMap<>();
     private final CraftPersistentDataContainer persistentDataContainer = new CraftPersistentDataContainer(DATA_TYPE_REGISTRY);
+    private net.kyori.adventure.pointer.Pointers adventure$pointers; // Paper - implement pointers
 
     private static final Random rand = new Random();
 
@@ -1692,6 +1693,43 @@ public class CraftWorld extends CraftRegionAccessor implements World {
         }
     }
 
+    // Paper start - Adventure
+    @Override
+    public void playSound(final net.kyori.adventure.sound.Sound sound) {
+        org.spigotmc.AsyncCatcher.catchOp("play sound"); // Paper
+        final long seed = sound.seed().orElseGet(this.world.getRandom()::nextLong);
+        for (ServerPlayer player : this.getHandle().players()) {
+            player.connection.send(io.papermc.paper.adventure.PaperAdventure.asSoundPacket(sound, player.getX(), player.getY(), player.getZ(), seed, null));
+        }
+    }
+
+    @Override
+    public void playSound(final net.kyori.adventure.sound.Sound sound, final double x, final double y, final double z) {
+        org.spigotmc.AsyncCatcher.catchOp("play sound"); // Paper
+        io.papermc.paper.adventure.PaperAdventure.asSoundPacket(sound, x, y, z, sound.seed().orElseGet(this.world.getRandom()::nextLong), this.playSound0(x, y, z));
+    }
+
+    @Override
+    public void playSound(final net.kyori.adventure.sound.Sound sound, final net.kyori.adventure.sound.Sound.Emitter emitter) {
+        org.spigotmc.AsyncCatcher.catchOp("play sound"); // Paper
+        final long seed = sound.seed().orElseGet(this.getHandle().getRandom()::nextLong);
+        if (emitter == net.kyori.adventure.sound.Sound.Emitter.self()) {
+            for (ServerPlayer player : this.getHandle().players()) {
+                player.connection.send(io.papermc.paper.adventure.PaperAdventure.asSoundPacket(sound, player, seed, null));
+            }
+        } else if (emitter instanceof CraftEntity craftEntity) {
+            final net.minecraft.world.entity.Entity entity = craftEntity.getHandle();
+            io.papermc.paper.adventure.PaperAdventure.asSoundPacket(sound, entity, seed, this.playSound0(entity.getX(), entity.getY(), entity.getZ()));
+        } else {
+            throw new IllegalArgumentException("Sound emitter must be an Entity or self(), but was: " + emitter);
+        }
+    }
+
+    private java.util.function.BiConsumer<net.minecraft.network.protocol.Packet<?>, Float> playSound0(final double x, final double y, final double z) {
+        return (packet, distance) -> this.world.getServer().getPlayerList().broadcast(null, x, y, z, distance, this.world.dimension(), packet);
+    }
+    // Paper end
+
     private static Map<String, GameRules.Key<?>> gamerules;
 
     public static synchronized Map<String, GameRules.Key<?>> getGameRulesNMS() {
@@ -2078,4 +2116,65 @@ public class CraftWorld extends CraftRegionAccessor implements World {
         return spigot;
     }
     // Spigot end
+
+    // Paper start
+    public java.util.concurrent.CompletableFuture<Chunk> getChunkAtAsync(int x, int z, boolean gen, boolean urgent) {
+        if (Bukkit.isPrimaryThread()) {
+            net.minecraft.world.level.chunk.LevelChunk immediate = this.world.getChunkSource().getChunkAtIfLoadedImmediately(x, z);
+            if (immediate != null) {
+                return java.util.concurrent.CompletableFuture.completedFuture(new CraftChunk(immediate));
+            }
+        }
+        ca.spottedleaf.concurrentutil.executor.standard.PrioritisedExecutor.Priority priority;
+        if (urgent) {
+            priority = ca.spottedleaf.concurrentutil.executor.standard.PrioritisedExecutor.Priority.HIGHER;
+        } else {
+            priority = ca.spottedleaf.concurrentutil.executor.standard.PrioritisedExecutor.Priority.NORMAL;
+        }
+        java.util.concurrent.CompletableFuture<Chunk> ret = new java.util.concurrent.CompletableFuture<>();
+        ca.spottedleaf.moonrise.common.util.ChunkSystem.scheduleChunkLoad(this.getHandle(), x, z, gen, ChunkStatus.FULL, true, priority, (c) -> {
+            net.minecraft.server.MinecraftServer.getServer().scheduleOnMain(() -> {
+                net.minecraft.world.level.chunk.LevelChunk chunk = (net.minecraft.world.level.chunk.LevelChunk) c;
+                ret.complete(chunk == null ? null : new CraftChunk(chunk));
+            });
+        });
+        return ret;
+    }
+
+    @Override
+    public void setViewDistance(final int viewDistance) {
+        if (viewDistance < 2 || viewDistance > 32) {
+            throw new IllegalArgumentException("View distance " + viewDistance + " is out of range of [2, 32]");
+        }
+        this.getHandle().chunkSource.chunkMap.setServerViewDistance(viewDistance);
+    }
+
+    @Override
+    public void setSimulationDistance(final int simulationDistance) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    @Override
+    public int getSendViewDistance() {
+        return this.getViewDistance();
+    }
+
+    @Override
+    public void setSendViewDistance(final int viewDistance) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+    // Paper end
+
+    // Paper start - implement pointers
+    @Override
+    public net.kyori.adventure.pointer.Pointers pointers() {
+        if (this.adventure$pointers == null) {
+            this.adventure$pointers = net.kyori.adventure.pointer.Pointers.builder()
+                    .withDynamic(net.kyori.adventure.identity.Identity.NAME, this::getName)
+                    .withDynamic(net.kyori.adventure.identity.Identity.UUID, this::getUID)
+                    .build();
+        }
+        return this.adventure$pointers;
+    }
+    // Paper end
 }

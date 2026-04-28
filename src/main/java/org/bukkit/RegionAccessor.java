@@ -157,7 +157,7 @@ public interface RegionAccessor {
      * Creates a tree at the given {@link Location}
      *
      * @param location Location to spawn the tree
-     * @param random   Random to use to generated the tree
+     * @param random   Random to use to generate the tree
      * @param type     Type of the tree to create
      * @return true if the tree was created successfully, otherwise false
      */
@@ -169,7 +169,7 @@ public interface RegionAccessor {
      * The provided consumer gets called for every block which gets changed
      * as a result of the tree generation. When the consumer gets called no
      * modifications to the world are done yet. Which means, that calling
-     * {@link #getBlockState(Location)} in the consumer while return the state
+     * {@link #getBlockState(Location)} in the consumer will return the state
      * of the block before the generation.
      * <p>
      * Modifications done to the {@link BlockState} in the consumer are respected,

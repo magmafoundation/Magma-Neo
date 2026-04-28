@@ -1,10 +1,11 @@
 --- a/net/minecraft/commands/CommandSourceStack.java
 +++ b/net/minecraft/commands/CommandSourceStack.java
-@@ -61,6 +_,7 @@
+@@ -61,6 +_,8 @@
      private final Vec2 rotation;
      private final CommandSigningContext signingContext;
      private final TaskChainer chatMessageChainer;
 +    public volatile com.mojang.brigadier.tree.CommandNode currentCommand; // CraftBukkit
++    public boolean bypassSelectorPermissions = false; // Paper - add bypass for selector permissions
  
      public CommandSourceStack(
          CommandSource p_81302_,

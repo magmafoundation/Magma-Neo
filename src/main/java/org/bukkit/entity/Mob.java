@@ -8,6 +8,12 @@ import org.jetbrains.annotations.Nullable;
  * Represents a Mob. Mobs are living entities with simple AI.
  */
 public interface Mob extends LivingEntity, Lootable {
+
+    // Paper start
+    @Override
+    org.bukkit.inventory.@org.jetbrains.annotations.NotNull EntityEquipment getEquipment();
+    // Paper end
+
     /**
      * Instructs this Mob to set the specified LivingEntity as its target.
      * <p>
@@ -60,4 +66,12 @@ public interface Mob extends LivingEntity, Lootable {
      */
     @Nullable
     public Sound getAmbientSound();
+
+    // Paper start - LootTable API
+    @Override
+    default void setLootTable(final @Nullable org.bukkit.loot.LootTable table, final long seed) {
+        this.setLootTable(table);
+        this.setSeed(seed);
+    }
+    // Paper end - LootTable API
 }

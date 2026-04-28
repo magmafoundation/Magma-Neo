@@ -47,7 +47,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Represents a world, which may contain entities, chunks and blocks
  */
-public interface World extends RegionAccessor, WorldInfo, PluginMessageRecipient, Metadatable, PersistentDataHolder, Keyed {
+public interface World extends RegionAccessor, WorldInfo, PluginMessageRecipient, Metadatable, PersistentDataHolder, Keyed, net.kyori.adventure.audience.ForwardingAudience { // Paper
     /**
      * Gets the {@link Block} at the given coordinates
      *
@@ -58,6 +58,33 @@ public interface World extends RegionAccessor, WorldInfo, PluginMessageRecipient
      */
     @NotNull
     public Block getBlockAt(int x, int y, int z);
+
+    // Paper start
+    /**
+     * @return The amount of Entities in this world
+     */
+    int getEntityCount();
+
+    /**
+     * @return The amount of Tile Entities in this world
+     */
+    int getTileEntityCount();
+
+    /**
+     * @return The amount of Tickable Tile Entities in this world
+     */
+    int getTickableTileEntityCount();
+
+    /**
+     * @return The amount of Chunks in this world
+     */
+    int getChunkCount();
+
+    /**
+     * @return The amount of Players in this world
+     */
+    int getPlayerCount();
+    // Paper end
 
     /**
      * Gets the {@link Block} at the given {@link Location}
@@ -642,6 +669,14 @@ public interface World extends RegionAccessor, WorldInfo, PluginMessageRecipient
      */
     @NotNull
     public List<Player> getPlayers();
+
+    // Paper start
+    @NotNull
+    @Override
+    default Iterable<? extends net.kyori.adventure.audience.Audience> audiences() {
+        return this.getPlayers();
+    }
+    // Paper end
 
     /**
      * Returns a list of entities within a bounding box centered around a
@@ -2729,7 +2764,7 @@ public interface World extends RegionAccessor, WorldInfo, PluginMessageRecipient
     /**
      * Find the closest nearby structure of a given {@link StructureType}.
      * Finding unexplored structures can, and will, block if the world is
-     * looking in chunks that gave not generated yet. This can lead to the world
+     * looking in chunks that have not generated yet. This can lead to the world
      * temporarily freezing while locating an unexplored structure.
      * <p>
      * The {@code radius} is not a rigid square radius. Each structure may alter
@@ -2763,7 +2798,7 @@ public interface World extends RegionAccessor, WorldInfo, PluginMessageRecipient
     /**
      * Find the closest nearby structure of a given {@link StructureType}.
      * Finding unexplored structures can, and will, block if the world is
-     * looking in chunks that gave not generated yet. This can lead to the world
+     * looking in chunks that have not generated yet. This can lead to the world
      * temporarily freezing while locating an unexplored structure.
      * <p>
      * The {@code radius} is not a rigid square radius. Each structure may alter
@@ -2796,7 +2831,7 @@ public interface World extends RegionAccessor, WorldInfo, PluginMessageRecipient
     /**
      * Find the closest nearby structure of a given {@link Structure}. Finding
      * unexplored structures can, and will, block if the world is looking in
-     * chunks that gave not generated yet. This can lead to the world
+     * chunks that have not generated yet. This can lead to the world
      * temporarily freezing while locating an unexplored structure.
      * <p>
      * The {@code radius} is not a rigid square radius. Each structure may alter
@@ -2956,6 +2991,72 @@ public interface World extends RegionAccessor, WorldInfo, PluginMessageRecipient
      */
     @NotNull
     public Set<FeatureFlag> getFeatureFlags();
+
+    // Paper start - view distance api
+    /**
+     * Sets the view distance for this world.
+     * 
+     * @param viewDistance view distance in [2, 32]
+     */
+    void setViewDistance(int viewDistance);
+
+    /**
+     * Sets the simulation distance for this world.
+     * 
+     * @param simulationDistance simulation distance in [2, 32]
+     */
+    void setSimulationDistance(int simulationDistance);
+
+    /**
+     * Returns the no-tick view distance for this world.
+     * <p>
+     * No-tick view distance is the view distance where chunks will load, however the chunks and their entities will not
+     * be set to tick.
+     * </p>
+     * 
+     * @return The no-tick view distance for this world.
+     * @deprecated Use {@link #getViewDistance()}
+     */
+    @Deprecated
+    default int getNoTickViewDistance() {
+        return this.getViewDistance();
+    }
+
+    /**
+     * Sets the no-tick view distance for this world.
+     * <p>
+     * No-tick view distance is the view distance where chunks will load, however the chunks and their entities will not
+     * be set to tick.
+     * </p>
+     * 
+     * @param viewDistance view distance in [2, 32]
+     * @deprecated Use {@link #setViewDistance(int)}
+     */
+    @Deprecated
+    default void setNoTickViewDistance(int viewDistance) {
+        this.setViewDistance(viewDistance);
+    }
+
+    /**
+     * Gets the sending view distance for this world.
+     * <p>
+     * Sending view distance is the view distance where chunks will load in for players in this world.
+     * </p>
+     * 
+     * @return The sending view distance for this world.
+     */
+    int getSendViewDistance();
+
+    /**
+     * Sets the sending view distance for this world.
+     * <p>
+     * Sending view distance is the view distance where chunks will load in for players in this world.
+     * </p>
+     * 
+     * @param viewDistance view distance in [2, 32] or -1
+     */
+    void setSendViewDistance(int viewDistance);
+    // Paper end - view distance api
 
     /**
      * Gets all generated structures that intersect the chunk at the given

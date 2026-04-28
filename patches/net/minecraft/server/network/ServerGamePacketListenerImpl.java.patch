@@ -11,7 +11,7 @@
      private int dropSpamTickCount;
      private double firstGoodX;
      private double firstGoodY;
-@@ -237,17 +_,34 @@
+@@ -237,14 +_,30 @@
      private boolean waitingForSwitchToConfig;
  
      public ServerGamePacketListenerImpl(MinecraftServer p_9770_, Connection p_9771_, ServerPlayer p_9772_, CommonListenerCookie p_301978_) {
@@ -44,10 +44,6 @@
  
      @Override
      public void tick() {
-+        org.bukkit.craftbukkit.SpigotTimings.playerConnectionTimer.startTiming(); // Spigot
-         if (this.ackBlockChangesUpTo > -1) {
-             this.send(new ClientboundBlockChangedAckPacket(this.ackBlockChangesUpTo));
-             this.ackBlockChangesUpTo = -1;
 @@ -297,10 +_,14 @@
          }
  
@@ -64,17 +60,14 @@
          if (this.dropSpamTickCount > 0) {
              this.dropSpamTickCount--;
          }
-@@ -308,8 +_,10 @@
+@@ -308,6 +_,7 @@
          if (this.player.getLastActionTime() > 0L
              && this.server.getPlayerIdleTimeout() > 0
              && Util.getMillis() - this.player.getLastActionTime() > (long)this.server.getPlayerIdleTimeout() * 1000L * 60L) {
 +            this.player.resetLastActionTime(); // CraftBukkit - SPIGOT-854
              this.disconnect(Component.translatable("multiplayer.disconnect.idling"));
          }
-+        org.bukkit.craftbukkit.SpigotTimings.playerConnectionTimer.stopTiming(); // Spigot
      }
- 
-     private int getMaximumFlyingTicks(Entity p_326388_) {
 @@ -407,7 +_,40 @@
                  double d8 = d5 - this.vehicleFirstGoodZ;
                  double d9 = entity.getDeltaMovement().lengthSqr();
@@ -724,7 +717,7 @@
          LOGGER.info("{} lost connection: {}", this.player.getName().getString(), p_350554_.reason().getString());
          this.removePlayerFromWorld();
          super.onDisconnect(p_350554_);
-@@ -1185,12 +_,21 @@
+@@ -1185,12 +_,22 @@
  
      private void removePlayerFromWorld() {
          this.chatMessageChain.close();
@@ -737,10 +730,11 @@
 +        */
          this.player.disconnect();
          this.server.getPlayerList().remove(this.player);
-+        String quitMessage = this.server.getPlayerList().magma$removeString;
-+        this.server.getPlayerList().magma$removeString = null;
-+        if ((quitMessage != null) && (quitMessage.length() > 0)) {
-+            this.server.getPlayerList().broadcastMessage(org.bukkit.craftbukkit.util.CraftChatMessage.fromString(quitMessage));
++        // Paper start - Adventure
++        net.kyori.adventure.text.Component quitMessage = this.server.getPlayerList().remove(this.player);
++        if ((quitMessage != null) && !quitMessage.equals(net.kyori.adventure.text.Component.empty())) {
++            this.server.getPlayerList().broadcastSystemMessage(io.papermc.paper.adventure.PaperAdventure.asVanilla(quitMessage), false);
++            // Paper end
 +        }
 +        // CraftBukkit end
          this.player.getTextFilter().leave();
@@ -789,7 +783,7 @@
 -                CompletableFuture<FilteredText> completablefuture = this.filterTextPacket(playerchatmessage.signedContent());
 -                Component component = this.server.getChatDecorator().decorate(this.player, playerchatmessage.decoratedContent());
 +                CompletableFuture<FilteredText> completablefuture = this.filterTextPacket(playerchatmessage.signedContent()).thenApplyAsync(java.util.function.Function.identity(), this.server.chatExecutor); // CraftBukkit - async chat
-+                Component component = net.neoforged.neoforge.common.CommonHooks.getServerChatSubmittedDecorator().decorate(this.player, playerchatmessage.decoratedContent());
++                Component component = net.neoforged.neoforge.common.CommonHooks.getServerChatSubmittedDecorator().decorate(this.player, playerchatmessage.decoratedContent()).join(); // Paper - Adventure
                  this.chatMessageChain.append(completablefuture, p_300785_ -> {
 +                    if (component == null) return; // Forge: ServerChatEvent was canceled if this is null.
                      PlayerChatMessage playerchatmessage1 = playerchatmessage.withUnsignedContent(component).filter(p_300785_.mask());
@@ -900,7 +894,7 @@
          }
      }
  
-@@ -1381,21 +_,163 @@
+@@ -1381,21 +_,171 @@
          return false;
      }
  
@@ -915,7 +909,15 @@
 +            this.handleCommand(s);
 +        } else if (this.player.getChatVisibility() == ChatVisiblity.SYSTEM) {
 +            // Do nothing, this is coming from a plugin
-+        } else {
++            // Paper start
++        } else if (true) {
++            if (!async && !org.bukkit.Bukkit.isPrimaryThread()) {
++                org.spigotmc.AsyncCatcher.catchOp("Asynchronous player chat is not allowed here");
++            }
++            final io.papermc.paper.adventure.ChatProcessor cp = new io.papermc.paper.adventure.ChatProcessor(this.server, this.player, original, async);
++            cp.process();
++            // Paper end
++        } else if (false) { // Paper
 +            org.bukkit.entity.Player player = this.getCraftPlayer();
 +            org.bukkit.event.player.AsyncPlayerChatEvent event = new org.bukkit.event.player.AsyncPlayerChatEvent(async, player, s, new org.bukkit.craftbukkit.util.LazyPlayerSet(server));
 +            String originalFormat = event.getFormat(), originalMessage = event.getMessage();
@@ -991,7 +993,7 @@
 +    }
 +
 +    private void handleCommand(String s) {
-+        org.bukkit.craftbukkit.SpigotTimings.playerCommandTimer.startTiming(); // Spigot
++        co.aikar.timings.MinecraftTimings.playerCommandTimer.startTiming(); // Paper
 +        if ( org.spigotmc.SpigotConfig.logCommands ) // Spigot
 +        this.LOGGER.info(this.player.getScoreboardName() + " issued server command: " + s);
 +
@@ -1001,7 +1003,7 @@
 +        this.cserver.getPluginManager().callEvent(event);
 +
 +        if (event.isCancelled()) {
-+            org.bukkit.craftbukkit.SpigotTimings.playerCommandTimer.stopTiming(); // Spigot
++            co.aikar.timings.MinecraftTimings.playerCommandTimer.stopTiming(); // Paper
 +            return;
 +        }
 +
@@ -1014,7 +1016,7 @@
 +            java.util.logging.Logger.getLogger(ServerGamePacketListenerImpl.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
 +            return;
 +        } finally {
-+            org.bukkit.craftbukkit.SpigotTimings.playerCommandTimer.stopTiming(); // Spigot
++            co.aikar.timings.MinecraftTimings.playerCommandTimer.stopTiming(); // Paper
 +        }
 +    }
 +    // CraftBukkit end
@@ -1676,7 +1678,7 @@
          this.player.resetLastActionTime();
          ServerLevel serverlevel = this.player.serverLevel();
          BlockPos blockpos = p_9923_.getPos();
-@@ -1753,13 +_,25 @@
+@@ -1753,13 +_,26 @@
      @Override
      public void handlePlayerAbilities(ServerboundPlayerAbilitiesPacket p_9887_) {
          PacketUtils.ensureRunningOnSameThread(p_9887_, this, this.player.serverLevel());
@@ -1700,6 +1702,7 @@
 +        net.minecraft.server.level.ClientInformation oldInfo = this.player.clientInformation();
          this.player.updateOptions(p_301979_.information());
 +        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.entity.player.ClientInformationUpdatedEvent(this.player, oldInfo, p_301979_.information()));
++        this.connection.channel.attr(io.papermc.paper.adventure.PaperAdventure.LOCALE_ATTRIBUTE).set(net.kyori.adventure.translation.Translator.parseLocale(p_301979_.information().language())); // Paper
      }
  
      @Override

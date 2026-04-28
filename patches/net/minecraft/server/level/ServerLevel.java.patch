@@ -1,6 +1,6 @@
 --- a/net/minecraft/server/level/ServerLevel.java
 +++ b/net/minecraft/server/level/ServerLevel.java
-@@ -199,12 +_,27 @@
+@@ -199,12 +_,52 @@
      private final List<CustomSpawner> customSpawners;
      @Nullable
      private EndDragonFight dragonFight;
@@ -26,10 +26,35 @@
 +        return typeKey == null ? super.getTypeKey() : typeKey;
 +    }
 +
++    // Paper start
++    public final boolean areChunksLoadedForMove(AABB axisalignedbb) {
++        // copied code from collision methods, so that we can guarantee that they wont load chunks (we don't override
++        // ICollisionAccess methods for VoxelShapes)
++        // be more strict too, add a block (dumb plugins in move events?)
++        int minBlockX = Mth.floor(axisalignedbb.minX - 1.0E-7D) - 3;
++        int maxBlockX = Mth.floor(axisalignedbb.maxX + 1.0E-7D) + 3;
++        int minBlockZ = Mth.floor(axisalignedbb.minZ - 1.0E-7D) - 3;
++        int maxBlockZ = Mth.floor(axisalignedbb.maxZ + 1.0E-7D) + 3;
++        int minChunkX = minBlockX >> 4;
++        int maxChunkX = maxBlockX >> 4;
++        int minChunkZ = minBlockZ >> 4;
++        int maxChunkZ = maxBlockZ >> 4;
++        ServerChunkCache chunkProvider = this.getChunkSource();
++        for (int cx = minChunkX; cx <= maxChunkX; ++cx) {
++            for (int cz = minChunkZ; cz <= maxChunkZ; ++cz) {
++                if (chunkProvider.getChunkAtIfLoadedImmediately(cx, cz) == null) {
++                    return false;
++                }
++            }
++        }
++        return true;
++    }
++    // Paper end
++
      public ServerLevel(
          MinecraftServer p_214999_,
          Executor p_215000_,
-@@ -230,11 +_,57 @@
+@@ -230,11 +_,66 @@
              p_215007_,
              p_214999_.getMaxChainedNeighborUpdates()
          );
@@ -85,6 +110,15 @@
 +
 +        // CraftBukkit end
 +        this.spigotConfig = new org.spigotmc.SpigotWorldConfig(worldName); // Spigot
++        paperConfigFunction = spigotConfig -> p_214999_.paperConfigurations.createWorldConfig(
++                io.papermc.paper.configuration.PaperConfigurations.createWorldContextMap(
++                        p_215001_.levelDirectory.path(),
++                        worldName,
++                        p_215003_.location(),
++                        spigotConfig,
++                        p_214999_.registryAccess(),
++                        (worldDataServer != null ? worldDataServer.getGameRules() : serverLevelData.getGameRules())));
++        this.paperConfig = paperConfigFunction.apply(this.spigotConfig); // Paper - create paper world configs
          boolean flag = p_214999_.forceSynchronousWrites();
          DataFixer datafixer = p_214999_.getFixerUpper();
          EntityPersistentStorage<Entity> entitypersistentstorage = new EntityStorage(
@@ -99,6 +133,33 @@
              flag,
              p_215005_,
              this.entityManager::updateChunkStatus,
+@@ -275,16 +_,16 @@
+ 
+         long i = p_214999_.getWorldData().worldGenOptions().seed();
+         this.structureCheck = new StructureCheck(
+-            this.chunkSource.chunkScanner(),
+-            this.registryAccess(),
+-            p_214999_.getStructureManager(),
+-            p_215003_,
+-            chunkgenerator,
+-            this.chunkSource.randomState(),
+-            this,
+-            chunkgenerator.getBiomeSource(),
+-            i,
+-            datafixer
++                this.chunkSource.chunkScanner(),
++                this.registryAccess(),
++                p_214999_.getStructureManager(),
++                p_215003_,
++                chunkgenerator,
++                this.chunkSource.randomState(),
++                this,
++                chunkgenerator.getBiomeSource(),
++                i,
++                datafixer
+         );
+         this.structureManager = new StructureManager(this, p_214999_.getWorldData().worldGenOptions(), this.structureCheck);
+         if (this.dimension() == Level.END && this.dimensionTypeRegistration().is(BuiltinDimensionTypes.END)) {
 @@ -298,6 +_,19 @@
          this.randomSequences = Objects.requireNonNullElseGet(
              p_288977_, () -> this.getDataStorage().computeIfAbsent(RandomSequences.factory(i), "random_sequences")
@@ -113,7 +174,7 @@
 +        if (worldDataServer != null) {
 +            worldDataServer.setWorld(this);
 +        }
-+        timings = new org.bukkit.craftbukkit.SpigotTimings.WorldTimingsHandler(worldName); // Spigot - code below can generate new world and access timings // Magma level name
++        this.timings = new co.aikar.timings.WorldTimingsHandler(this); // Paper - code below can generate new world and access timings
 +        this.entityLimiter = new org.spigotmc.TickLimiter(spigotConfig.entityMaxTickTime);
 +        this.tileLimiter = new org.spigotmc.TickLimiter(spigotConfig.tileMaxTickTime);
      }
@@ -132,20 +193,27 @@
          }
  
          profilerfiller.popPush("tickPending");
-+        timings.doTickPending.startTiming(); // Spigot
++        this.timings.scheduledBlocks.startTiming(); // Paper
          if (!this.isDebug() && flag) {
              long k = this.getGameTime();
              profilerfiller.push("blockTicks");
-@@ -365,6 +_,7 @@
+@@ -365,34 +_,44 @@
              this.fluidTicks.tick(k, 65536, this::tickFluid);
              profilerfiller.pop();
          }
-+        timings.doTickPending.stopTiming(); // Spigot
++        this.timings.scheduledBlocks.stopTiming(); // Paper
  
          profilerfiller.popPush("raid");
          if (flag) {
-@@ -375,24 +_,29 @@
++            this.timings.raids.startTiming(); // Paper - timings
+             this.raids.tick();
++            this.timings.raids.stopTiming(); // Paper - timings
+         }
+ 
+         profilerfiller.popPush("chunkSource");
++        this.timings.chunkProviderTick.startTiming(); // Paper - timings
          this.getChunkSource().tick(p_8794_, true);
++        this.timings.chunkProviderTick.stopTiming(); // Paper - timings
          profilerfiller.popPush("blockEvents");
          if (flag) {
 +            timings.doSounds.startTiming(); // Spigot
@@ -235,6 +303,22 @@
                  }
              }
          }
+@@ -506,6 +_,7 @@
+         }
+ 
+         profilerfiller.popPush("tickBlocks");
++        timings.chunkTicksBlocks.startTiming(); // Paper
+         if (p_8716_ > 0) {
+             LevelChunkSection[] alevelchunksection = p_8715_.getSections();
+ 
+@@ -534,6 +_,7 @@
+             }
+         }
+ 
++        timings.chunkTicksBlocks.stopTiming(); // Paper
+         profilerfiller.pop();
+     }
+ 
 @@ -542,8 +_,9 @@
          BlockPos blockpos = this.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, p_295060_);
          BlockPos blockpos1 = blockpos.below();
@@ -283,47 +367,81 @@
          }
      }
  
-@@ -753,17 +_,31 @@
+@@ -753,17 +_,39 @@
      }
  
      public void tickNonPassenger(Entity p_8648_) {
+-        p_8648_.setOldPosAndRot();
+-        ProfilerFiller profilerfiller = this.getProfiler();
+-        p_8648_.tickCount++;
+-        this.getProfiler().push(() -> BuiltInRegistries.ENTITY_TYPE.getKey(p_8648_.getType()).toString());
+-        profilerfiller.incrementCounter("tickNonPassenger");
+-        p_8648_.tick();
+-        this.getProfiler().pop();
+-
+-        for (Entity entity : p_8648_.getPassengers()) {
+-            this.tickPassenger(p_8648_, entity);
++        ++co.aikar.timings.TimingHistory.entityTicks; // Paper - timings
 +        // Spigot start
++        co.aikar.timings.Timing timer; // Paper
 +        if (!org.spigotmc.ActivationRange.checkIfActive(p_8648_)) {
 +            p_8648_.tickCount++;
++            timer = entity.getType().inactiveTickTimer.startTiming(); try { // Paper - timings
 +            p_8648_.inactiveTick();
++            } finally { timer.stopTiming(); } // Paper
 +            return;
-+        }
-+        // Spigot end
-+        p_8648_.tickTimer.startTiming(); // Spigot
-         p_8648_.setOldPosAndRot();
-         ProfilerFiller profilerfiller = this.getProfiler();
-         p_8648_.tickCount++;
-         this.getProfiler().push(() -> BuiltInRegistries.ENTITY_TYPE.getKey(p_8648_.getType()).toString());
-         profilerfiller.incrementCounter("tickNonPassenger");
--        p_8648_.tick();
-+        // Neo: Permit cancellation of Entity#tick via EntityTickEvent.Pre
-+        if (!net.neoforged.neoforge.event.EventHooks.fireEntityTickPre(p_8648_).isCanceled()) {
-+            p_8648_.tick();
-+            p_8648_.postTick(); // CraftBukkit
-+            net.neoforged.neoforge.event.EventHooks.fireEntityTickPost(p_8648_);
-+        }
-         this.getProfiler().pop();
- 
-         for (Entity entity : p_8648_.getPassengers()) {
-             this.tickPassenger(p_8648_, entity);
          }
-+        p_8648_.tickTimer.stopTiming(); // Spigot
++        // Spigot end
++        // Paper start- timings
++        co.aikar.timings.TimingHistory.activatedEntityTicks++;
++        timer = p_8648_.getVehicle() != null ? p_8648_.getType().passengerTickTimer.startTiming() : p_8648_.getType().tickTimer.startTiming();
++        try {
++            // Paper end - timings
++            p_8648_.setOldPosAndRot();
++            ProfilerFiller profilerfiller = this.getProfiler();
++            p_8648_.tickCount++;
++            this.getProfiler().push(() -> BuiltInRegistries.ENTITY_TYPE.getKey(p_8648_.getType()).toString());
++            profilerfiller.incrementCounter("tickNonPassenger");
++            // Neo: Permit cancellation of Entity#tick via EntityTickEvent.Pre
++            if (!net.neoforged.neoforge.event.EventHooks.fireEntityTickPre(p_8648_).isCanceled()) {
++                p_8648_.tick();
++                p_8648_.postTick(); // CraftBukkit
++                net.neoforged.neoforge.event.EventHooks.fireEntityTickPost(p_8648_);
++            }
++            this.getProfiler().pop();
++
++            for (Entity entity : p_8648_.getPassengers()) {
++                this.tickPassenger(p_8648_, entity);
++            }
++        } finally { timer.stopTiming(); } // Paper - timings
      }
  
      private void tickPassenger(Entity p_8663_, Entity p_8664_) {
-@@ -793,6 +_,7 @@
+@@ -793,13 +_,18 @@
          ServerChunkCache serverchunkcache = this.getChunkSource();
          if (!p_8646_) {
              if (p_8644_ != null) {
+-                p_8644_.progressStartNoAbort(Component.translatable("menu.savingLevel"));
+-            }
 +                org.bukkit.Bukkit.getPluginManager().callEvent(new org.bukkit.event.world.WorldSaveEvent(getWorld())); // CraftBukkit
-                 p_8644_.progressStartNoAbort(Component.translatable("menu.savingLevel"));
-             }
++                try (co.aikar.timings.Timing ignored = timings.worldSave.startTiming()) { // Paper
++                    p_8644_.progressStartNoAbort(Component.translatable("menu.savingLevel"));
++                }
  
+-            this.saveLevelData();
+-            if (p_8644_ != null) {
+-                p_8644_.progressStage(Component.translatable("menu.savingChunks"));
+-            }
++                timings.worldSaveChunks.startTiming(); // Paper
++                this.saveLevelData();
++                if (p_8644_ != null) {
++                    p_8644_.progressStage(Component.translatable("menu.savingChunks"));
++                }
++                timings.worldSaveChunks.stopTiming(); // Paper
++            }// Paper
+ 
+             serverchunkcache.save(p_8645_);
+             if (p_8645_) {
 @@ -807,6 +_,18 @@
              } else {
                  this.entityManager.autoSave();

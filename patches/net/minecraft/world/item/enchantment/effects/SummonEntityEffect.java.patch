@@ -14,7 +14,7 @@
 +                    // CraftBukkit start
 +                    p_345900_.strikeLightning(entity, (p_345549_.itemStack().getItem() == net.minecraft.world.item.Items.TRIDENT) ? org.bukkit.event.weather.LightningStrikeEvent.Cause.TRIDENT : org.bukkit.event.weather.LightningStrikeEvent.Cause.ENCHANTMENT);
 +                } else {
-+                    p_345900_.addFreshEntityWithPassengers(p_346414_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.ENCHANTMENT);
++                    p_345900_.addFreshEntityWithPassengers(entity, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.ENCHANTMENT); // Paper - Fix typo when adding summoned entity
 +                    // CraftBukkit end
  
                      if (this.joinTeam && p_346414_.getTeam() != null) {

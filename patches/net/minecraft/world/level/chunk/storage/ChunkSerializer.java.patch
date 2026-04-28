@@ -145,28 +145,6 @@
          return compoundtag;
      }
  
-@@ -408,10 +_,13 @@
-         ListTag listtag = getListOfCompoundsOrNull(p_196892_, "entities");
-         ListTag listtag1 = getListOfCompoundsOrNull(p_196892_, "block_entities");
-         return listtag == null && listtag1 == null ? null : p_196904_ -> {
-+            p_196891_.timings.syncChunkLoadEntitiesTimer.startTiming(); // Spigot
-             if (listtag != null) {
-                 p_196891_.addLegacyChunkEntities(EntityType.loadEntitiesRecursive(listtag, p_196891_));
-             }
-+            p_196891_.timings.syncChunkLoadEntitiesTimer.stopTiming(); // Spigot
- 
-+            p_196891_.timings.syncChunkLoadTileEntitiesTimer.startTiming(); // Spigot
-             if (listtag1 != null) {
-                 for (int i = 0; i < listtag1.size(); i++) {
-                     CompoundTag compoundtag = listtag1.getCompound(i);
-@@ -427,6 +_,7 @@
-                     }
-                 }
-             }
-+            p_196891_.timings.syncChunkLoadTileEntitiesTimer.stopTiming(); // Spigot
-         };
-     }
- 
 @@ -473,8 +_,15 @@
              if (structure == null) {
                  LOGGER.error("Unknown structure start: {}", resourcelocation);

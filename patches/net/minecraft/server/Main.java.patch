@@ -9,7 +9,7 @@
          SharedConstants.tryDetectVersion();
          OptionParser optionparser = new OptionParser();
          OptionSpec<Void> optionspec = optionparser.accepts("nogui");
-@@ -83,6 +_,42 @@
+@@ -83,6 +_,60 @@
          OptionSpec<Void> optionspec13 = optionparser.accepts("jfrProfile");
          OptionSpec<Path> optionspec14 = optionparser.accepts("pidFile").withRequiredArg().withValuesConvertedBy(new PathConverter());
          OptionSpec<String> optionspec15 = optionparser.nonOptions();
@@ -49,15 +49,37 @@
 +                .defaultsTo(new File("spigot.yml"))
 +                .describedAs("Yml file");
 +        // Spigot End
++
++        // Paper start
++        optionparser.acceptsAll(java.util.Arrays.asList("paper-dir", "paper-settings-directory"), "Directory for Paper settings")
++                .withRequiredArg()
++                .ofType(File.class)
++                .defaultsTo(new File(io.papermc.paper.configuration.PaperConfigurations.CONFIG_DIR))
++                .describedAs("Config directory");
++        optionparser.acceptsAll(java.util.Arrays.asList("paper", "paper-settings"), "File for Paper settings")
++                .withRequiredArg()
++                .ofType(File.class)
++                .defaultsTo(new File("paper.yml"))
++                .describedAs("Yml file");
++        optionparser.acceptsAll(java.util.Arrays.asList("add-plugin", "add-extra-plugin-jar"), "Specify paths to extra plugin jars to be loaded in addition to those in the plugins folder. This argument can be specified multiple times, once for each extra plugin jar path.")
++                .withRequiredArg()
++                .ofType(File.class)
++                .defaultsTo(new File[] {})
++                .describedAs("Jar file");
++        // Paper end
  
          try {
              OptionSet optionset = optionparser.parse(p_129699_);
-@@ -90,6 +_,22 @@
+@@ -90,6 +_,26 @@
                  optionparser.printHelpOn(System.err);
                  return;
              }
 +            Path path2 = Paths.get("eula.txt");
 +            Eula eula = new Eula(path2);
++            // Paper start - load config files early for access below if needed
++            org.bukkit.configuration.file.YamlConfiguration bukkitConfiguration = io.papermc.paper.configuration.PaperConfigurations.loadLegacyConfigFile((File) optionset.valueOf("bukkit-settings"));
++            org.bukkit.configuration.file.YamlConfiguration spigotConfiguration = io.papermc.paper.configuration.PaperConfigurations.loadLegacyConfigFile((File) optionset.valueOf("spigot-settings"));
++            // Paper end - load config files early for access below if needed
 +
 +            // Spigot Start
 +            boolean eulaAgreed = Boolean.getBoolean( "com.mojang.eula.agree" );
@@ -75,7 +97,12 @@
  
              Path path = optionset.valueOf(optionspec14);
              if (path != null) {
-@@ -105,24 +_,35 @@
+@@ -101,28 +_,40 @@
+                 JvmProfiler.INSTANCE.start(Environment.SERVER);
+             }
+ 
++            io.papermc.paper.plugin.PluginInitializerManager.load(optionset); // Paper
+             Bootstrap.bootStrap();
              Bootstrap.validate();
              Util.startTimerHackThread();
              Path path1 = Paths.get("server.properties");
@@ -109,7 +136,8 @@
 -            }
 -
              File file1 = new File(optionset.valueOf(optionspec9));
-             Services services = Services.create(new YggdrasilAuthenticationService(Proxy.NO_PROXY), file1);
+-            Services services = Services.create(new YggdrasilAuthenticationService(Proxy.NO_PROXY), file1);
++            Services services = Services.create(new YggdrasilAuthenticationService(Proxy.NO_PROXY), file1, optionset); // Paper - pass OptionSet to load paper config files
              String s = Optional.ofNullable(optionset.valueOf(optionspec10)).orElse(dedicatedserversettings.getProperties().levelName);
 +            if (s == null || s.isEmpty() || new File(file1, s).getAbsolutePath().equals(new File(s).getAbsolutePath())) {
 +                LOGGER.error("Invalid world directory specified, must not be null, empty or the same directory as your universe! " + s);

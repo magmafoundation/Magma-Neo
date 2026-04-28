@@ -30,9 +30,22 @@ public interface Plugin extends TabExecutor {
      * Returns the plugin.yaml file containing the details for this plugin
      *
      * @return Contents of the plugin.yaml file
+     * @deprecated May be inaccurate due to different plugin implementations.
+     * @see Plugin#getPluginMeta()
      */
+    @Deprecated // Paper
     @NotNull
     public PluginDescriptionFile getDescription();
+
+    // Paper start
+    /**
+     * Gets the plugin meta for this plugin.
+     * 
+     * @return configuration
+     */
+    @NotNull
+    io.papermc.paper.plugin.configuration.PluginMeta getPluginMeta();
+    // Paper end
 
     /**
      * Gets a {@link FileConfiguration} for this plugin, read through
@@ -94,6 +107,7 @@ public interface Plugin extends TabExecutor {
      *
      * @return PluginLoader that controls this plugin
      */
+    @Deprecated(forRemoval = true) // Paper - The PluginLoader system will not function in the near future
     @NotNull
     public PluginLoader getPluginLoader();
 
@@ -178,6 +192,13 @@ public interface Plugin extends TabExecutor {
      */
     @NotNull
     public Logger getLogger();
+
+    // Paper start - Adventure component logger
+    @NotNull
+    default net.kyori.adventure.text.logger.slf4j.ComponentLogger getComponentLogger() {
+        return net.kyori.adventure.text.logger.slf4j.ComponentLogger.logger(getLogger().getName());
+    }
+    // Paper end
 
     /**
      * Returns the name of the plugin.

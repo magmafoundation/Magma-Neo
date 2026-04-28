@@ -34,10 +34,10 @@
  
 +        // CraftBukkit start
 +        org.bukkit.entity.Player player = ((net.minecraft.server.level.ServerPlayer) p_277396_).getBukkitEntity();
-+        String[] lines = new String[4];
++        List<net.kyori.adventure.text.Component> lines = new java.util.ArrayList<>(); // Paper - adventure
 +
 +        for (int i = 0; i < p_277744_.size(); ++i) {
-+            lines[i] = org.bukkit.craftbukkit.util.CraftChatMessage.fromComponent(p_277359_.getMessage(i, p_277396_.isTextFilteringEnabled()));
++            lines.add(io.papermc.paper.adventure.PaperAdventure.asAdventure(originalText.getMessage(i, p_277396_.isTextFilteringEnabled()))); // Paper - Adventure
 +        }
 +
 +        org.bukkit.event.block.SignChangeEvent event = new org.bukkit.event.block.SignChangeEvent(org.bukkit.craftbukkit.block.CraftBlock.at(this.level, this.worldPosition), player, lines.clone(), (front) ? org.bukkit.block.sign.Side.FRONT : org.bukkit.block.sign.Side.BACK);
@@ -47,9 +47,9 @@
 +            return originalText;
 +        }
 +
-+        Component[] components = org.bukkit.craftbukkit.block.CraftSign.sanitizeLines(event.getLines());
++        Component[] components = org.bukkit.craftbukkit.block.CraftSign.sanitizeLines(event.lines()); // Paper - Adventure
 +        for (int i = 0; i < components.length; i++) {
-+            if (!java.util.Objects.equals(lines[i], event.getLine(i))) {
++            if (!java.util.Objects.equals(lines.get(i), event.line(i))) { // Paper - Adventure
 +                p_277359_ = p_277359_.setMessage(i, components[i]);
 +            }
 +        }

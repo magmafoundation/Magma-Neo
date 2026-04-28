@@ -1,6 +1,18 @@
 --- a/net/minecraft/world/level/BlockGetter.java
 +++ b/net/minecraft/world/level/BlockGetter.java
-@@ -32,7 +_,7 @@
+@@ -28,11 +_,19 @@
+     }
+ 
+     BlockState getBlockState(BlockPos p_45571_);
++    // Paper start - if loaded util
++    @Nullable BlockState getBlockStateIfLoaded(BlockPos blockposition);
++    default @Nullable net.minecraft.world.level.block.Block getBlockIfLoaded(BlockPos blockposition) {
++        BlockState type = this.getBlockStateIfLoaded(blockposition);
++        return type == null ? null : type.getBlock();
++    }
++    @Nullable FluidState getFluidIfLoaded(BlockPos blockposition);
++    // Paper end
+ 
      FluidState getFluidState(BlockPos p_45569_);
  
      default int getLightEmission(BlockPos p_45572_) {
