@@ -18,6 +18,7 @@ import org.jspecify.annotations.NullMarked;
 public class StaticMethodHandleEventExecutor implements EventExecutor {
     private final Class<? extends Event> eventClass;
     private final MethodHandle handle;
+    private final Method method;
 
     public StaticMethodHandleEventExecutor(final Class<? extends Event> eventClass, final Method m) {
         Preconditions.checkArgument(Modifier.isStatic(m.getModifiers()), "Not a static method: %s", m);
@@ -29,6 +30,7 @@ public class StaticMethodHandleEventExecutor implements EventExecutor {
         } catch (final IllegalAccessException e) {
             throw new AssertionError("Unable to set accessible", e);
         }
+        this.method = m;
     }
 
     @Override
@@ -39,5 +41,10 @@ public class StaticMethodHandleEventExecutor implements EventExecutor {
         } catch (final Throwable throwable) {
             SneakyThrow.sneaky(throwable);
         }
+    }
+
+    @Override
+    public String toString() {
+        return "StaticMethodHandleEventExecutor['" + this.method + "']";
     }
 }

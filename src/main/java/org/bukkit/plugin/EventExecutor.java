@@ -47,6 +47,12 @@ public interface EventExecutor {
         Preconditions.checkArgument(m.getParameterCount() != 0, "Incorrect number of arguments %s", m.getParameterCount());
         Preconditions.checkArgument(m.getParameterTypes()[0] == eventClass, "First parameter %s doesn't match event class %s", m.getParameterTypes()[0], eventClass);
         ClassDefiner definer = ClassDefiner.getInstance();
+        if (m.getReturnType() != Void.TYPE) {
+            final org.bukkit.plugin.java.JavaPlugin plugin = org.bukkit.plugin.java.JavaPlugin.getProvidingPlugin(m.getDeclaringClass());
+            org.bukkit.Bukkit.getLogger().warning("@EventHandler method " + m.getDeclaringClass().getName() + (Modifier.isStatic(m.getModifiers()) ? '.' : '#') + m.getName()
+                    + " returns non-void type " + m.getReturnType().getName() + ". This is unsupported behavior and will no longer work in a future version of Paper."
+                    + " This should be reported to the developers of " + plugin.getPluginMeta().getDisplayName() + " (" + String.join(",", plugin.getPluginMeta().getAuthors()) + ')');
+        }
         if (Modifier.isStatic(m.getModifiers())) {
             return new StaticMethodHandleEventExecutor(eventClass, m);
         } else if (definer.isBypassAccessChecks() || Modifier.isPublic(m.getDeclaringClass().getModifiers()) && Modifier.isPublic(m.getModifiers())) {
@@ -60,9 +66,18 @@ public interface EventExecutor {
             try {
                 EventExecutor asmExecutor = executorClass.newInstance();
                 // Define a wrapper to conform to bukkit stupidity (passing in events that don't match and wrapper exception)
-                return (listener, event) -> {
-                    if (!eventClass.isInstance(event)) return;
-                    asmExecutor.execute(listener, event);
+                return new EventExecutor() {
+                    @Override
+                    public void execute(@NotNull Listener listener, @NotNull Event event) throws EventException {
+                        if (!eventClass.isInstance(event)) return;
+                        asmExecutor.execute(listener, event);
+                    }
+
+                    @Override
+                    @NotNull
+                    public String toString() {
+                        return "ASMEventExecutor['" + m + "']";
+                    }
                 };
             } catch (InstantiationException | IllegalAccessException e) {
                 throw new AssertionError("Unable to initialize generated event executor", e);

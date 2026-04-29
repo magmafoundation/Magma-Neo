@@ -37,6 +37,23 @@ public interface SkullMeta extends ItemMeta {
     @Deprecated
     boolean setOwner(@Nullable String owner);
 
+    // Paper start
+    /**
+     * Sets this skull to use the supplied Player Profile, which can include textures already prefilled.
+     * 
+     * @param profile The profile to set this Skull to use, or null to clear owner
+     */
+    void setPlayerProfile(@Nullable com.destroystokyo.paper.profile.PlayerProfile profile);
+
+    /**
+     * If the skull has an owner, per {@link #hasOwner()}, return the owners {@link com.destroystokyo.paper.profile.PlayerProfile}
+     * 
+     * @return The profile of the owner, if set
+     */
+    @Nullable
+    com.destroystokyo.paper.profile.PlayerProfile getPlayerProfile();
+    // Paper end
+
     /**
      * Gets the owner of the skull.
      *
@@ -63,6 +80,7 @@ public interface SkullMeta extends ItemMeta {
      * @return the profile of the owning player
      */
     @Nullable
+    @Deprecated // Paper
     PlayerProfile getOwnerProfile();
 
     /**
@@ -77,6 +95,7 @@ public interface SkullMeta extends ItemMeta {
      * @throws IllegalArgumentException if the profile does not contain the
      *                                  necessary information
      */
+    @Deprecated // Paper
     void setOwnerProfile(@Nullable PlayerProfile profile);
 
     /**

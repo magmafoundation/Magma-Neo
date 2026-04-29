@@ -3,6 +3,7 @@ package org.bukkit.entity;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.bukkit.Chunk; // Paper
 import org.bukkit.EntityEffect;
 import org.bukkit.Location;
 import org.bukkit.Nameable;
@@ -124,9 +125,31 @@ public interface Entity extends Metadatable, CommandSender, Nameable, Persistent
      *
      * @param yaw   the yaw
      * @param pitch the pitch
-     * @throws UnsupportedOperationException if used for players
      */
     public void setRotation(float yaw, float pitch);
+
+    // Paper start - Teleport API
+    /**
+     * Teleports this entity to the given location.
+     *
+     * @param location      New location to teleport this entity to
+     * @param teleportFlags Flags to be used in this teleportation
+     * @return <code>true</code> if the teleport was successful
+     */
+    default boolean teleport(@NotNull Location location, @NotNull io.papermc.paper.entity.TeleportFlag @NotNull... teleportFlags) {
+        return this.teleport(location, TeleportCause.PLUGIN, teleportFlags);
+    }
+
+    /**
+     * Teleports this entity to the given location.
+     *
+     * @param location      New location to teleport this entity to
+     * @param cause         The cause of this teleportation
+     * @param teleportFlags Flags to be used in this teleportation
+     * @return <code>true</code> if the teleport was successful
+     */
+    boolean teleport(@NotNull Location location, @NotNull TeleportCause cause, @NotNull io.papermc.paper.entity.TeleportFlag @NotNull... teleportFlags);
+    // Paper end - Teleport API
 
     /**
      * Teleports this entity to the given location. If this entity is riding a
@@ -165,6 +188,42 @@ public interface Entity extends Metadatable, CommandSender, Nameable, Persistent
      * @return <code>true</code> if the teleport was successful
      */
     public boolean teleport(@NotNull Entity destination, @NotNull TeleportCause cause);
+
+    // Paper start
+    /**
+     * Loads/Generates(in 1.13+) the Chunk asynchronously, and then teleports the entity when the chunk is ready.
+     * 
+     * @param loc Location to teleport to
+     * @return A future that will be completed with the result of the teleport
+     */
+    default java.util.concurrent.@NotNull CompletableFuture<Boolean> teleportAsync(final @NotNull Location loc) {
+        return this.teleportAsync(loc, TeleportCause.PLUGIN);
+    }
+
+    /**
+     * Loads/Generates(in 1.13+) the Chunk asynchronously, and then teleports the entity when the chunk is ready.
+     * 
+     * @param loc   Location to teleport to
+     * @param cause Reason for teleport
+     * @return A future that will be completed with the result of the teleport
+     */
+    default java.util.concurrent.@NotNull CompletableFuture<Boolean> teleportAsync(final @NotNull Location loc, final @NotNull TeleportCause cause) {
+        final class Holder {
+            static final io.papermc.paper.entity.TeleportFlag[] EMPTY_FLAGS = new io.papermc.paper.entity.TeleportFlag[0];
+        }
+        return this.teleportAsync(loc, cause, Holder.EMPTY_FLAGS);
+    }
+
+    /**
+     * Loads/Generates(in 1.13+) the Chunk asynchronously, and then teleports the entity when the chunk is ready.
+     * 
+     * @param loc           Location to teleport to
+     * @param cause         Reason for teleport
+     * @param teleportFlags Flags to be used in this teleportation
+     * @return A future that will be completed with the result of the teleport
+     */
+    java.util.concurrent.@NotNull CompletableFuture<Boolean> teleportAsync(@NotNull Location loc, @NotNull TeleportCause cause, @NotNull io.papermc.paper.entity.TeleportFlag @NotNull... teleportFlags);
+    // Paper end
 
     /**
      * Returns a list of entities within a bounding box centered around this
@@ -257,6 +316,60 @@ public interface Entity extends Metadatable, CommandSender, Nameable, Persistent
      * @return freeze status
      */
     boolean isFrozen();
+
+    // Paper start - missing entity api
+    /**
+     * Sets whether the entity is invisible or not.
+     * <p>
+     * This setting is undefined for non-living entities like boats or paintings.
+     * Non-living entities that are marked as invisible through this method may e.g. only hide their shadow.
+     * To hide such entities from players completely, see {@link Player#hideEntity(org.bukkit.plugin.Plugin, Entity)}.
+     *
+     * @param invisible If the entity is invisible
+     */
+    void setInvisible(boolean invisible); // Paper - moved up from LivingEntity
+
+    /**
+     * Gets whether the entity is invisible or not.
+     *
+     * @return Whether the entity is invisible
+     */
+    boolean isInvisible(); // Paper - moved up from LivingEntity
+
+    /**
+     * Sets this entities no physics status.
+     *
+     * @param noPhysics boolean indicating if the entity should not have physics.
+     */
+    void setNoPhysics(boolean noPhysics);
+
+    /**
+     * Gets if this entity has no physics.
+     *
+     * @return true if the entity does not have physics.
+     */
+    boolean hasNoPhysics();
+    // Paper end - missing entity api
+
+    // Paper start - Freeze Tick Lock API
+    /**
+     * Gets if the entity currently has its freeze ticks locked
+     * to a set amount.
+     * <p>
+     * This is only set by plugins
+     *
+     * @return locked or not
+     */
+    boolean isFreezeTickingLocked();
+
+    /**
+     * Sets if the entity currently has its freeze ticks locked,
+     * preventing default vanilla freeze tick modification.
+     *
+     * @param locked prevent vanilla modification or not
+     */
+    void lockFreezeTicks(boolean locked);
+    // Paper end - Freeze Tick Lock API
 
     /**
      * Mark the entity's removal.
@@ -712,6 +825,61 @@ public interface Entity extends Metadatable, CommandSender, Nameable, Persistent
     @NotNull
     Pose getPose();
 
+    // Paper start
+    /**
+     * Returns if the entity is in sneak mode
+     *
+     * @return true if the entity is in sneak mode
+     */
+    boolean isSneaking();
+
+    /**
+     * Sets the sneak mode the entity.
+     * <p>
+     * Note: For most Entities this does not update Entity's pose
+     * and just makes its name tag less visible.
+     *
+     * @param sneak true if the entity should be sneaking
+     */
+    void setSneaking(boolean sneak);
+
+    /**
+     * Sets the entity's current {@link Pose}.
+     *
+     * <p>Note: While poses affect some things like hitboxes, they do not change the entity's state
+     * (e.g. having {@link Pose#SNEAKING} does not guarantee {@link #isSneaking()} being {@code true}).
+     *
+     * <p>If applied to the {@link Player}, they might see a different pose client-side.
+     *
+     * @param pose a new {@link Pose}
+     * @see #setPose(Pose, boolean)
+     */
+    default void setPose(@NotNull Pose pose) {
+        setPose(pose, false);
+    }
+
+    /**
+     * Sets the entity's current {@link Pose}.
+     *
+     * <p>Note: While poses affect some things like hitboxes, they do not change the entity's state
+     * (e.g. having {@link Pose#SNEAKING} does not guarantee {@link #isSneaking()} being {@code true}).
+     *
+     * <p>If applied to the {@link Player}, they might see a different pose client-side.
+     *
+     * @param pose  a new {@link Pose}
+     * @param fixed whether the new {@link Pose} should stay until manually changed
+     */
+    void setPose(@NotNull Pose pose, boolean fixed);
+
+    /**
+     * Checks whether the entity has a fixed {@link Pose}
+     *
+     * @see #setPose(Pose, boolean)
+     * @return whether the entity has a fixed {@link Pose}
+     */
+    boolean hasFixedPose();
+    // Paper end
+
     /**
      * Get the category of spawn to which this entity belongs.
      *
@@ -805,5 +973,210 @@ public interface Entity extends Metadatable, CommandSender, Nameable, Persistent
      */
     @Nullable
     Location getOrigin();
+
+    /**
+     * Returns whether this entity was spawned from a mob spawner.
+     *
+     * @return True if entity spawned from a mob spawner
+     */
+    boolean fromMobSpawner();
+
+    /**
+     * Gets the latest chunk an entity is currently or was in.
+     *
+     * @return The current, or most recent chunk if the entity is invalid (which may load the chunk)
+     */
+    @NotNull
+    default Chunk getChunk() {
+        // TODO remove impl here
+        return getLocation().getChunk();
+    }
+
+    /**
+     * @return The {@link org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason} that initially spawned this entity. <!-- Paper - added "initially" to clarify that the SpawnReason doesn't change after the Entity was initially spawned" -->
+     */
+    @NotNull
+    org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason getEntitySpawnReason();
+
+    /**
+     * Check if entity is underwater
+     */
+    boolean isUnderWater();
+
+    /**
+     * Check if entity is in rain
+     */
+    boolean isInRain();
+
+    /**
+     * Check if entity is in bubble column
+     */
+    boolean isInBubbleColumn();
+
+    /**
+     * Check if entity is in water or rain
+     */
+    boolean isInWaterOrRain();
+
+    /**
+     * Check if entity is in water or bubble column
+     */
+    boolean isInWaterOrBubbleColumn();
+
+    /**
+     * Check if entity is in water or rain or bubble column
+     */
+    boolean isInWaterOrRainOrBubbleColumn();
+
+    /**
+     * Check if entity is in lava
+     */
+    boolean isInLava();
+
+    /**
+     * Check if entity is inside a ticking chunk
+     */
+    boolean isTicking();
+
+    /**
+     * Returns a set of {@link Player Players} within this entity's tracking range (players that can "see" this entity).
+     *
+     * @return players in tracking range
+     * @deprecated slightly misleading name, use {@link #getTrackedBy()}
+     */
+    @Deprecated
+    @NotNull
+    Set<Player> getTrackedPlayers();
+
+    /**
+     * Spawns the entity in the world at the given {@link Location} with the default spawn reason.
+     * <p>
+     * This will not spawn the entity if the entity is already spawned or has previously been despawned.
+     * <p>
+     * Also, this method will fire the same events as a normal entity spawn.
+     *
+     * @param location The location to spawn the entity at.
+     * @return Whether the entity was successfully spawned.
+     */
+    public default boolean spawnAt(@NotNull Location location) {
+        return spawnAt(location, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT);
+    }
+
+    /**
+     * Spawns the entity in the world at the given {@link Location} with the reason given.
+     * <p>
+     * This will not spawn the entity if the entity is already spawned or has previously been despawned.
+     * <p>
+     * Also, this method will fire the same events as a normal entity spawn.
+     *
+     * @param location The location to spawn the entity at.
+     * @param reason   The reason for the entity being spawned.
+     * @return Whether the entity was successfully spawned.
+     */
+    public boolean spawnAt(@NotNull Location location, @NotNull org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason reason);
+
+    /**
+     * Check if entity is inside powdered snow.
+     *
+     * @return true if in powdered snow.
+     */
+    boolean isInPowderedSnow();
+
+    /**
+     * Gets the x-coordinate of this entity
+     *
+     * @return x-coordinate
+     */
+    double getX();
+
+    /**
+     * Gets the y-coordinate of this entity
+     *
+     * @return y-coordinate
+     */
+    double getY();
+
+    /**
+     * Gets the z-coordinate of this entity
+     *
+     * @return z-coordinate
+     */
+    double getZ();
+
+    /**
+     * Gets this entity's pitch
+     *
+     * @see Location#getPitch()
+     * @return the entity's pitch
+     */
+    float getPitch();
+
+    /**
+     * Gets this entity's yaw
+     *
+     * @see Location#getYaw()
+     * @return the entity's yaw
+     */
+    float getYaw();
     // Paper end
+
+    // Paper start - Collision API
+    /**
+     * Checks for any collisions with the entity's bounding box at the provided location.
+     * This will check for any colliding entities (boats, shulkers) / worldborder / blocks.
+     * Does not load chunks that are within the bounding box at the specified location.
+     *
+     * @param location the location to check collisions in
+     * @return collides or not
+     */
+    boolean collidesAt(@NotNull Location location);
+
+    /**
+     * This checks using the given boundingbox as the entity's boundingbox if the entity would collide with anything.
+     * This will check for any colliding entities (boats, shulkers) / worldborder / blocks.
+     * Does not load chunks that are within the bounding box.
+     *
+     * @param boundingBox the box to check collisions in
+     * @return collides or not
+     */
+    boolean wouldCollideUsing(@NotNull BoundingBox boundingBox);
+    // Paper end - Collision API
+
+    // Paper start - Folia schedulers
+    /**
+     * Returns the task scheduler for this entity. The entity scheduler can be used to schedule tasks
+     * that are guaranteed to always execute on the tick thread that owns the entity.
+     * <p><b>If you do not need/want to make your plugin run on Folia, use {@link org.bukkit.Server#getScheduler()} instead.</b></p>
+     * 
+     * @return the task scheduler for this entity.
+     * @see io.papermc.paper.threadedregions.scheduler.EntityScheduler
+     */
+    @NotNull
+    io.papermc.paper.threadedregions.scheduler.EntityScheduler getScheduler();
+    // Paper end - Folia schedulers
+
+    // Paper start - entity scoreboard name
+    /**
+     * Gets the string name of the entity used to track it in {@link org.bukkit.scoreboard.Scoreboard Scoreboards}.
+     *
+     * @return the scoreboard entry name
+     * @see org.bukkit.scoreboard.Scoreboard#getScores(String)
+     * @see org.bukkit.scoreboard.Scoreboard#getEntries()
+     */
+    @NotNull
+    String getScoreboardEntryName();
+    // Paper end - entity scoreboard name
+
+    // Paper start - broadcast hurt animation
+    /**
+     * Broadcasts a hurt animation. This fakes incoming damage towards the target entity.
+     * <p>
+     * The target players cannot include {@code this} player. For self-damage, use
+     * {@link Player#sendHurtAnimation(float)}.
+     *
+     * @param players the players to broadcast to (cannot include {@code this}
+     * @throws IllegalArgumentException if {@code this} is contained in {@code players}
+     */
+    void broadcastHurtAnimation(@NotNull java.util.Collection<Player> players);
+    // Paper end - broadcast hurt animation
 }

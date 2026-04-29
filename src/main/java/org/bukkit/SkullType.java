@@ -5,7 +5,7 @@ package org.bukkit;
  * 
  * @deprecated check {@link Material} instead
  */
-@Deprecated
+@Deprecated(forRemoval = true, since = "1.13")
 public enum SkullType {
     SKELETON,
     WITHER,

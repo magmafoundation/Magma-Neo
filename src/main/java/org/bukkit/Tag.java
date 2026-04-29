@@ -11,6 +11,10 @@ import org.jetbrains.annotations.NotNull;
  * Note that whilst all tags defined within this interface must be present in
  * implementations, their existence is not guaranteed across future versions.
  *
+ * <p>Custom tags defined by Paper are not present (as constants) in this class.
+ * To access them please refer to {@link com.destroystokyo.paper.MaterialTags}
+ * and {@link io.papermc.paper.tag.EntityTags}.</p>
+ *
  * @param <T> the type of things grouped by this tag
  */
 public interface Tag<T extends Keyed> extends Keyed {
@@ -1310,6 +1314,25 @@ public interface Tag<T extends Keyed> extends Keyed {
      * Vanilla tag representing all projectiles which can be punched back.
      */
     Tag<EntityType> ENTITY_TYPES_REDIRECTABLE_PROJECTILE = Bukkit.getTag(REGISTRY_ENTITY_TYPES, NamespacedKey.minecraft("redirectable_projectile"), EntityType.class);
+
+    // Paper start
+    String REGISTRY_GAME_EVENTS = "game_events";
+
+    /**
+     * Tag for game events that trigger sculk sensors
+     */
+    Tag<GameEvent> GAME_EVENT_VIBRATIONS = Bukkit.getTag(REGISTRY_GAME_EVENTS, NamespacedKey.minecraft("vibrations"), GameEvent.class);
+
+    /**
+     * Tag for game events that are ignored if the entity is sneaking
+     */
+    Tag<GameEvent> GAME_EVENT_IGNORE_VIBRATIONS_SNEAKING = Bukkit.getTag(REGISTRY_GAME_EVENTS, NamespacedKey.minecraft("ignore_vibrations_sneaking"), GameEvent.class);
+
+    /**
+     * Tag for game events that an allay can listen to
+     */
+    Tag<GameEvent> GAME_EVENT_ALLAY_CAN_LISTEN = Bukkit.getTag(REGISTRY_GAME_EVENTS, NamespacedKey.minecraft("allay_can_listen"), GameEvent.class);
+    // Paper end
 
     /**
      * Returns whether or not this tag has an entry for the specified item.

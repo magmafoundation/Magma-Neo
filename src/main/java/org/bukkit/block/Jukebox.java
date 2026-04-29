@@ -1,7 +1,6 @@
 package org.bukkit.block;
 
 import org.bukkit.Material;
-import org.bukkit.inventory.BlockInventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.JukeboxInventory;
 import org.jetbrains.annotations.NotNull;
@@ -10,7 +9,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Represents a captured state of a jukebox.
  */
-public interface Jukebox extends TileState, BlockInventoryHolder {
+public interface Jukebox extends io.papermc.paper.block.TileStateInventoryHolder { // Paper - TileStateInventoryHolder
     /**
      * Gets the record inserted into the jukebox.
      *
@@ -84,18 +83,12 @@ public interface Jukebox extends TileState, BlockInventoryHolder {
      */
     public boolean eject();
 
-    /**
-     * @return inventory
-     * @see Container#getInventory()
-     */
+    // Paper - move docs to TileStateInventoryHolder
     @NotNull
     @Override
     JukeboxInventory getInventory();
 
-    /**
-     * @return snapshot inventory
-     * @see Container#getSnapshotInventory()
-     */
+    @Override // Paper - move docs to TileStateInventoryHolder
     @NotNull
     JukeboxInventory getSnapshotInventory();
 }

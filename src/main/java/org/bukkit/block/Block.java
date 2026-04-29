@@ -32,7 +32,7 @@ import org.jetbrains.annotations.Nullable;
  * (i.e. lighting and power) may not be able to be safely accessed during world
  * generation when used in cases like BlockPhysicsEvent!!!!
  */
-public interface Block extends Metadatable, Translatable {
+public interface Block extends Metadatable, Translatable, net.kyori.adventure.translation.Translatable { // Paper - translatable
     /**
      * Gets the metadata for this block
      *
@@ -155,6 +155,99 @@ public interface Block extends Metadatable, Translatable {
      */
     int getZ();
 
+    // Paper start
+    /**
+     * Returns this block's coordinates packed into a long value.
+     * Computed via: {@code Block.getBlockKey(this.getX(), this.getY(), this.getZ())}
+     * 
+     * @see Block#getBlockKey(int, int, int)
+     * @return This block's x, y, and z coordinates packed into a long value
+     * @deprecated see {@link #getBlockKey(int, int, int)}
+     */
+    @Deprecated(since = "1.18.1")
+    public default long getBlockKey() {
+        return Block.getBlockKey(this.getX(), this.getY(), this.getZ());
+    }
+
+    /**
+     * Returns the specified block coordinates packed into a long value
+     * <p>
+     * The return value can be computed as follows:
+     * <br>
+     * {@code long value = ((long)x & 0x7FFFFFF) | (((long)z & 0x7FFFFFF) << 27) | ((long)y << 54);}
+     * </p>
+     *
+     * <p>
+     * And may be unpacked as follows:
+     * <br>
+     * {@code int x = (int) ((packed << 37) >> 37);}
+     * <br>
+     * {@code int y = (int) (packed >> 54);}
+     * <br>
+     * {@code int z = (int) ((packed << 10) >> 37);}
+     * </p>
+     *
+     * @return This block's x, y, and z coordinates packed into a long value
+     * @deprecated only encodes y block ranges from -512 to 511 and represents an already changed implementation detail
+     */
+    @Deprecated(since = "1.18.1")
+    public static long getBlockKey(int x, int y, int z) {
+        return ((long) x & 0x7FFFFFF) | (((long) z & 0x7FFFFFF) << 27) | ((long) y << 54);
+    }
+
+    /**
+     * Returns the x component from the packed value.
+     * 
+     * @param packed The packed value, as computed by {@link Block#getBlockKey(int, int, int)}
+     * @see Block#getBlockKey(int, int, int)
+     * @return The x component from the packed value.
+     * @deprecated see {@link #getBlockKey(int, int, int)}
+     */
+    @Deprecated(since = "1.18.1")
+    public static int getBlockKeyX(long packed) {
+        return (int) ((packed << 37) >> 37);
+    }
+
+    /**
+     * Returns the y component from the packed value.
+     * 
+     * @param packed The packed value, as computed by {@link Block#getBlockKey(int, int, int)}
+     * @see Block#getBlockKey(int, int, int)
+     * @return The y component from the packed value.
+     * @deprecated see {@link #getBlockKey(int, int, int)}
+     */
+    @Deprecated(since = "1.18.1")
+    public static int getBlockKeyY(long packed) {
+        return (int) (packed >> 54);
+    }
+
+    /**
+     * Returns the z component from the packed value.
+     * 
+     * @param packed The packed value, as computed by {@link Block#getBlockKey(int, int, int)}
+     * @see Block#getBlockKey(int, int, int)
+     * @return The z component from the packed value.
+     * @deprecated see {@link #getBlockKey(int, int, int)}
+     */
+    @Deprecated(since = "1.18.1")
+    public static int getBlockKeyZ(long packed) {
+        return (int) ((packed << 10) >> 37);
+    }
+    // Paper end
+
+    // Paper start - add isValidTool
+    /**
+     * Checks if the itemstack is a valid tool to
+     * break the block with
+     *
+     * @param itemStack The (tool) itemstack
+     * @return whether the block will drop items
+     * @deprecated partially replaced by {@link Block#isPreferredTool(ItemStack)}
+     */
+    @Deprecated(since = "1.21", forRemoval = true) // Paper
+    boolean isValidTool(@NotNull ItemStack itemStack);
+    // Paper end - add isValidTool
+
     /**
      * Gets the Location of the block
      *
@@ -273,13 +366,35 @@ public interface Block extends Metadatable, Translatable {
     @NotNull
     BlockState getState();
 
+    // Paper start
+    /**
+     * @see #getState() optionally disables use of snapshot, to operate on real block data
+     * @param useSnapshot if this block is a TE, should we create a fully copy of the TileEntity
+     * @return BlockState with the current state of this block
+     */
+    @NotNull
+    BlockState getState(boolean useSnapshot);
+    // Paper end
+
     /**
      * Returns the biome that this block resides in
      *
      * @return Biome type containing this block
+     * @see #getComputedBiome()
      */
     @NotNull
     Biome getBiome();
+
+    // Paper start
+    /**
+     * Gets the computed biome at the location of this Block.
+     *
+     * @return computed biome at the location of this Block.
+     * @see org.bukkit.RegionAccessor#getComputedBiome(int, int, int)
+     */
+    @NotNull
+    Biome getComputedBiome();
+    // Paper end
 
     /**
      * Sets the biome that this block resides in
@@ -354,6 +469,54 @@ public interface Block extends Metadatable, Translatable {
      */
     boolean isLiquid();
 
+    // Paper start
+    /**
+     * Check if this block is solid
+     * <p>
+     * Determined by Minecraft, typically a block a player can use to place a new block to build things.
+     * An example of a non buildable block would be liquids, flowers, or fire
+     *
+     * @return true if block is buildable
+     */
+    boolean isBuildable();
+
+    /**
+     * Check if this block is burnable
+     * <p>
+     * Determined by Minecraft, typically a block that fire can destroy (Wool, Wood)
+     *
+     * @return true if block is burnable
+     */
+    boolean isBurnable();
+
+    /**
+     * Check if this block is replaceable
+     * <p>
+     * Determined by Minecraft, representing a block that is not AIR that you can still place a new block at, such as flowers.
+     * 
+     * @return true if block is replaceable
+     */
+    boolean isReplaceable();
+
+    /**
+     * Check if this block is solid
+     * <p>
+     * Determined by Minecraft, typically a block a player can stand on and can't be passed through.
+     *
+     * This API is faster than accessing Material#isSolid as it avoids a material lookup and switch statement.
+     * 
+     * @return true if block is solid
+     */
+    boolean isSolid();
+
+    /**
+     * Checks if this block is collidable.
+     *
+     * @return true if collidable
+     */
+    boolean isCollidable();
+    // Paper end
+
     /**
      * Gets the temperature of this block.
      * <p>
@@ -395,6 +558,87 @@ public interface Block extends Metadatable, Translatable {
      * @return true if the block was destroyed
      */
     boolean breakNaturally(@Nullable ItemStack tool);
+
+    // Paper start
+    /**
+     * Breaks the block and spawns item drops as if a player had broken it
+     *
+     * @param triggerEffect Play the block break particle effect and sound
+     * @return true if the block was destroyed
+     * @see #breakNaturally(boolean, boolean) to trigger exp drops
+     */
+    default boolean breakNaturally(boolean triggerEffect) {
+        return this.breakNaturally(triggerEffect, false);
+    }
+
+    /**
+     * Breaks the block and spawns item drops as if a player had broken it
+     *
+     * @param triggerEffect  Play the block break particle effect and sound
+     * @param dropExperience drop exp if the block normally does so
+     * @return true if the block was destroyed
+     */
+    boolean breakNaturally(boolean triggerEffect, boolean dropExperience);
+
+    /**
+     * Breaks the block and spawns item drops as if a player had broken it
+     * with a specific tool
+     *
+     * @param tool          The tool or item in hand used for digging
+     * @param triggerEffect Play the block break particle effect and sound
+     * @return true if the block was destroyed
+     * @see #breakNaturally(ItemStack, boolean, boolean) to trigger exp drops
+     */
+    default boolean breakNaturally(@NotNull ItemStack tool, boolean triggerEffect) {
+        return this.breakNaturally(tool, triggerEffect, false);
+    }
+
+    /**
+     * Breaks the block and spawns item drops as if a player had broken it
+     * with a specific tool
+     *
+     * @param tool           The tool or item in hand used for digging
+     * @param triggerEffect  Play the block break particle effect and sound
+     * @param dropExperience drop exp if the block normally does so
+     * @return true if the block was destroyed
+     */
+    boolean breakNaturally(@NotNull ItemStack tool, boolean triggerEffect, boolean dropExperience);
+
+    /**
+     * Causes the block to be ticked, this is different from {@link Block#randomTick()},
+     * in that it is usually scheduled to occur, for example
+     * redstone components being activated, sand falling, etc.
+     * <p>
+     * This method may directly fire events relating to block ticking.
+     *
+     * @see #fluidTick()
+     */
+    void tick();
+
+    /**
+     * Causes the fluid to be ticked, this is different from {@link Block#randomTick()},
+     * in that it is usually scheduled to occur, for example
+     * causing waterlogged blocks to spread.
+     * <p>
+     * This method may directly fire events relating to fluid ticking.
+     *
+     * @see #tick()
+     */
+    void fluidTick();
+
+    /**
+     * Causes the block to be ticked randomly.
+     * This has a chance to execute naturally if {@link BlockData#isRandomlyTicked()} is true.
+     * <p>
+     * For certain blocks, this behavior may be the same as {@link Block#tick()}.
+     * <p>
+     * This method may directly fire events relating to block random ticking.
+     *
+     * @see #tick()
+     * @see #fluidTick()
+     */
+    void randomTick();
+    // Paper end
 
     /**
      * Simulate bone meal application to this block (if possible).
@@ -441,7 +685,7 @@ public interface Block extends Metadatable, Translatable {
      * @return a list of dropped items for this type of block
      */
     @NotNull
-    Collection<ItemStack> getDrops(@NotNull ItemStack tool, @Nullable Entity entity);
+    Collection<ItemStack> getDrops(@Nullable ItemStack tool, @Nullable Entity entity); // Paper
 
     /**
      * Returns if the given item is a preferred choice to break this Block.
@@ -531,4 +775,60 @@ public interface Block extends Metadatable, Translatable {
      * @return <code>true</code> if the block data can be placed here
      */
     boolean canPlace(@NotNull BlockData data);
+
+    // Paper start
+    /**
+     * Gets the {@link com.destroystokyo.paper.block.BlockSoundGroup} for this block.
+     * <p>
+     * This object contains the block, step, place, hit, and fall sounds.
+     *
+     * @return the sound group for this block
+     * @deprecated use {@link #getBlockSoundGroup()}
+     */
+    @NotNull
+    @Deprecated(forRemoval = true, since = "1.18.2")
+    com.destroystokyo.paper.block.BlockSoundGroup getSoundGroup();
+
+    /**
+     * Gets the {@link org.bukkit.SoundGroup} for this block.
+     *
+     * @return the sound group for this block
+     */
+    @NotNull
+    org.bukkit.SoundGroup getBlockSoundGroup();
+
+    /**
+     * @deprecated use {@link #translationKey()}
+     */
+    @NotNull
+    @Deprecated(forRemoval = true)
+    String getTranslationKey();
+    // Paper end
+
+    // Paper start - destroy speed API
+    /**
+     * Gets the speed at which this block will be destroyed by a given {@link ItemStack}
+     * <p>
+     * Default value is 1.0
+     *
+     * @param itemStack {@link ItemStack} used to mine this Block
+     * @return the speed that this Block will be mined by the given {@link ItemStack}
+     */
+    default float getDestroySpeed(final @NotNull ItemStack itemStack) {
+        return this.getBlockData().getDestroySpeed(itemStack);
+    }
+
+    /**
+     * Gets the speed at which this block will be destroyed by a given {@link ItemStack}
+     * <p>
+     * Default value is 1.0
+     *
+     * @param itemStack        {@link ItemStack} used to mine this Block
+     * @param considerEnchants true to look at enchants on the itemstack
+     * @return the speed that this Block will be mined by the given {@link ItemStack}
+     */
+    default float getDestroySpeed(@NotNull ItemStack itemStack, boolean considerEnchants) {
+        return this.getBlockData().getDestroySpeed(itemStack, considerEnchants);
+    }
+    // Paper end - destroy speed API
 }

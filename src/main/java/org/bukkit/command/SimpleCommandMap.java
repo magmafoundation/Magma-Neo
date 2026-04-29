@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -22,10 +21,14 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class SimpleCommandMap implements CommandMap {
-    protected final Map<String, Command> knownCommands = new HashMap<String, Command>();
+    protected final Map<String, Command> knownCommands; // Paper
     private final Server server;
 
-    public SimpleCommandMap(@NotNull final Server server) {
+    // Paper start
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public SimpleCommandMap(@NotNull final Server server, Map<String, Command> backing) {
+        this.knownCommands = backing;
+        // Paper end
         this.server = server;
         setDefaultCommands();
     }
@@ -102,7 +105,10 @@ public class SimpleCommandMap implements CommandMap {
      */
     private synchronized boolean register(@NotNull String label, @NotNull Command command, boolean isAlias, @NotNull String fallbackPrefix) {
         knownCommands.put(fallbackPrefix + ":" + label, command);
-        if ((command instanceof BukkitCommand || isAlias) && knownCommands.containsKey(label)) {
+        // Paper start
+        Command known = knownCommands.get(label);
+        if ((command instanceof BukkitCommand || isAlias) && (known != null && !known.canBeOverriden())) {
+            // Paper end
             // Request is for an alias/fallback command and it conflicts with
             // a existing command or previous alias ignore it
             // Note: This will mean it gets removed from the commands list of active aliases
@@ -114,7 +120,9 @@ public class SimpleCommandMap implements CommandMap {
         // If the command exists but is an alias we overwrite it, otherwise we return
         Command conflict = knownCommands.get(label);
         if (conflict != null && conflict.getLabel().equals(label)) {
-            return false;
+            if (!conflict.canBeOverriden()) { // Paper
+                return false;
+            } // Paper
         }
 
         if (!isAlias) {
@@ -130,7 +138,7 @@ public class SimpleCommandMap implements CommandMap {
      */
     @Override
     public boolean dispatch(@NotNull CommandSender sender, @NotNull String commandLine) throws CommandException {
-        String[] args = commandLine.split(" ");
+        String[] args = org.apache.commons.lang3.StringUtils.split(commandLine, ' '); // Paper - fix adjacent spaces (from console/plugins) causing empty array elements
 
         if (args.length == 0) {
             return false;

@@ -1,6 +1,5 @@
 package org.bukkit.event.inventory;
 
-import org.bukkit.event.HandlerList;
 import org.bukkit.inventory.GrindstoneInventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
@@ -10,9 +9,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Called when an item is put in a slot for repair or unenchanting in a grindstone.
  */
-public class PrepareGrindstoneEvent extends PrepareInventoryResultEvent {
-    private static final HandlerList handlers = new HandlerList();
-
+public class PrepareGrindstoneEvent extends com.destroystokyo.paper.event.inventory.PrepareGrindstoneEvent { // Paper
+    // Paper - move HandlerList to PrepareInventoryResultEvent
     public PrepareGrindstoneEvent(@NotNull InventoryView inventory, @Nullable ItemStack result) {
         super(inventory, result);
     }
@@ -23,14 +21,5 @@ public class PrepareGrindstoneEvent extends PrepareInventoryResultEvent {
         return (GrindstoneInventory) super.getInventory();
     }
 
-    @NotNull
-    @Override
-    public HandlerList getHandlers() {
-        return handlers;
-    }
-
-    @NotNull
-    public static HandlerList getHandlerList() {
-        return handlers;
-    }
+    // Paper - move HandlerList to PrepareInventoryResultEvent
 }

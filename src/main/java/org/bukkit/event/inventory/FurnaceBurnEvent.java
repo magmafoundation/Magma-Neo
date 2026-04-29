@@ -8,7 +8,9 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Called when an ItemStack is successfully burned as fuel in a furnace.
+ * Called when an ItemStack is successfully burned as fuel in a furnace-like block such as a
+ * {@link org.bukkit.block.Furnace}, {@link org.bukkit.block.Smoker}, or
+ * {@link org.bukkit.block.BlastFurnace}.
  */
 public class FurnaceBurnEvent extends BlockEvent implements Cancellable {
     private static final HandlerList handlers = new HandlerList();
@@ -16,6 +18,7 @@ public class FurnaceBurnEvent extends BlockEvent implements Cancellable {
     private int burnTime;
     private boolean cancelled;
     private boolean burning;
+    private boolean consumeFuel = true; // Paper
 
     public FurnaceBurnEvent(@NotNull final Block furnace, @NotNull final ItemStack fuel, final int burnTime) {
         super(furnace);
@@ -49,8 +52,8 @@ public class FurnaceBurnEvent extends BlockEvent implements Cancellable {
      *
      * @param burnTime the burn time for this fuel
      */
-    public void setBurnTime(int burnTime) {
-        this.burnTime = burnTime;
+    public void setBurnTime(@org.jetbrains.annotations.Range(from = Short.MIN_VALUE, to = Short.MAX_VALUE) int burnTime) { // Paper
+        this.burnTime = Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, burnTime)); // Paper
     }
 
     /**
@@ -70,6 +73,26 @@ public class FurnaceBurnEvent extends BlockEvent implements Cancellable {
     public void setBurning(boolean burning) {
         this.burning = burning;
     }
+
+    // Paper start
+    /**
+     * Gets whether the furnace's fuel will be consumed or not.
+     *
+     * @return whether the furnace's fuel will be consumed
+     */
+    public boolean willConsumeFuel() {
+        return consumeFuel;
+    }
+
+    /**
+     * Sets whether the furnace's fuel will be consumed or not.
+     *
+     * @param consumeFuel true to consume the fuel
+     */
+    public void setConsumeFuel(boolean consumeFuel) {
+        this.consumeFuel = consumeFuel;
+    }
+    // Paper end
 
     @Override
     public boolean isCancelled() {

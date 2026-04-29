@@ -171,9 +171,9 @@ public final class MapCursor {
      * Get the type of this cursor.
      *
      * @return The type (color/style) of the map cursor.
-     * @deprecated Magic value
+     * @apiNote Internal Use Only
      */
-    @Deprecated
+    @org.jetbrains.annotations.ApiStatus.Internal // Paper
     public byte getRawType() {
         return type.getValue();
     }
@@ -228,9 +228,9 @@ public final class MapCursor {
      * Set the type of this cursor.
      *
      * @param type The type (color/style) of the map cursor.
-     * @deprecated Magic value
+     * @deprecated use {@link #setType(Type)}
      */
-    @Deprecated
+    @Deprecated(forRemoval = true, since = "1.20.2") // Paper
     public void setRawType(byte type) {
         Type enumType = Type.byValue(type);
         Preconditions.checkArgument(enumType != null, "Unknown type by id %s", type);
@@ -323,12 +323,26 @@ public final class MapCursor {
         Type BANNER_RED = getType("banner_red");
         Type BANNER_BLACK = getType("banner_black");
         Type RED_X = getType("red_x");
+        @org.bukkit.MinecraftExperimental(org.bukkit.MinecraftExperimental.Requires.TRADE_REBALANCE) // Paper - add missing annotation
+        @org.jetbrains.annotations.ApiStatus.Experimental // Paper - add missing annotation
         Type VILLAGE_DESERT = getType("village_desert");
+        @org.bukkit.MinecraftExperimental(org.bukkit.MinecraftExperimental.Requires.TRADE_REBALANCE) // Paper - add missing annotation
+        @org.jetbrains.annotations.ApiStatus.Experimental // Paper - add missing annotation
         Type VILLAGE_PLAINS = getType("village_plains");
+        @org.bukkit.MinecraftExperimental(org.bukkit.MinecraftExperimental.Requires.TRADE_REBALANCE) // Paper - add missing annotation
+        @org.jetbrains.annotations.ApiStatus.Experimental // Paper - add missing annotation
         Type VILLAGE_SAVANNA = getType("village_savanna");
+        @org.bukkit.MinecraftExperimental(org.bukkit.MinecraftExperimental.Requires.TRADE_REBALANCE) // Paper - add missing annotation
+        @org.jetbrains.annotations.ApiStatus.Experimental // Paper - add missing annotation
         Type VILLAGE_SNOWY = getType("village_snowy");
+        @org.bukkit.MinecraftExperimental(org.bukkit.MinecraftExperimental.Requires.TRADE_REBALANCE) // Paper - add missing annotation
+        @org.jetbrains.annotations.ApiStatus.Experimental // Paper - add missing annotation
         Type VILLAGE_TAIGA = getType("village_taiga");
+        @org.bukkit.MinecraftExperimental(org.bukkit.MinecraftExperimental.Requires.TRADE_REBALANCE) // Paper - add missing annotation
+        @org.jetbrains.annotations.ApiStatus.Experimental // Paper - add missing annotation
         Type JUNGLE_TEMPLE = getType("jungle_temple");
+        @org.bukkit.MinecraftExperimental(org.bukkit.MinecraftExperimental.Requires.TRADE_REBALANCE) // Paper - add missing annotation
+        @org.jetbrains.annotations.ApiStatus.Experimental // Paper - add missing annotation
         Type SWAMP_HUT = getType("swamp_hut");
         Type TRIAL_CHAMBERS = getType("trial_chambers");
 
@@ -341,9 +355,9 @@ public final class MapCursor {
          * Gets the internal value of the cursor.
          *
          * @return the value
-         * @deprecated Magic value
+         * @apiNote Internal Use Only
          */
-        @Deprecated
+        @org.jetbrains.annotations.ApiStatus.Internal // Paper
         byte getValue();
 
         /**
@@ -351,9 +365,9 @@ public final class MapCursor {
          *
          * @param value the value
          * @return the matching type
-         * @deprecated Magic value
+         * @apiNote Internal Use Only
          */
-        @Deprecated
+        @org.jetbrains.annotations.ApiStatus.Internal // Paper
         @Nullable
         static Type byValue(byte value) {
             for (Type t : values()) {
@@ -368,7 +382,8 @@ public final class MapCursor {
          * @deprecated only for backwards compatibility, use {@link Registry#get(NamespacedKey)} instead.
          */
         @NotNull
-        @Deprecated(since = "1.21")
+        @Deprecated(since = "1.21", forRemoval = true)
+        @org.jetbrains.annotations.ApiStatus.ScheduledForRemoval(inVersion = "1.22") // Paper - will be removed via asm-utils
         static Type valueOf(@NotNull String name) {
             Type type = Registry.MAP_DECORATION_TYPE.get(NamespacedKey.fromString(name.toLowerCase(Locale.ROOT)));
             Preconditions.checkArgument(type != null, "No Type found with the name %s", name);
@@ -380,7 +395,8 @@ public final class MapCursor {
          * @deprecated use {@link Registry#iterator()}.
          */
         @NotNull
-        @Deprecated(since = "1.21")
+        @Deprecated(since = "1.21", forRemoval = true)
+        @org.jetbrains.annotations.ApiStatus.ScheduledForRemoval(inVersion = "1.22") // Paper - will be removed via asm-utils
         static Type[] values() {
             return Lists.newArrayList(Registry.MAP_DECORATION_TYPE).toArray(new Type[0]);
         }

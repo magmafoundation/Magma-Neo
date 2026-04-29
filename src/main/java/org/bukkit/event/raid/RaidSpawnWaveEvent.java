@@ -7,7 +7,6 @@ import org.bukkit.World;
 import org.bukkit.entity.Raider;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Called when a raid wave spawns.
@@ -18,7 +17,7 @@ public class RaidSpawnWaveEvent extends RaidEvent {
     private final List<Raider> raiders;
     private final Raider leader;
 
-    public RaidSpawnWaveEvent(@NotNull Raid raid, @NotNull World world, @Nullable Raider leader, @NotNull List<Raider> raiders) {
+    public RaidSpawnWaveEvent(@NotNull Raid raid, @NotNull World world, @NotNull Raider leader, @NotNull List<Raider> raiders) { // Paper
         super(raid, world);
         this.raiders = raiders;
         this.leader = leader;
@@ -29,7 +28,7 @@ public class RaidSpawnWaveEvent extends RaidEvent {
      *
      * @return {@link Raider}
      */
-    @Nullable
+    @NotNull // Paper
     public Raider getPatrolLeader() {
         return leader;
     }

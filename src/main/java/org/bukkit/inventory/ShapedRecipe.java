@@ -24,7 +24,7 @@ public class ShapedRecipe extends CraftingRecipe {
      * @param result The item you want the recipe to create.
      * @see ShapedRecipe#shape(String...)
      * @see ShapedRecipe#setIngredient(char, Material)
-     * @see ShapedRecipe#setIngredient(char, Material, int)
+     * @see ShapedRecipe#setIngredient(char, MaterialData)
      * @see ShapedRecipe#setIngredient(char, MaterialData)
      * @see ShapedRecipe#setIngredient(char, RecipeChoice)
      * @deprecated Recipes must have keys. Use {@link #ShapedRecipe(NamespacedKey, ItemStack)}
@@ -33,6 +33,7 @@ public class ShapedRecipe extends CraftingRecipe {
     @Deprecated
     public ShapedRecipe(@NotNull ItemStack result) {
         this(NamespacedKey.randomKey(), result);
+        new Throwable("Warning: A plugin is creating a recipe using a Deprecated method. This will cause you to receive warnings stating 'Tried to load unrecognized recipe: bukkit:<ID>'. Please ask the author to give their recipe a static key using NamespacedKey.").printStackTrace(); // Paper
     }
 
     /**
@@ -45,7 +46,7 @@ public class ShapedRecipe extends CraftingRecipe {
      * @exception IllegalArgumentException if the {@code result} is an empty item (AIR)
      * @see ShapedRecipe#shape(String...)
      * @see ShapedRecipe#setIngredient(char, Material)
-     * @see ShapedRecipe#setIngredient(char, Material, int)
+     * @see ShapedRecipe#setIngredient(char, MaterialData)
      * @see ShapedRecipe#setIngredient(char, MaterialData)
      * @see ShapedRecipe#setIngredient(char, RecipeChoice)
      */
@@ -110,8 +111,10 @@ public class ShapedRecipe extends CraftingRecipe {
      * @return The changed recipe, so you can chain calls.
      * @throws IllegalArgumentException if the {@code key} is a space character
      * @throws IllegalArgumentException if the {@code key} does not appear in the shape.
+     * @deprecated use {@link #setIngredient(char, RecipeChoice)}
      */
     @NotNull
+    @Deprecated // Paper
     public ShapedRecipe setIngredient(char key, @NotNull MaterialData ingredient) {
         return setIngredient(key, ingredient.getItemType(), ingredient.getData());
     }
@@ -179,15 +182,25 @@ public class ShapedRecipe extends CraftingRecipe {
         Preconditions.checkArgument(key != ' ', "Space in recipe shape must represent no ingredient");
         Preconditions.checkArgument(ingredients.containsKey(key), "Symbol does not appear in the shape:", key);
 
-        ingredients.put(key, ingredient);
+        ingredients.put(key, ingredient.validate(false).clone()); // Paper
         return this;
     }
+
+    // Paper start
+    @NotNull
+    public ShapedRecipe setIngredient(char key, @NotNull ItemStack item) {
+        Preconditions.checkArgument(!item.getType().isAir(), "Item cannot be air"); // Paper
+        return setIngredient(key, new RecipeChoice.ExactChoice(item.clone())); // Paper
+    }
+    // Paper end
 
     /**
      * Get a copy of the ingredients map.
      *
      * @return The mapping of character to ingredients.
+     * @deprecated Use {@link #getChoiceMap()} instead for more complete data.
      */
+    @Deprecated // Paper
     @NotNull
     public Map<Character, ItemStack> getIngredientMap() {
         HashMap<Character, ItemStack> result = new HashMap<Character, ItemStack>();

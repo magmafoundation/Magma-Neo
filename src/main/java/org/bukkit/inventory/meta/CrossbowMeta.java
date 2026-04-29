@@ -27,8 +27,7 @@ public interface CrossbowMeta extends ItemMeta {
      * Removes all projectiles when given null.
      *
      * @param projectiles the projectiles to set
-     * @throws IllegalArgumentException if one of the projectiles is not an
-     *                                  arrow or firework rocket
+     * @throws IllegalArgumentException if one of the projectiles is empty
      */
     void setChargedProjectiles(@Nullable List<ItemStack> projectiles);
 
@@ -36,8 +35,7 @@ public interface CrossbowMeta extends ItemMeta {
      * Adds a charged projectile to this item.
      *
      * @param item projectile
-     * @throws IllegalArgumentException if the projectile is not an arrow or
-     *                                  firework rocket
+     * @throws IllegalArgumentException if the projectile is empty
      */
     void addChargedProjectile(@NotNull ItemStack item);
 }

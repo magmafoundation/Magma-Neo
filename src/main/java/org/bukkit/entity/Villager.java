@@ -3,6 +3,8 @@ package org.bukkit.entity;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import java.util.Locale;
+import java.util.Map; // Paper
+import java.util.UUID; // Paper
 import org.bukkit.Keyed;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
@@ -61,8 +63,11 @@ public interface Villager extends AbstractVillager {
      * A villager with a level of 1 and no experience is liable to lose its
      * profession.
      *
+     * This doesn't update the trades of this villager.
+     *
      * @param level the new level
      * @throws IllegalArgumentException if level not between [1, 5]
+     * @see #increaseLevel(int)
      */
     public void setVillagerLevel(int level);
 
@@ -80,6 +85,51 @@ public interface Villager extends AbstractVillager {
      * @throws IllegalArgumentException if experience &lt; 0
      */
     public void setVillagerExperience(int experience);
+
+    // Paper start
+    /**
+     * Increases the level of this villager.
+     * The villager will also unlock new recipes unlike the raw
+     * method {@link #setVillagerLevel(int)}.
+     * <p>
+     * A villager with a level of 1 and no experience is liable to lose its
+     * profession.
+     * <p>
+     * A master villager has a level of 5 in its profession and
+     * will unlock 10 trades (2 per level).
+     *
+     * @param amount The amount of level
+     * @return Whether trades are unlocked
+     * @throws IllegalArgumentException if current level plus the amount
+     *                                  isn't between [1, 5] or the amount isn't positive
+     * @see #setVillagerLevel(int)
+     */
+    boolean increaseLevel(int amount);
+
+    /**
+     * Gives to this villager some potential new trades
+     * based to its profession and level.
+     * 
+     * @param amount The amount of trades to give
+     * @return Whether trades are added
+     * @throws IllegalArgumentException if the amount isn't positive
+     */
+    boolean addTrades(int amount);
+
+    /**
+     * Gets the amount of times a villager has restocked their trades today
+     * 
+     * @return The amount of trade restocks.
+     */
+    public int getRestocksToday();
+
+    /**
+     * Sets the amount of times a villager has restocked their trades today
+     * 
+     * @param restocksToday new restock count
+     */
+    public void setRestocksToday(int restocksToday);
+    // Paper end
 
     /**
      * Attempts to make this villager sleep at the given location.
@@ -141,7 +191,8 @@ public interface Villager extends AbstractVillager {
          * @deprecated only for backwards compatibility, use {@link Registry#get(NamespacedKey)} instead.
          */
         @NotNull
-        @Deprecated(since = "1.21")
+        @Deprecated(since = "1.21", forRemoval = true)
+        @org.jetbrains.annotations.ApiStatus.ScheduledForRemoval(inVersion = "1.22") // Paper - will be removed via asm-utils
         static Type valueOf(@NotNull String name) {
             Type type = Registry.VILLAGER_TYPE.get(NamespacedKey.fromString(name.toLowerCase(Locale.ROOT)));
             Preconditions.checkArgument(type != null, "No villager type found with the name %s", name);
@@ -153,7 +204,8 @@ public interface Villager extends AbstractVillager {
          * @deprecated use {@link Registry#iterator()}.
          */
         @NotNull
-        @Deprecated(since = "1.21")
+        @Deprecated(since = "1.21", forRemoval = true)
+        @org.jetbrains.annotations.ApiStatus.ScheduledForRemoval(inVersion = "1.22") // Paper - will be removed via asm-utils
         static Type[] values() {
             return Lists.newArrayList(Registry.VILLAGER_TYPE).toArray(new Type[0]);
         }
@@ -163,7 +215,7 @@ public interface Villager extends AbstractVillager {
      * Represents the various different Villager professions there may be.
      * Villagers have different trading options depending on their profession,
      */
-    interface Profession extends OldEnum<Profession>, Keyed {
+    interface Profession extends OldEnum<Profession>, Keyed, net.kyori.adventure.translation.Translatable {
         Profession NONE = getProfession("none");
         /**
          * Armorer profession. Wears a black apron. Armorers primarily trade for
@@ -247,7 +299,8 @@ public interface Villager extends AbstractVillager {
          * @deprecated only for backwards compatibility, use {@link Registry#get(NamespacedKey)} instead.
          */
         @NotNull
-        @Deprecated(since = "1.21")
+        @Deprecated(since = "1.21", forRemoval = true)
+        @org.jetbrains.annotations.ApiStatus.ScheduledForRemoval(inVersion = "1.22") // Paper - will be removed via asm-utils
         static Profession valueOf(@NotNull String name) {
             Profession profession = Registry.VILLAGER_PROFESSION.get(NamespacedKey.fromString(name.toLowerCase(Locale.ROOT)));
             Preconditions.checkArgument(profession != null, "No villager profession found with the name %s", name);
@@ -259,9 +312,63 @@ public interface Villager extends AbstractVillager {
          * @deprecated use {@link Registry#iterator()}.
          */
         @NotNull
-        @Deprecated(since = "1.21")
+        @Deprecated(since = "1.21", forRemoval = true)
+        @org.jetbrains.annotations.ApiStatus.ScheduledForRemoval(inVersion = "1.22") // Paper - will be removed via asm-utils
         static Profession[] values() {
             return Lists.newArrayList(Registry.VILLAGER_PROFESSION).toArray(new Profession[0]);
         }
+
+        // Paper start
+        @Override
+        default @NotNull String translationKey() {
+            return "entity.minecraft.villager." + this.getKey().getKey();
+        }
+        // Paper end
     }
+
+    // Paper start - Add villager reputation API
+    /**
+     * Get the {@link com.destroystokyo.paper.entity.villager.Reputation reputation}
+     * for a specific player by {@link UUID}.
+     *
+     * @param uniqueId The {@link UUID} of the player to get the reputation of.
+     * @return The player's copied reputation with this villager.
+     */
+    @NotNull
+    public com.destroystokyo.paper.entity.villager.Reputation getReputation(@NotNull UUID uniqueId);
+
+    /**
+     * Get all {@link com.destroystokyo.paper.entity.villager.Reputation reputations}
+     * for all players mapped by their {@link UUID unique IDs}.
+     *
+     * @return All {@link com.destroystokyo.paper.entity.villager.Reputation reputations} for all players
+     *         in a copied map.
+     */
+    @NotNull
+    public Map<UUID, com.destroystokyo.paper.entity.villager.Reputation> getReputations();
+
+    /**
+     * Set the {@link com.destroystokyo.paper.entity.villager.Reputation reputation}
+     * for a specific player by {@link UUID}.
+     *
+     * @param uniqueId   The {@link UUID} of the player to set the reputation of.
+     * @param reputation The {@link com.destroystokyo.paper.entity.villager.Reputation reputation} to set.
+     */
+    public void setReputation(@NotNull UUID uniqueId, @NotNull com.destroystokyo.paper.entity.villager.Reputation reputation);
+
+    /**
+     * Set all {@link com.destroystokyo.paper.entity.villager.Reputation reputations}
+     * for all players mapped by their {@link UUID unique IDs}.
+     *
+     * @param reputations All {@link com.destroystokyo.paper.entity.villager.Reputation reputations}
+     *                    for all players mapped by their {@link UUID unique IDs}.
+     */
+    public void setReputations(@NotNull Map<UUID, com.destroystokyo.paper.entity.villager.Reputation> reputations);
+
+    /**
+     * Clear all reputations from this villager. This removes every single
+     * reputation regardless of its impact and the player associated.
+     */
+    public void clearReputations();
+    // Paper end
 }

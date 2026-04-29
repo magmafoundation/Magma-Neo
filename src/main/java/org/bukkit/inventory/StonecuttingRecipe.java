@@ -28,21 +28,21 @@ public class StonecuttingRecipe implements Recipe, Keyed {
     }
 
     /**
-     * Create a cooking recipe to craft the specified ItemStack.
+     * Create a Stonecutting recipe to craft the specified ItemStack.
      *
      * @param key    The unique recipe key
      * @param result The item you want the recipe to create.
      * @param input  The input choices.
      */
     public StonecuttingRecipe(@NotNull NamespacedKey key, @NotNull ItemStack result, @NotNull RecipeChoice input) {
-        Preconditions.checkArgument(result.getType() != Material.AIR, "Recipe must have non-AIR result.");
+        Preconditions.checkArgument(!result.isEmpty(), "Recipe cannot have an empty result."); // Paper
         this.key = key;
         this.output = new ItemStack(result);
-        this.ingredient = input;
+        this.ingredient = input.validate(false).clone(); // Paper
     }
 
     /**
-     * Sets the input of this cooking recipe.
+     * Sets the input of this Stonecutting recipe.
      *
      * @param input The input material.
      * @return The changed recipe, so you can chain calls.
@@ -57,21 +57,23 @@ public class StonecuttingRecipe implements Recipe, Keyed {
      * Get the input material.
      *
      * @return The input material.
+     * @deprecated Use {@link #getInputChoice()} instead for more complete data.
      */
+    @Deprecated // Paper
     @NotNull
     public ItemStack getInput() {
         return this.ingredient.getItemStack();
     }
 
     /**
-     * Sets the input of this cooking recipe.
+     * Sets the input of this Stonecutting recipe.
      *
      * @param input The input choice.
      * @return The changed recipe, so you can chain calls.
      */
     @NotNull
     public StonecuttingRecipe setInputChoice(@NotNull RecipeChoice input) {
-        this.ingredient = input;
+        this.ingredient = input.validate(false).clone(); // Paper
         return (StonecuttingRecipe) this;
     }
 

@@ -31,9 +31,9 @@ public interface MapView {
          *
          * @param value The raw scale
          * @return The enum scale, or null for an invalid input
-         * @deprecated Magic value
+         * @apiNote Internal Use Only
          */
-        @Deprecated
+        @org.jetbrains.annotations.ApiStatus.Internal // Paper
         @Nullable
         public static Scale valueOf(byte value) {
             switch (value) {
@@ -56,9 +56,9 @@ public interface MapView {
          * Get the raw value of this scale level.
          *
          * @return The scale value
-         * @deprecated Magic value
+         * @apiNote Internal Use Only
          */
-        @Deprecated
+        @org.jetbrains.annotations.ApiStatus.Internal // Paper
         public byte getValue() {
             return value;
         }

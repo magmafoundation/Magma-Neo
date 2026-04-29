@@ -13,7 +13,7 @@ import org.bukkit.block.BlockFace;
  * @deprecated all usage of MaterialData is deprecated and subject to removal.
  *             Use {@link org.bukkit.block.data.BlockData}.
  */
-@Deprecated
+@Deprecated(forRemoval = true, since = "1.13")
 public class Diode extends MaterialData implements Directional, Redstone {
     protected static final BlockFace DEFAULT_DIRECTION = BlockFace.NORTH;
     protected static final int DEFAULT_DELAY = 1;

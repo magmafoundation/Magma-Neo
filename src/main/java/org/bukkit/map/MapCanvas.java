@@ -94,9 +94,9 @@ public interface MapCanvas {
      * @param x The x coordinate, from 0 to 127.
      * @param y The y coordinate, from 0 to 127.
      * @return The color. See {@link MapPalette}.
-     * @deprecated Magic value, use {@link #getPixelColor(int, int)}
+     * @deprecated use {@link #getPixelColor(int, int)}
      */
-    @Deprecated
+    @Deprecated(forRemoval = true, since = "1.20.2") // Paper
     public byte getPixel(int x, int y);
 
     /**
@@ -105,9 +105,9 @@ public interface MapCanvas {
      * @param x The x coordinate, from 0 to 127.
      * @param y The y coordinate, from 0 to 127.
      * @return The color. See {@link MapPalette}.
-     * @deprecated Magic value, use {@link #getBasePixelColor(int, int)}
+     * @deprecated use {@link #getBasePixelColor(int, int)}
      */
-    @Deprecated
+    @Deprecated(forRemoval = true, since = "1.20.2") // Paper
     public byte getBasePixel(int x, int y);
 
     /**

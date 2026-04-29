@@ -47,6 +47,12 @@ public class AttributeModifier implements ConfigurationSerializable, Keyed {
         this(NamespacedKey.fromString(uuid.toString()), amount, operation, slot);
     }
 
+    // Paper start - Add constructor without EquipmentSlotGroup
+    public AttributeModifier(@NotNull NamespacedKey key, double amount, @NotNull Operation operation) {
+        this(key, amount, operation, EquipmentSlotGroup.ANY);
+    }
+    // Paper end
+
     public AttributeModifier(@NotNull NamespacedKey key, double amount, @NotNull Operation operation, @NotNull EquipmentSlotGroup slot) {
         Preconditions.checkArgument(key != null, "Key cannot be null");
         Preconditions.checkArgument(operation != null, "Operation cannot be null");
@@ -122,6 +128,7 @@ public class AttributeModifier implements ConfigurationSerializable, Keyed {
      */
     @Nullable
     @Deprecated
+    @io.papermc.paper.annotation.DoNotUse // Paper
     public EquipmentSlot getSlot() {
         return slot == EquipmentSlotGroup.ANY ? null : slot.getExample();
     }

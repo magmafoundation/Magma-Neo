@@ -125,7 +125,7 @@ import org.jetbrains.annotations.Nullable;
  * changes may occur. Do not use this API in plugins.
  */
 @ApiStatus.Internal
-public interface BlockType extends Keyed, Translatable {
+public interface BlockType extends Keyed, Translatable, net.kyori.adventure.translation.Translatable, io.papermc.paper.world.flag.FeatureDependant { // Paper - add translatable & feature flag API
     /**
      * Typed represents a subtype of {@link BlockType}s that have a known block
      * data type at compile time.
@@ -3436,8 +3436,13 @@ public interface BlockType extends Keyed, Translatable {
      * state in which additional interact handling is performed for the
      * block type.
      *
+     * @deprecated This method is not comprehensive and does not accurately reflect what block types are
+     *             interactable. Many "interactions" are defined on the item not block, and many are conditional on some other world state
+     *             checks being true.
+     *
      * @return true if this block type can be interacted with.
      */
+    @Deprecated // Paper
     boolean isInteractable();
 
     /**
@@ -3483,7 +3488,9 @@ public interface BlockType extends Keyed, Translatable {
      *
      * @param world the world to check
      * @return true if this BlockType can be used in this World.
+     * @deprecated Use {@link io.papermc.paper.world.flag.FeatureFlagSetHolder#isEnabled(io.papermc.paper.world.flag.FeatureDependant)}
      */
+    @Deprecated(forRemoval = true, since = "1.21.1") // Paper
     boolean isEnabledByFeature(@NotNull World world);
 
     /**
@@ -3495,4 +3502,24 @@ public interface BlockType extends Keyed, Translatable {
     @Nullable
     @Deprecated
     Material asMaterial();
+
+    // Paper start - add Translatable
+    /**
+     * @deprecated use {@link #translationKey()} and {@link net.kyori.adventure.text.Component#translatable(net.kyori.adventure.translation.Translatable)}
+     */
+    @Deprecated(forRemoval = true)
+    @Override
+    @NotNull
+    String getTranslationKey();
+    // Paper end - add Translatable
+
+    // Paper start - hasCollision API
+    /**
+     * Checks if this block type has collision.
+     * <p>
+     * 
+     * @return false if this block never has collision, true if it <b>might</b> have collision
+     */
+    boolean hasCollision();
+    // Paper end - hasCollision API
 }

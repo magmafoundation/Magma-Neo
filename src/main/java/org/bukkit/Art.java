@@ -96,13 +96,20 @@ public enum Art implements Keyed {
      * Get the ID of this painting.
      *
      * @return The ID of this painting
-     * @deprecated Magic value
+     * @apiNote Internal Use Only
      */
-    @Deprecated
+    @org.jetbrains.annotations.ApiStatus.Internal // Paper
     public int getId() {
         return id;
     }
 
+    // Paper start - deprecate getKey
+    /**
+     * @deprecated use {@link Registry#getKey(Keyed)}, {@link io.papermc.paper.registry.RegistryAccess#getRegistry(io.papermc.paper.registry.RegistryKey)},
+     *             and {@link io.papermc.paper.registry.RegistryKey#PAINTING_VARIANT}. Painting variants can exist without a key.
+     */
+    @Deprecated(since = "1.21")
+    // Paper end - deprecate getKey
     @NotNull
     @Override
     public NamespacedKey getKey() {
@@ -114,9 +121,9 @@ public enum Art implements Keyed {
      *
      * @param id The ID
      * @return The painting
-     * @deprecated Magic value
+     * @apiNote Internal Use Only
      */
-    @Deprecated
+    @org.jetbrains.annotations.ApiStatus.Internal // Paper
     @Nullable
     public static Art getById(int id) {
         return BY_ID.get(id);

@@ -21,7 +21,7 @@ public interface MapMeta extends ItemMeta {
      *             for example will generate a new map with a different ID). The xxxMapView
      *             family of methods should be used instead.
      */
-    @Deprecated
+    //@Deprecated // Paper
     boolean hasMapId();
 
     /**
@@ -39,7 +39,7 @@ public interface MapMeta extends ItemMeta {
      *             for example will generate a new map with a different ID). The xxxMapView
      *             family of methods should be used instead.
      */
-    @Deprecated
+    //@Deprecated // Paper
     int getMapId();
 
     /**

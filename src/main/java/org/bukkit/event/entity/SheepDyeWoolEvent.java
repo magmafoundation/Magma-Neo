@@ -11,32 +11,15 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Called when a sheep's wool is dyed
  */
-public class SheepDyeWoolEvent extends EntityEvent implements Cancellable {
-    private static final HandlerList handlers = new HandlerList();
-    private boolean cancel;
-    private DyeColor color;
-    private final Player player;
-
+public class SheepDyeWoolEvent extends io.papermc.paper.event.entity.EntityDyeEvent implements Cancellable {
+    // Paper - move everything to superclass
     @Deprecated
     public SheepDyeWoolEvent(@NotNull final Sheep sheep, @NotNull final DyeColor color) {
         this(sheep, color, null);
     }
 
     public SheepDyeWoolEvent(@NotNull final Sheep sheep, @NotNull final DyeColor color, @Nullable Player player) {
-        super(sheep);
-        this.cancel = false;
-        this.color = color;
-        this.player = player;
-    }
-
-    @Override
-    public boolean isCancelled() {
-        return cancel;
-    }
-
-    @Override
-    public void setCancelled(boolean cancel) {
-        this.cancel = cancel;
+        super(sheep, color, player); // Paper
     }
 
     @NotNull

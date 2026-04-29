@@ -22,7 +22,7 @@ import org.bukkit.block.BlockFace;
  * @deprecated all usage of MaterialData is deprecated and subject to removal.
  *             Use {@link org.bukkit.block.data.BlockData}.
  */
-@Deprecated
+@Deprecated(forRemoval = true, since = "1.13")
 public class Door extends MaterialData implements Directional, Openable {
 
     // This class breaks API contracts on Directional and Openable because

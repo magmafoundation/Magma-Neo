@@ -14,6 +14,7 @@ import org.jetbrains.annotations.ApiStatus;
  *             suggests a bad API design.
  */
 @Retention(RetentionPolicy.CLASS)
+@java.lang.annotation.Documented // Paper
 @ApiStatus.Internal
 @Deprecated
 public @interface UndefinedNullability {

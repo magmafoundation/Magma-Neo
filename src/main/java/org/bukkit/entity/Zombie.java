@@ -99,11 +99,79 @@ public interface Zombie extends Monster, Ageable {
 
     /**
      * Sets whether this zombie can break doors
-     *
-     * This will be ignored if the entity is a Drowned. Will also stop the action if
+     * <p>
+     * Check {@link #supportsBreakingDoors()} to see
+     * if this zombie type will even be affected by using
+     * this method. Will also stop the action if
      * the entity is currently breaking a door.
      *
      * @param flag Whether this zombie can break doors
      */
     void setCanBreakDoors(boolean flag);
+
+    // Paper start
+    /**
+     * Check if zombie is drowning
+     *
+     * @return True if zombie conversion process has begun
+     */
+    boolean isDrowning();
+
+    /**
+     * Make zombie start drowning
+     *
+     * @param drownedConversionTime Amount of time until zombie converts from drowning
+     *
+     * @deprecated See {@link #setConversionTime(int)}
+     */
+    @Deprecated
+    void startDrowning(int drownedConversionTime);
+
+    /**
+     * Stop a zombie from starting the drowning conversion process
+     */
+    void stopDrowning();
+
+    /**
+     * Set if zombie has its arms raised
+     *
+     * @param raised True to raise arms
+     * @deprecated use {{@link #setAggressive(boolean)}}
+     */
+    @Deprecated
+    void setArmsRaised(boolean raised);
+
+    /**
+     * Check if zombie has arms raised
+     *
+     * @return True if arms are raised
+     * @deprecated use {@link #isAggressive()}
+     */
+    @Deprecated
+    boolean isArmsRaised();
+
+    /**
+     * Check if this zombie will burn in the sunlight
+     *
+     * @return True if zombie will burn in sunlight
+     */
+    boolean shouldBurnInDay();
+
+    /**
+     * Set if this zombie should burn in the sunlight
+     *
+     * @param shouldBurnInDay True to burn in sunlight
+     */
+    void setShouldBurnInDay(boolean shouldBurnInDay);
+
+    /**
+     * Checks if this zombie type supports breaking doors.
+     * {@link Drowned} do not have support for breaking doors
+     * so using {@link #setCanBreakDoors(boolean)} on them has
+     * no effect.
+     *
+     * @return true if entity supports breaking doors
+     */
+    boolean supportsBreakingDoors();
+    // Paper end
 }

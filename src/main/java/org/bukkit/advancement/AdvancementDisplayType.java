@@ -8,7 +8,10 @@ import org.jetbrains.annotations.NotNull;
  *
  * This enum contains information about these types and how they are
  * represented.
+ * 
+ * @deprecated use {@link io.papermc.paper.advancement.AdvancementDisplay.Frame}
  */
+@Deprecated(forRemoval = true)
 public enum AdvancementDisplayType {
     /**
      * Task or normal icons have a square icon frame.

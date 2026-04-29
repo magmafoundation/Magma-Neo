@@ -35,6 +35,32 @@ public interface Chunk extends PersistentDataHolder {
      */
     int getZ();
 
+    // Paper start
+    /**
+     * @return The Chunks X and Z coordinates packed into a long
+     */
+    default long getChunkKey() {
+        return getChunkKey(getX(), getZ());
+    }
+
+    /**
+     * @param loc Location to get chunk key
+     * @return Location's chunk coordinates packed into a long
+     */
+    static long getChunkKey(@NotNull Location loc) {
+        return getChunkKey((int) Math.floor(loc.getX()) >> 4, (int) Math.floor(loc.getZ()) >> 4);
+    }
+
+    /**
+     * @param x X Coordinate
+     * @param z Z Coordinate
+     * @return Chunk coordinates packed into a long
+     */
+    static long getChunkKey(int x, int z) {
+        return (long) x & 0xffffffffL | ((long) z & 0xffffffffL) << 32;
+    }
+    // Paper end
+
     /**
      * Gets the world containing this chunk
      *
@@ -76,6 +102,23 @@ public interface Chunk extends PersistentDataHolder {
     @NotNull
     ChunkSnapshot getChunkSnapshot(boolean includeMaxblocky, boolean includeBiome, boolean includeBiomeTempRain);
 
+    // Paper start - Add getChunkSnapshot includeLightData parameter
+    /**
+     * Capture thread-safe read-only snapshot of chunk data
+     *
+     * @param includeMaxblocky     if true, snapshot includes per-coordinate
+     *                             maximum Y values
+     * @param includeBiome         if true, snapshot includes per-coordinate biome
+     *                             type
+     * @param includeBiomeTempRain if true, snapshot includes per-coordinate
+     *                             raw biome temperature and rainfall
+     * @param includeLightData     Whether to include per-coordinate light emitted by blocks and sky light data
+     * @return ChunkSnapshot
+     */
+    @NotNull
+    ChunkSnapshot getChunkSnapshot(boolean includeMaxblocky, boolean includeBiome, boolean includeBiomeTempRain, boolean includeLightData);
+    // Paper end - Add getChunkSnapshot includeLightData parameter
+
     /**
      * Checks if entities in this chunk are loaded.
      *
@@ -98,7 +141,30 @@ public interface Chunk extends PersistentDataHolder {
      * @return The tile entities.
      */
     @NotNull
-    BlockState[] getTileEntities();
+    // Paper start
+    default BlockState[] getTileEntities() {
+        return getTileEntities(true);
+    }
+
+    /**
+     * Get a list of all tile entities in the chunk.
+     *
+     * @param useSnapshot Take snapshots or direct references
+     * @return The tile entities.
+     */
+    @NotNull
+    BlockState[] getTileEntities(boolean useSnapshot);
+
+    /**
+     * Get a list of all tile entities that match a given predicate in the chunk.
+     *
+     * @param blockPredicate The predicate of blocks to return tile entities for
+     * @param useSnapshot    Take snapshots or direct references
+     * @return The tile entities.
+     */
+    @NotNull
+    Collection<BlockState> getTileEntities(java.util.function.@NotNull Predicate<? super Block> blockPredicate, boolean useSnapshot);
+    // Paper end
 
     /**
      * Checks if the chunk is fully generated.

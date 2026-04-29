@@ -18,6 +18,7 @@ import org.jetbrains.annotations.NotNull;
 public class PlayerPickupItemEvent extends PlayerEvent implements Cancellable {
     private static final HandlerList handlers = new HandlerList();
     private final Item item;
+    private boolean flyAtPlayer = true; // Paper
     private boolean cancel = false;
     private final int remaining;
 
@@ -46,6 +47,28 @@ public class PlayerPickupItemEvent extends PlayerEvent implements Cancellable {
         return remaining;
     }
 
+    // Paper start
+    /**
+     * Set if the item will fly at the player
+     * <p>
+     * Cancelling the event will set this value to false.
+     *
+     * @param flyAtPlayer true for item to fly at player
+     */
+    public void setFlyAtPlayer(boolean flyAtPlayer) {
+        this.flyAtPlayer = flyAtPlayer;
+    }
+
+    /**
+     * Gets if the item will fly at the player
+     *
+     * @return true if the item will fly at the player
+     */
+    public boolean getFlyAtPlayer() {
+        return flyAtPlayer;
+    }
+    // Paper end
+
     @Override
     public boolean isCancelled() {
         return cancel;
@@ -54,6 +77,7 @@ public class PlayerPickupItemEvent extends PlayerEvent implements Cancellable {
     @Override
     public void setCancelled(boolean cancel) {
         this.cancel = cancel;
+        this.flyAtPlayer = !cancel; // Paper
     }
 
     @NotNull

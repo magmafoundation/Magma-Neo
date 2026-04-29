@@ -329,9 +329,11 @@ public final class Bukkit {
     /**
      * Get the DataPack Manager.
      *
+     * @deprecated use {@link #getDatapackManager()}
      * @return the manager
      */
     @NotNull
+    @Deprecated(forRemoval = true, since = "1.20")
     public static DataPackManager getDataPackManager() {
         return server.getDataPackManager();
     }
@@ -754,6 +756,20 @@ public final class Bukkit {
         return server.getPlayer(id);
     }
 
+    // Paper start
+    /**
+     * Gets the unique ID of the player currently known as the specified player name
+     * In Offline Mode, will return an Offline UUID
+     *
+     * @param playerName the player name to look up the unique ID for
+     * @return A UUID, or null if that player name is not registered with Minecraft and the server is in online mode
+     */
+    @Nullable
+    public static UUID getPlayerUniqueId(@NotNull String playerName) {
+        return server.getPlayerUniqueId(playerName);
+    }
+    // Paper end
+
     /**
      * Gets the plugin manager for interfacing with plugins.
      *
@@ -794,12 +810,26 @@ public final class Bukkit {
         return server.getWorlds();
     }
 
+    // Paper start
+    /**
+     * Gets whether the worlds are being ticked right now.
+     *
+     * @return true if the worlds are being ticked, false otherwise.
+     */
+    public static boolean isTickingWorlds() {
+        return server.isTickingWorlds();
+    }
+    // Paper end
+
     /**
      * Creates or loads a world with the given name using the specified
      * options.
      * <p>
      * If the world is already loaded, it will just return the equivalent of
      * getWorld(creator.name()).
+     * <p>
+     * Do note that un/loading worlds mid-tick may have potential side effects, we strongly recommend
+     * ensuring that you're not un/loading worlds midtick by checking {@link Bukkit#isTickingWorlds()}
      *
      * @param creator the options to use when creating the world
      * @return newly created or loaded world
@@ -811,6 +841,9 @@ public final class Bukkit {
 
     /**
      * Unloads a world with the given name.
+     * <p>
+     * Do note that un/loading worlds mid-tick may have potential side effects, we strongly recommend
+     * ensuring that you're not un/loading worlds midtick by checking {@link Bukkit#isTickingWorlds()}
      *
      * @param name Name of the world to unload
      * @param save whether to save the chunks before unloading
@@ -822,6 +855,9 @@ public final class Bukkit {
 
     /**
      * Unloads the given world.
+     * <p>
+     * Do note that un/loading worlds mid-tick may have potential side effects, we strongly recommend
+     * ensuring that you're not un/loading worlds midtick by checking {@link Bukkit#isTickingWorlds()}
      *
      * @param world the world to unload
      * @param save  whether to save the chunks before unloading
@@ -853,6 +889,30 @@ public final class Bukkit {
         return server.getWorld(uid);
     }
 
+    // Paper start
+    /**
+     * Gets the world from the given NamespacedKey
+     *
+     * @param worldKey the NamespacedKey of the world to retrieve
+     * @return a world with the given NamespacedKey, or null if none exists
+     */
+    @Nullable
+    public static World getWorld(@NotNull NamespacedKey worldKey) {
+        return server.getWorld(worldKey);
+    }
+
+    /**
+     * Gets the world from the given Key
+     *
+     * @param worldKey the Key of the world to retrieve
+     * @return a world with the given Key, or null if none exists
+     */
+    @Nullable
+    public static World getWorld(@NotNull net.kyori.adventure.key.Key worldKey) {
+        return server.getWorld(worldKey);
+    }
+    // Paper end
+
     /**
      * Create a new virtual {@link WorldBorder}.
      *
@@ -870,9 +930,8 @@ public final class Bukkit {
      *
      * @param id the id of the map to get
      * @return a map view if it exists, or null otherwise
-     * @deprecated Magic value
      */
-    @Deprecated
+    //@Deprecated // Paper - Not a magic value
     @Nullable
     public static MapView getMap(int id) {
         return server.getMap(id);
@@ -892,9 +951,6 @@ public final class Bukkit {
     /**
      * Create a new explorer map targeting the closest nearby structure of a
      * given {@link StructureType}.
-     * <br>
-     * This method uses implementation default values for radius and
-     * findUnexplored (usually 100, true).
      *
      * @param world         the world the map will belong to
      * @param location      the origin location to find the nearest structure
@@ -903,7 +959,9 @@ public final class Bukkit {
      *
      * @see World#locateNearestStructure(org.bukkit.Location,
      *      org.bukkit.StructureType, int, boolean)
+     * @deprecated use {@link #createExplorerMap(World, Location, org.bukkit.generator.structure.StructureType, org.bukkit.map.MapCursor.Type)}
      */
+    @Deprecated // Paper
     @NotNull
     public static ItemStack createExplorerMap(@NotNull World world, @NotNull Location location, @NotNull StructureType structureType) {
         return server.createExplorerMap(world, location, structureType);
@@ -926,11 +984,55 @@ public final class Bukkit {
      *
      * @see World#locateNearestStructure(org.bukkit.Location,
      *      org.bukkit.StructureType, int, boolean)
+     * @deprecated use {@link #createExplorerMap(World, Location, org.bukkit.generator.structure.StructureType, org.bukkit.map.MapCursor.Type, int, boolean)}
      */
+    @Deprecated // Paper
     @NotNull
     public static ItemStack createExplorerMap(@NotNull World world, @NotNull Location location, @NotNull StructureType structureType, int radius, boolean findUnexplored) {
         return server.createExplorerMap(world, location, structureType, radius, findUnexplored);
     }
+
+    // Paper start
+    /**
+     * Create a new explorer map targeting the closest nearby structure of a
+     * given {@link org.bukkit.generator.structure.StructureType}.
+     * <br>
+     * This method uses implementation default values for radius and
+     * findUnexplored (usually 100, true).
+     *
+     * @param world         the world the map will belong to
+     * @param location      the origin location to find the nearest structure
+     * @param structureType the type of structure to find
+     * @param mapIcon       the map icon to use on the map
+     * @return a newly created item stack or null if it can't find a location
+     *
+     * @see World#locateNearestStructure(org.bukkit.Location,
+     *      org.bukkit.generator.structure.StructureType, int, boolean)
+     */
+    public static @Nullable ItemStack createExplorerMap(@NotNull World world, @NotNull Location location, @NotNull org.bukkit.generator.structure.StructureType structureType, @NotNull org.bukkit.map.MapCursor.Type mapIcon) {
+        return server.createExplorerMap(world, location, structureType, mapIcon);
+    }
+
+    /**
+     * Create a new explorer map targeting the closest nearby structure of a
+     * given {@link org.bukkit.generator.structure.StructureType}.
+     *
+     * @param world          the world the map will belong to
+     * @param location       the origin location to find the nearest structure
+     * @param structureType  the type of structure to find
+     * @param mapIcon        the map icon to use on the map
+     * @param radius         radius to search, see World#locateNearestStructure for more
+     *                       information
+     * @param findUnexplored whether to find unexplored structures
+     * @return the newly created item stack or null if it can't find a location
+     *
+     * @see World#locateNearestStructure(org.bukkit.Location,
+     *      org.bukkit.generator.structure.StructureType, int, boolean)
+     */
+    public static @Nullable ItemStack createExplorerMap(@NotNull World world, @NotNull Location location, @NotNull org.bukkit.generator.structure.StructureType structureType, @NotNull org.bukkit.map.MapCursor.Type mapIcon, int radius, boolean findUnexplored) {
+        return server.createExplorerMap(world, location, structureType, mapIcon, radius, findUnexplored);
+    }
+    // Paper end
 
     /**
      * Reloads the server, refreshing settings and plugin information.
@@ -947,12 +1049,40 @@ public final class Bukkit {
         server.reloadData();
     }
 
+    // Paper start - update reloadable data
+    /**
+     * Updates all advancement, tag, and recipe data for all connected clients.
+     * Useful for updating clients to new advancements/recipes/tags.
+     * 
+     * @see #updateRecipes()
+     */
+    public static void updateResources() {
+        server.updateResources();
+    }
+
+    /**
+     * Updates recipe data and the recipe book for all connected clients. Useful for
+     * updating clients to new recipes.
+     * 
+     * @see #updateResources()
+     */
+    public static void updateRecipes() {
+        server.updateRecipes();
+    }
+    // Paper end - update reloadable data
+
     /**
      * Returns the primary logger associated with this server instance.
      *
      * @return Logger associated with this server
+     * @see org.bukkit.plugin.Plugin#getSLF4JLogger()
+     * @apiNote This logger is for the Minecraft server software, not for specific plugins. You should
+     *          use a logger for a specific plugin, either via {@link org.bukkit.plugin.Plugin#getSLF4JLogger()}
+     *          or {@link org.bukkit.plugin.Plugin#getLogger()} or create a specific logger for a class via slf4j.
+     *          That way, log messages contain contextual information about the source of the message.
      */
     @NotNull
+    @org.jetbrains.annotations.ApiStatus.Internal // Paper - internalize Bukkit#getLogger
     public static Logger getLogger() {
         return server.getLogger();
     }
@@ -1000,6 +1130,20 @@ public final class Bukkit {
     public static boolean addRecipe(@Nullable Recipe recipe) {
         return server.addRecipe(recipe);
     }
+
+    // Paper start - method to send recipes immediately
+    /**
+     * Adds a recipe to the crafting manager.
+     *
+     * @param recipe        the recipe to add
+     * @param resendRecipes true to update the client with the full set of recipes
+     * @return true if the recipe was added, false if it wasn't for some reason
+     */
+    @Contract("null, _ -> false")
+    public static boolean addRecipe(@Nullable Recipe recipe, boolean resendRecipes) {
+        return server.addRecipe(recipe, resendRecipes);
+    }
+    // Paper end - method to send recipes immediately
 
     /**
      * Get a list of all recipes for a given item. The stack size is ignored
@@ -1191,6 +1335,24 @@ public final class Bukkit {
         return server.removeRecipe(key);
     }
 
+    // Paper start - method to resend recipes
+    /**
+     * Remove a recipe from the server.
+     * <p>
+     * <b>Note that removing a recipe may cause permanent loss of data
+     * associated with that recipe (eg whether it has been discovered by
+     * players).</b>
+     *
+     * @param key           NamespacedKey of recipe to remove.
+     * @param resendRecipes true to update all clients on the new recipe list.
+     *                      Will only update if a recipe was actually removed
+     * @return True if recipe was removed
+     */
+    public static boolean removeRecipe(@NotNull NamespacedKey key, boolean resendRecipes) {
+        return server.removeRecipe(key, resendRecipes);
+    }
+    // Paper end - method to resend recipes
+
     /**
      * Gets a list of command aliases defined in the server properties.
      *
@@ -1350,14 +1512,33 @@ public final class Bukkit {
      * @param name the name the player to retrieve
      * @return an offline player
      * @see #getOfflinePlayer(java.util.UUID)
-     * @deprecated Persistent storage of users should be by UUID as names are no longer
-     *             unique past a single session.
      */
-    @Deprecated
+    // @Deprecated // Paper
     @NotNull
     public static OfflinePlayer getOfflinePlayer(@NotNull String name) {
         return server.getOfflinePlayer(name);
     }
+
+    // Paper start
+    /**
+     * Gets the player by the given name, regardless if they are offline or
+     * online.
+     * <p>
+     * This will not make a web request to get the UUID for the given name,
+     * thus this method will not block. However this method will return
+     * {@code null} if the player is not cached.
+     * </p>
+     *
+     * @param name the name of the player to retrieve
+     * @return an offline player if cached, {@code null} otherwise
+     * @see #getOfflinePlayer(String)
+     * @see #getOfflinePlayer(java.util.UUID)
+     */
+    @Nullable
+    public static OfflinePlayer getOfflinePlayerIfCached(@NotNull String name) {
+        return server.getOfflinePlayerIfCached(name);
+    }
+    // Paper end
 
     /**
      * Gets the player by the given UUID, regardless if they are offline or
@@ -1382,8 +1563,10 @@ public final class Bukkit {
      * @return the new PlayerProfile
      * @throws IllegalArgumentException if both the unique id is
      *                                  <code>null</code> and the name is <code>null</code> or blank
+     * @deprecated use {@link #createProfile(UUID, String)}
      */
     @NotNull
+    @Deprecated(since = "1.18.1") // Paper
     public static PlayerProfile createPlayerProfile(@Nullable UUID uniqueId, @Nullable String name) {
         return server.createPlayerProfile(uniqueId, name);
     }
@@ -1394,8 +1577,10 @@ public final class Bukkit {
      * @param uniqueId the unique id
      * @return the new PlayerProfile
      * @throws IllegalArgumentException if the unique id is <code>null</code>
+     * @deprecated use {@link #createProfile(UUID)}
      */
     @NotNull
+    @Deprecated(since = "1.18.1") // Paper
     public static PlayerProfile createPlayerProfile(@NotNull UUID uniqueId) {
         return server.createPlayerProfile(uniqueId);
     }
@@ -1407,8 +1592,10 @@ public final class Bukkit {
      * @return the new PlayerProfile
      * @throws IllegalArgumentException if the name is <code>null</code> or
      *                                  blank
+     * @deprecated use {@link #createProfile(String)}
      */
     @NotNull
+    @Deprecated(since = "1.18.1") // Paper
     public static PlayerProfile createPlayerProfile(@NotNull String name) {
         return server.createPlayerProfile(name);
     }
@@ -1482,11 +1669,28 @@ public final class Bukkit {
      * @param <T>  The ban target
      *
      * @return a ban list of the specified type
+     * @deprecated use {@link #getBanList(io.papermc.paper.ban.BanListType)} to enforce the correct return value at compile time.
      */
     @NotNull
+    @Deprecated(since = "1.20.4") // Paper - add BanListType (which has a generic)
     public static <T extends BanList<?>> T getBanList(@NotNull BanList.Type type) {
         return server.getBanList(type);
     }
+
+    // Paper start - add BanListType (which has a generic)
+    /**
+     * Gets a ban list for the supplied type.
+     *
+     * @param type the type of list to fetch, cannot be null
+     * @param <B>  The ban target
+     *
+     * @return a ban list of the specified type
+     */
+    @NotNull
+    public static <B extends BanList<E>, E> B getBanList(final io.papermc.paper.ban.@NotNull BanListType<B> type) {
+        return server.getBanList(type);
+    }
+    // Paper end - add BanListType (which has a generic)
 
     /**
      * Gets a set containing all player operators.
@@ -1527,6 +1731,20 @@ public final class Bukkit {
     public static ConsoleCommandSender getConsoleSender() {
         return server.getConsoleSender();
     }
+
+    // Paper start
+    /**
+     * Creates a special {@link CommandSender} which redirects command feedback (in the form of chat messages) to the
+     * specified listener. The returned sender will have the same effective permissions as {@link #getConsoleSender()}.
+     *
+     * @param feedback feedback listener
+     * @return a command sender
+     */
+    @NotNull
+    public static CommandSender createCommandSender(final @NotNull java.util.function.Consumer<? super net.kyori.adventure.text.Component> feedback) {
+        return server.createCommandSender(feedback);
+    }
+    // Paper end
 
     /**
      * Gets the folder that contains all of the various {@link World}s.
@@ -1962,7 +2180,7 @@ public final class Bukkit {
      *
      * @return the scoreboard manager or null if no worlds are loaded.
      */
-    @Nullable
+    @NotNull // Paper
     public static ScoreboardManager getScoreboardManager() {
         return server.getScoreboardManager();
     }
@@ -2176,6 +2394,25 @@ public final class Bukkit {
     public static double[] getTPS() {
         return server.getTPS();
     }
+
+    /**
+     * Get a sample of the servers last tick times (in nanos)
+     *
+     * @return A sample of the servers last tick times (in nanos)
+     */
+    @NotNull
+    public static long[] getTickTimes() {
+        return server.getTickTimes();
+    }
+
+    /**
+     * Get the average tick time (in millis)
+     *
+     * @return Average tick time (in millis)
+     */
+    public static double getAverageTickTime() {
+        return server == null ? 0D : server.getAverageTickTime();
+    }
     // Paper end
 
     /**
@@ -2352,8 +2589,11 @@ public final class Bukkit {
      * @param tClass of the registry to get
      * @param <T>    type of the registry
      * @return the corresponding registry or null if not present
+     * @deprecated use {@link io.papermc.paper.registry.RegistryAccess#getRegistry(io.papermc.paper.registry.RegistryKey)}
+     *             with keys from {@link io.papermc.paper.registry.RegistryKey}
      */
     @Nullable
+    @Deprecated(since = "1.20.6")
     public static <T extends Keyed> Registry<T> getRegistry(@NotNull Class<T> tClass) {
         return server.getRegistry(tClass);
     }
@@ -2404,7 +2644,298 @@ public final class Bukkit {
     public static boolean suggestPlayerNamesWhenNullTabCompletions() {
         return server.suggestPlayerNamesWhenNullTabCompletions();
     }
+
+    /**
+     * Gets the default no permission message used on the server
+     *
+     * @return the default message
+     * @deprecated use {@link #permissionMessage()}
+     */
+    @NotNull
+    @Deprecated
+    public static String getPermissionMessage() {
+        return server.getPermissionMessage();
+    }
+
+    /**
+     * Gets the default no permission message used on the server
+     *
+     * @return the default message
+     */
+    @NotNull
+    public static net.kyori.adventure.text.Component permissionMessage() {
+        return server.permissionMessage();
+    }
+
+    /**
+     * Creates a PlayerProfile for the specified uuid, with name as null.
+     *
+     * If a player with the passed uuid exists on the server at the time of creation, the returned player profile will
+     * be populated with the properties of said player (including their uuid and name).
+     *
+     * @param uuid UUID to create profile for
+     * @return A PlayerProfile object
+     */
+    @NotNull
+    public static com.destroystokyo.paper.profile.PlayerProfile createProfile(@NotNull UUID uuid) {
+        return server.createProfile(uuid);
+    }
+
+    /**
+     * Creates a PlayerProfile for the specified name, with UUID as null.
+     *
+     * If a player with the passed name exists on the server at the time of creation, the returned player profile will
+     * be populated with the properties of said player (including their uuid and name).
+     * <p>
+     * E.g. if the player 'jeb_' is currently playing on the server, calling {@code createProfile("JEB_")} will
+     * yield a profile with the name 'jeb_', their uuid and their textures.
+     * To bypass this pre-population on a case-insensitive name match, see {@link #createProfileExact(UUID, String)}.
+     * <p>
+     *
+     * @param name Name to create profile for
+     * @return A PlayerProfile object
+     * @throws IllegalArgumentException if the name is longer than 16 characters
+     * @throws IllegalArgumentException if the name contains invalid characters
+     */
+    @NotNull
+    public static com.destroystokyo.paper.profile.PlayerProfile createProfile(@NotNull String name) {
+        return server.createProfile(name);
+    }
+
+    /**
+     * Creates a PlayerProfile for the specified name/uuid
+     *
+     * Both UUID and Name can not be null at same time. One must be supplied.
+     * If a player with the passed uuid or name exists on the server at the time of creation, the returned player
+     * profile will be populated with the properties of said player (including their uuid and name).
+     * <p>
+     * E.g. if the player 'jeb_' is currently playing on the server, calling {@code createProfile(null, "JEB_")} will
+     * yield a profile with the name 'jeb_', their uuid and their textures.
+     * To bypass this pre-population on an case-insensitive name match, see {@link #createProfileExact(UUID, String)}.
+     * <p>
+     *
+     * The name comparison will compare the {@link String#toLowerCase()} version of both the passed name parameter and
+     * a players name to honour the case-insensitive nature of a mojang profile lookup.
+     *
+     * @param uuid UUID to create profile for
+     * @param name Name to create profile for
+     * @return A PlayerProfile object
+     * @throws IllegalArgumentException if the name is longer than 16 characters
+     * @throws IllegalArgumentException if the name contains invalid characters
+     */
+    @NotNull
+    public static com.destroystokyo.paper.profile.PlayerProfile createProfile(@Nullable UUID uuid, @Nullable String name) {
+        return server.createProfile(uuid, name);
+    }
+
+    /**
+     * Creates an exact PlayerProfile for the specified name/uuid
+     *
+     * Both UUID and Name can not be null at same time. One must be supplied.
+     * If a player with the passed uuid or name exists on the server at the time of creation, the returned player
+     * profile will be populated with the properties of said player.
+     * <p>
+     * Compared to {@link #createProfile(UUID, String)}, this method will never mutate the passed uuid or name.
+     * If a player with either the same uuid or a matching name (case-insensitive) is found on the server, their
+     * properties, such as textures, will be pre-populated in the profile, however the passed uuid and name stay intact.
+     *
+     * @param uuid UUID to create profile for
+     * @param name Name to create profile for
+     * @return A PlayerProfile object
+     * @throws IllegalArgumentException if the name is longer than 16 characters
+     * @throws IllegalArgumentException if the name contains invalid characters
+     */
+    @NotNull
+    public static com.destroystokyo.paper.profile.PlayerProfile createProfileExact(@Nullable UUID uuid, @Nullable String name) {
+        return server.createProfileExact(uuid, name);
+    }
+
+    public static int getCurrentTick() {
+        return server.getCurrentTick();
+    }
+
+    /**
+     * Checks if the server is in the process of being shutdown.
+     *
+     * @return true if server is in the process of being shutdown
+     */
+    public static boolean isStopping() {
+        return server.isStopping();
+    }
+
+    /**
+     * Returns the {@link com.destroystokyo.paper.entity.ai.MobGoals} manager
+     *
+     * @return the mob goals manager
+     */
+    @NotNull
+    public static com.destroystokyo.paper.entity.ai.MobGoals getMobGoals() {
+        return server.getMobGoals();
+    }
+
+    /**
+     * @return the datapack manager
+     */
+    @NotNull
+    public static io.papermc.paper.datapack.DatapackManager getDatapackManager() {
+        return server.getDatapackManager();
+    }
+
+    /**
+     * Gets the potion brewer.
+     *
+     * @return the potion brewer
+     */
+    public static @NotNull org.bukkit.potion.PotionBrewer getPotionBrewer() {
+        return server.getPotionBrewer();
+    }
     // Paper end
+
+    // Paper start - Folia region threading API
+    /**
+     * Returns the region task scheduler. The region task scheduler can be used to schedule
+     * tasks by location to be executed on the region which owns the location.
+     * <p>
+     * <b>Note</b>: It is entirely inappropriate to use the region scheduler to schedule tasks for entities.
+     * If you wish to schedule tasks to perform actions on entities, you should be using {@link Entity#getScheduler()}
+     * as the entity scheduler will "follow" an entity if it is teleported, whereas the region task scheduler
+     * will not.
+     * </p>
+     * <p><b>If you do not need/want to make your plugin run on Folia, use {@link #getScheduler()} instead.</b></p>
+     * 
+     * @return the region task scheduler
+     */
+    public static @NotNull io.papermc.paper.threadedregions.scheduler.RegionScheduler getRegionScheduler() {
+        return server.getRegionScheduler();
+    }
+
+    /**
+     * Returns the async task scheduler. The async task scheduler can be used to schedule tasks
+     * that execute asynchronously from the server tick process.
+     * 
+     * @return the async task scheduler
+     */
+    public static @NotNull io.papermc.paper.threadedregions.scheduler.AsyncScheduler getAsyncScheduler() {
+        return server.getAsyncScheduler();
+    }
+
+    /**
+     * Returns the global region task scheduler. The global task scheduler can be used to schedule
+     * tasks to execute on the global region.
+     * <p>
+     * The global region is responsible for maintaining world day time, world game time, weather cycle,
+     * sleep night skipping, executing commands for console, and other misc. tasks that do not belong to any specific region.
+     * </p>
+     * <p><b>If you do not need/want to make your plugin run on Folia, use {@link #getScheduler()} instead.</b></p>
+     * 
+     * @return the global region scheduler
+     */
+    public static @NotNull io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler getGlobalRegionScheduler() {
+        return server.getGlobalRegionScheduler();
+    }
+
+    /**
+     * Returns whether the current thread is ticking a region and that the region being ticked
+     * owns the chunk at the specified world and block position.
+     * 
+     * @param world    Specified world.
+     * @param position Specified block position.
+     */
+    public static boolean isOwnedByCurrentRegion(@NotNull World world, @NotNull io.papermc.paper.math.Position position) {
+        return server.isOwnedByCurrentRegion(world, position);
+    }
+
+    /**
+     * Returns whether the current thread is ticking a region and that the region being ticked
+     * owns the chunks centered at the specified block position within the specified square radius.
+     * Specifically, this function checks that every chunk with position x in [centerX - radius, centerX + radius] and
+     * position z in [centerZ - radius, centerZ + radius] is owned by the current ticking region.
+     * 
+     * @param world              Specified world.
+     * @param position           Specified block position.
+     * @param squareRadiusChunks Specified square radius. Must be >= 0. Note that this parameter is <i>not</i> a <i>squared</i>
+     *                           radius, but rather a <i>Chebyshev Distance</i>.
+     */
+    public static boolean isOwnedByCurrentRegion(@NotNull World world, @NotNull io.papermc.paper.math.Position position, int squareRadiusChunks) {
+        return server.isOwnedByCurrentRegion(world, position, squareRadiusChunks);
+    }
+
+    /**
+     * Returns whether the current thread is ticking a region and that the region being ticked
+     * owns the chunk at the specified world and block position as included in the specified location.
+     * 
+     * @param location Specified location, must have a non-null world.
+     */
+    public static boolean isOwnedByCurrentRegion(@NotNull Location location) {
+        return server.isOwnedByCurrentRegion(location);
+    }
+
+    /**
+     * Returns whether the current thread is ticking a region and that the region being ticked
+     * owns the chunks centered at the specified world and block position as included in the specified location
+     * within the specified square radius.
+     * Specifically, this function checks that every chunk with position x in [centerX - radius, centerX + radius] and
+     * position z in [centerZ - radius, centerZ + radius] is owned by the current ticking region.
+     * 
+     * @param location           Specified location, must have a non-null world.
+     * @param squareRadiusChunks Specified square radius. Must be >= 0. Note that this parameter is <i>not</i> a <i>squared</i>
+     *                           radius, but rather a <i>Chebyshev Distance</i>.
+     */
+    public static boolean isOwnedByCurrentRegion(@NotNull Location location, int squareRadiusChunks) {
+        return server.isOwnedByCurrentRegion(location, squareRadiusChunks);
+    }
+
+    /**
+     * Returns whether the current thread is ticking a region and that the region being ticked
+     * owns the chunk at the specified block position.
+     * 
+     * @param block Specified block position.
+     */
+    public static boolean isOwnedByCurrentRegion(@NotNull org.bukkit.block.Block block) {
+        return server.isOwnedByCurrentRegion(block.getLocation());
+    }
+
+    /**
+     * Returns whether the current thread is ticking a region and that the region being ticked
+     * owns the chunk at the specified world and chunk position.
+     * 
+     * @param world  Specified world.
+     * @param chunkX Specified x-coordinate of the chunk position.
+     * @param chunkZ Specified z-coordinate of the chunk position.
+     */
+    public static boolean isOwnedByCurrentRegion(@NotNull World world, int chunkX, int chunkZ) {
+        return server.isOwnedByCurrentRegion(world, chunkX, chunkZ);
+    }
+
+    /**
+     * Returns whether the current thread is ticking a region and that the region being ticked
+     * owns the chunks centered at the specified world and chunk position within the specified
+     * square radius.
+     * Specifically, this function checks that every chunk with position x in [centerX - radius, centerX + radius] and
+     * position z in [centerZ - radius, centerZ + radius] is owned by the current ticking region.
+     * 
+     * @param world              Specified world.
+     * @param chunkX             Specified x-coordinate of the chunk position.
+     * @param chunkZ             Specified z-coordinate of the chunk position.
+     * @param squareRadiusChunks Specified square radius. Must be >= 0. Note that this parameter is <i>not</i> a <i>squared</i>
+     *                           radius, but rather a <i>Chebyshev Distance</i>.
+     */
+    public static boolean isOwnedByCurrentRegion(@NotNull World world, int chunkX, int chunkZ, int squareRadiusChunks) {
+        return server.isOwnedByCurrentRegion(world, chunkX, chunkZ, squareRadiusChunks);
+    }
+
+    /**
+     * Returns whether the current thread is ticking a region and that the region being ticked
+     * owns the specified entity. Note that this function is the only appropriate method of checking
+     * for ownership of an entity, as retrieving the entity's location is undefined unless the entity is owned
+     * by the current region.
+     * 
+     * @param entity Specified entity.
+     */
+    public static boolean isOwnedByCurrentRegion(@NotNull Entity entity) {
+        return server.isOwnedByCurrentRegion(entity);
+    }
+    // Paper end - Folia region threading API
 
     @NotNull
     public static Server.Spigot spigot() {

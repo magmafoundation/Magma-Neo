@@ -1,7 +1,6 @@
 package org.bukkit.event.block;
 
 import org.bukkit.block.Block;
-import org.bukkit.event.HandlerList;
 import org.bukkit.inventory.CampfireRecipe;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
@@ -9,8 +8,9 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Called when a Campfire starts to cook.
  */
+@org.jetbrains.annotations.ApiStatus.Experimental // Paper
 public class CampfireStartEvent extends InventoryBlockStartEvent {
-    private static final HandlerList handlers = new HandlerList();
+    // Paper - remove HandlerList
     private int cookingTime;
     private CampfireRecipe campfireRecipe;
 
@@ -48,14 +48,5 @@ public class CampfireStartEvent extends InventoryBlockStartEvent {
         this.cookingTime = cookTime;
     }
 
-    @NotNull
-    @Override
-    public HandlerList getHandlers() {
-        return handlers;
-    }
-
-    @NotNull
-    public static HandlerList getHandlerList() {
-        return handlers;
-    }
+    // Paper - remove HandlerList
 }

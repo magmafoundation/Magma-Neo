@@ -6,7 +6,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Represents a Wither boss
  */
-public interface Wither extends Monster, Boss {
+public interface Wither extends Monster, Boss, com.destroystokyo.paper.entity.RangedEntity { // Paper
     /**
      * {@inheritDoc}
      * <p>
@@ -42,7 +42,9 @@ public interface Wither extends Monster, Boss {
      * Returns the wither's current invulnerability ticks.
      *
      * @return amount of invulnerability ticks
+     * @deprecated Duplicate api, use {@link #getInvulnerableTicks()}
      */
+    @Deprecated(forRemoval = true) // Paper
     int getInvulnerabilityTicks();
 
     /**
@@ -51,7 +53,9 @@ public interface Wither extends Monster, Boss {
      * When invulnerability ticks reach 0, the wither will trigger an explosion.
      *
      * @param ticks amount of invulnerability ticks
+     * @deprecated Duplicate api, use {@link #setInvulnerableTicks(int)}
      */
+    @Deprecated(forRemoval = true) // Paper
     void setInvulnerabilityTicks(int ticks);
 
     /**
@@ -63,4 +67,43 @@ public interface Wither extends Monster, Boss {
         LEFT,
         RIGHT
     }
+
+    // Paper start
+    /**
+     * @return whether the wither is charged
+     */
+    boolean isCharged();
+
+    /**
+     * @return ticks the wither is invulnerable for
+     */
+    int getInvulnerableTicks();
+
+    /**
+     * Sets for how long in the future, the wither should be invulnerable.
+     *
+     * @param ticks ticks the wither is invulnerable for
+     */
+    void setInvulnerableTicks(int ticks);
+
+    /**
+     * @return whether the wither can travel through portals
+     */
+    boolean canTravelThroughPortals();
+
+    /**
+     * Sets whether the wither can travel through portals.
+     *
+     * @param value whether the wither can travel through portals
+     */
+    void setCanTravelThroughPortals(boolean value);
+
+    /**
+     * Makes the wither invulnerable for 11 seconds and
+     * sets the health to one third of the max health.
+     * <br>
+     * This is called in vanilla directly after spawning the wither.
+     */
+    void enterInvulnerabilityPhase();
+    // Paper end
 }

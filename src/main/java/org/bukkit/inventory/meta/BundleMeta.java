@@ -6,6 +6,7 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+@org.bukkit.MinecraftExperimental(org.bukkit.MinecraftExperimental.Requires.BUNDLE) // Paper - add missing annotation
 @ApiStatus.Experimental
 public interface BundleMeta extends ItemMeta {
     /**

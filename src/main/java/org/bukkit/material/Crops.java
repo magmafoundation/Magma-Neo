@@ -15,7 +15,7 @@ import org.bukkit.Material;
  * @deprecated all usage of MaterialData is deprecated and subject to removal.
  *             Use {@link org.bukkit.block.data.BlockData}.
  */
-@Deprecated
+@Deprecated(forRemoval = true, since = "1.13")
 public class Crops extends MaterialData {
     protected static final Material DEFAULT_TYPE = Material.LEGACY_CROPS;
     protected static final CropState DEFAULT_STATE = CropState.SEEDED;

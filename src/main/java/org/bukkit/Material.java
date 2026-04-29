@@ -135,7 +135,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * An enum of all material IDs accepted by the official server and client
  */
-public enum Material implements Keyed, Translatable {
+@SuppressWarnings({ "DeprecatedIsStillUsed", "deprecation" }) // Paper
+public enum Material implements Keyed, Translatable, net.kyori.adventure.translation.Translatable { // Paper
     //<editor-fold desc="Materials" defaultstate="collapsed">
     AIR(9648, 0),
     STONE(22948),
@@ -2504,6 +2505,8 @@ public enum Material implements Keyed, Translatable {
     EGG(21603, 16),
     COMPASS(24139),
     RECOVERY_COMPASS(12710),
+    @MinecraftExperimental(org.bukkit.MinecraftExperimental.Requires.BUNDLE) // Paper - add missing annotation
+    @ApiStatus.Experimental // Paper - add missing annotation
     BUNDLE(16835, 1),
     FISHING_ROD(4167, 1, 64),
     CLOCK(14980),
@@ -4696,24 +4699,98 @@ public enum Material implements Keyed, Translatable {
         });
     }
 
+    // Paper start
+
+    /**
+     * @return If the type is either AIR, CAVE_AIR or VOID_AIR
+     */
+    public boolean isEmpty() {
+        switch (this) {
+            case AIR:
+            case CAVE_AIR:
+            case VOID_AIR:
+                return true;
+        }
+        return false;
+    }
+    // Paper end
+
+    // Paper start - add Translatable
+    @Override
+    public @NotNull String translationKey() {
+        if (this.isItem()) {
+            return java.util.Objects.requireNonNull(this.asItemType()).translationKey();
+        } else {
+            return java.util.Objects.requireNonNull(this.asBlockType()).translationKey();
+        }
+    }
+    // Paper end - add Translatable
+
+    // Paper start - item rarity API
+    /**
+     * Returns the item rarity for the item. The Material <b>MUST</b> be an Item not a block.
+     * Use {@link #isItem()} before this.
+     *
+     * @return the item rarity
+     * @deprecated use {@link org.bukkit.inventory.meta.ItemMeta#hasRarity()} and {@link org.bukkit.inventory.meta.ItemMeta#getRarity()}
+     */
+    @NotNull
+    @Deprecated(forRemoval = true, since = "1.20.5")
+    public io.papermc.paper.inventory.ItemRarity getItemRarity() {
+        return new org.bukkit.inventory.ItemStack(this).getRarity();
+    }
+    // Paper end - item rarity API
+
+    // Paper start - item default attributes API
+    /**
+     * Returns an immutable multimap of attributes for the slot.
+     * {@link #isItem()} must be true for this material.
+     *
+     * @param equipmentSlot the slot to get the attributes for
+     * @throws IllegalArgumentException if {@link #isItem()} is false
+     * @return an immutable multimap of attributes
+     * @deprecated use {@link #getDefaultAttributeModifiers(EquipmentSlot)}
+     */
+    @NotNull
+    @Deprecated(forRemoval = true, since = "1.20.5")
+    public Multimap<Attribute, AttributeModifier> getItemAttributes(@NotNull EquipmentSlot equipmentSlot) {
+        return this.getDefaultAttributeModifiers(equipmentSlot);
+    }
+    // Paper end - item default attributes API
+
+    // Paper start - isCollidable API
+    /**
+     * Checks if this material is collidable.
+     *
+     * @return true if collidable
+     * @throws IllegalArgumentException if {@link #isBlock()} is false
+     */
+    public boolean isCollidable() {
+        if (this.isBlock()) {
+            return this.asBlockType().hasCollision();
+        }
+        throw new IllegalArgumentException(this + " isn't a block type");
+    }
+    // Paper end - isCollidable API
+
     /**
      * Do not use for any reason.
      *
      * @return ID of this material
-     * @deprecated Magic value
+     * @apiNote Internal Use Only
      */
-    @Deprecated
+    @ApiStatus.Internal // Paper
     public int getId() {
         Preconditions.checkArgument(legacy, "Cannot get ID of Modern Material");
         return id;
     }
 
     /**
-     * Do not use for any reason.
+     * Checks if this constant is a legacy material.
      *
      * @return legacy status
      */
-    @Deprecated
+    // @Deprecated // Paper - this is useful, don't deprecate
     public boolean isLegacy() {
         return legacy;
     }
@@ -4789,8 +4866,10 @@ public enum Material implements Keyed, Translatable {
      * Gets the MaterialData class associated with this Material
      *
      * @return MaterialData associated with this Material
+     * @deprecated use {@link #createBlockData()}
      */
     @NotNull
+    @Deprecated // Paper
     public Class<? extends MaterialData> getData() {
         Preconditions.checkArgument(legacy, "Cannot get data class of Modern Material");
         return ctor.getDeclaringClass();
@@ -5246,7 +5325,11 @@ public enum Material implements Keyed, Translatable {
      * material.
      *
      * @return true if this material can be interacted with.
+     * @deprecated This method is not comprehensive and does not accurately reflect what block types are
+     *             interactable. Many "interactions" are defined on the item not block, and many are conditional on some other world state
+     *             checks being true.
      */
+    @Deprecated // Paper
     public boolean isInteractable() {
         BlockType type = asBlockType();
         return type != null && type.isInteractable();
@@ -5396,13 +5479,34 @@ public enum Material implements Keyed, Translatable {
         }
     }
 
+    // Paper start - improve default item attribute API
+    /**
+     * Return an immutable copy of all default {@link Attribute}s and their {@link AttributeModifier}s.
+     * <p>
+     * Default attributes are those that are always preset on some items, unless
+     * they are specifically overridden on that {@link ItemStack}. Examples include
+     * the attack damage on weapons or the armor value on armor.
+     * <p>
+     * Only available when {@link #isItem()} is true.
+     *
+     * @return the immutable {@link Multimap} with the respective default
+     *         Attributes and modifiers, or an empty map if no attributes are set.
+     */
+    public @NotNull @org.jetbrains.annotations.Unmodifiable Multimap<Attribute, AttributeModifier> getDefaultAttributeModifiers() {
+        final ItemType type = this.asItemType();
+        Preconditions.checkArgument(type != null, "The Material is not an item!");
+        return type.getDefaultAttributeModifiers();
+    }
+    // Paper end - improve default item attribute API
+
     /**
      * Return an immutable copy of all default {@link Attribute}s and their
      * {@link AttributeModifier}s for a given {@link EquipmentSlot}.
-     *
-     * Default attributes are those that are always preset on some items, such
-     * as the attack damage on weapons or the armor value on armor.
-     *
+     * <p>
+     * Default attributes are those that are always preset on some items, unless
+     * they are specifically overridden on that {@link ItemStack}. Examples include
+     * the attack damage on weapons or the armor value on armor.
+     * <p>
      * Only available when {@link #isItem()} is true.
      *
      * @param slot the {@link EquipmentSlot} to check
@@ -5438,9 +5542,11 @@ public enum Material implements Keyed, Translatable {
      *         material
      * @see #getBlockTranslationKey()
      * @see #getItemTranslationKey()
+     * @deprecated use {@link #translationKey()}
      */
     @Override
     @NotNull
+    @Deprecated(forRemoval = true) // Paper
     public String getTranslationKey() {
         if (this.isItem()) {
             return asItemType().getTranslationKey();
@@ -5481,6 +5587,7 @@ public enum Material implements Keyed, Translatable {
      * @param world the world to check
      * @return true if this material can be used in this World.
      */
+    @Deprecated(forRemoval = true, since = "1.20") // Paper
     public boolean isEnabledByFeature(@NotNull World world) {
         if (isItem()) {
             return Bukkit.getDataPackManager().isEnabledByFeature(asItemType(), world);

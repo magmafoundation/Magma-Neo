@@ -3,14 +3,12 @@ package org.bukkit.event.vehicle;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Vehicle;
 import org.bukkit.event.Cancellable;
-import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Raised when a vehicle collides with an entity.
  */
 public class VehicleEntityCollisionEvent extends VehicleCollisionEvent implements Cancellable {
-    private static final HandlerList handlers = new HandlerList();
     private final Entity entity;
     private boolean cancelled = false;
     private boolean cancelledPickup = false;
@@ -36,30 +34,23 @@ public class VehicleEntityCollisionEvent extends VehicleCollisionEvent implement
         this.cancelled = cancel;
     }
 
+    @Deprecated(forRemoval = true) // Paper - Unused
     public boolean isPickupCancelled() {
         return cancelledPickup;
     }
 
+    @Deprecated(forRemoval = true) // Paper - Unused
     public void setPickupCancelled(boolean cancel) {
         cancelledPickup = cancel;
     }
 
+    @Deprecated(forRemoval = true) // Paper - Unused
     public boolean isCollisionCancelled() {
         return cancelledCollision;
     }
 
+    @Deprecated(forRemoval = true) // Paper - Unused
     public void setCollisionCancelled(boolean cancel) {
         cancelledCollision = cancel;
-    }
-
-    @NotNull
-    @Override
-    public HandlerList getHandlers() {
-        return handlers;
-    }
-
-    @NotNull
-    public static HandlerList getHandlerList() {
-        return handlers;
     }
 }

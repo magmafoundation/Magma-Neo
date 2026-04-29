@@ -9,7 +9,7 @@ import org.bukkit.block.BlockFace;
  * @deprecated all usage of MaterialData is deprecated and subject to removal.
  *             Use {@link org.bukkit.block.data.BlockData}.
  */
-@Deprecated
+@Deprecated(forRemoval = true, since = "1.13")
 public class TripwireHook extends SimpleAttachableMaterialData implements Redstone {
     public TripwireHook() {
         super(Material.LEGACY_TRIPWIRE_HOOK);

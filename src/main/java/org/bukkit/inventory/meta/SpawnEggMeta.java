@@ -16,7 +16,7 @@ public interface SpawnEggMeta extends ItemMeta {
      * @return The entity type. May be null for implementation specific default.
      * @deprecated different types are different items
      */
-    @Deprecated
+    @Deprecated(forRemoval = true) // Paper
     @Contract("-> fail")
     EntityType getSpawnedType();
 
@@ -27,7 +27,7 @@ public interface SpawnEggMeta extends ItemMeta {
      *             default.
      * @deprecated different types are different items
      */
-    @Deprecated
+    @Deprecated(forRemoval = true) // Paper
     @Contract("_ -> fail")
     void setSpawnedType(EntityType type);
 
@@ -52,6 +52,23 @@ public interface SpawnEggMeta extends ItemMeta {
      * @param snapshot the snapshot
      */
     void setSpawnedEntity(@NotNull EntitySnapshot snapshot);
+
+    // Paper start
+    /**
+     * Get the custom type of entity this egg will spawn.
+     *
+     * @return the entity type or null if no custom type is set
+     */
+    @org.jetbrains.annotations.Nullable
+    EntityType getCustomSpawnedType();
+
+    /**
+     * Set the custom type of entity this egg will spawn.
+     *
+     * @param type the entity type or null to clear the custom type
+     */
+    void setCustomSpawnedType(@org.jetbrains.annotations.Nullable EntityType type);
+    // Paper end
 
     @NotNull
     @Override

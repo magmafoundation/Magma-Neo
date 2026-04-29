@@ -7,6 +7,13 @@ import org.jetbrains.annotations.NotNull;
  * Represents a fluid type.
  */
 public enum Fluid implements Keyed {
+
+    // Paper start
+    /**
+     * No fluid.
+     */
+    EMPTY,
+    // Paper end
     /**
      * Stationary water.
      */

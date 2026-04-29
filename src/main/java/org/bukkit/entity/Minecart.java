@@ -1,5 +1,6 @@
 package org.bukkit.entity;
 
+import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.material.MaterialData;
 import org.bukkit.util.Vector;
@@ -100,7 +101,9 @@ public interface Minecart extends Vehicle {
      * Passing a null value will set the minecart to have no display block.
      *
      * @param material the material to set as display block.
+     * @deprecated use {@link #setDisplayBlockData(BlockData)}
      */
+    @Deprecated(forRemoval = true, since = "1.13")
     public void setDisplayBlock(@Nullable MaterialData material);
 
     /**
@@ -110,6 +113,7 @@ public interface Minecart extends Vehicle {
      * @return the block displayed by this minecart.
      */
     @NotNull
+    @Deprecated(forRemoval = true, since = "1.13")
     public MaterialData getDisplayBlock();
 
     /**
@@ -125,6 +129,7 @@ public interface Minecart extends Vehicle {
      * This function will return the type AIR if none is set.
      *
      * @return the block displayed by this minecart.
+     * @deprecated use {@link #getDisplayBlockData()}
      */
     @NotNull
     public BlockData getDisplayBlockData();
@@ -142,4 +147,14 @@ public interface Minecart extends Vehicle {
      * @return the current block offset for this minecart.
      */
     public int getDisplayBlockOffset();
+
+    // Paper start
+    /**
+     * Gets the {@link Material} that represents this Minecart type.
+     *
+     * @return the minecart material.
+     */
+    @NotNull
+    public Material getMinecartMaterial();
+    // Paper end
 }

@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Meow.
  */
-public interface Cat extends Tameable, Sittable {
+public interface Cat extends Tameable, Sittable, io.papermc.paper.entity.CollarColorable { // Paper - CollarColorable
     /**
      * Gets the current type of this cat.
      *
@@ -35,6 +35,7 @@ public interface Cat extends Tameable, Sittable {
      * @return the color of the collar
      */
     @NotNull
+    @Override // Paper
     public DyeColor getCollarColor();
 
     /**
@@ -42,6 +43,7 @@ public interface Cat extends Tameable, Sittable {
      *
      * @param color the color to apply
      */
+    @Override // Paper
     public void setCollarColor(@NotNull DyeColor color);
 
     /**
@@ -71,7 +73,8 @@ public interface Cat extends Tameable, Sittable {
          * @deprecated only for backwards compatibility, use {@link Registry#get(NamespacedKey)} instead.
          */
         @NotNull
-        @Deprecated(since = "1.21")
+        @Deprecated(since = "1.21", forRemoval = true)
+        @org.jetbrains.annotations.ApiStatus.ScheduledForRemoval(inVersion = "1.22") // Paper - will be removed via asm-utils
         static Type valueOf(@NotNull String name) {
             Type type = Registry.CAT_VARIANT.get(NamespacedKey.fromString(name.toLowerCase(Locale.ROOT)));
             Preconditions.checkArgument(type != null, "No cat type found with the name %s", name);
@@ -83,9 +86,42 @@ public interface Cat extends Tameable, Sittable {
          * @deprecated use {@link Registry#iterator()}.
          */
         @NotNull
-        @Deprecated(since = "1.21")
+        @Deprecated(since = "1.21", forRemoval = true)
+        @org.jetbrains.annotations.ApiStatus.ScheduledForRemoval(inVersion = "1.22") // Paper - will be removed via asm-utils
         static Type[] values() {
             return Lists.newArrayList(Registry.CAT_VARIANT).toArray(new Type[0]);
         }
     }
+
+    // Paper start - More cat api
+    /**
+     * Sets if the cat is lying down.
+     * This is visual and does not affect the behaviour of the cat.
+     *
+     * @param lyingDown whether the cat should lie down
+     */
+    public void setLyingDown(boolean lyingDown);
+
+    /**
+     * Gets if the cat is lying down.
+     *
+     * @return whether the cat is lying down
+     */
+    public boolean isLyingDown();
+
+    /**
+     * Sets if the cat has its head up.
+     * This is visual and does not affect the behaviour of the cat.
+     *
+     * @param headUp head is up
+     */
+    public void setHeadUp(boolean headUp);
+
+    /**
+     * Gets if the cat has its head up.
+     *
+     * @return head is up
+     */
+    public boolean isHeadUp();
+    // Paper end - More cat api
 }

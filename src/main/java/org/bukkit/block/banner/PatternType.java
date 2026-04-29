@@ -56,6 +56,13 @@ public interface PatternType extends OldEnum<PatternType>, Keyed {
     PatternType FLOW = getType("flow");
     PatternType GUSTER = getType("guster");
 
+    // Paper start - deprecate getKey
+    /**
+     * @deprecated use {@link Registry#getKey(Keyed)}, {@link io.papermc.paper.registry.RegistryAccess#getRegistry(io.papermc.paper.registry.RegistryKey)},
+     *             and {@link io.papermc.paper.registry.RegistryKey#BANNER_PATTERN}. PatternTypes can exist without a key.
+     */
+    @Deprecated(since = "1.20.5")
+    // Paper end - deprecate getKey
     @Override
     @NotNull
     public NamespacedKey getKey();
@@ -109,7 +116,8 @@ public interface PatternType extends OldEnum<PatternType>, Keyed {
      * @deprecated only for backwards compatibility, use {@link Registry#get(NamespacedKey)} instead.
      */
     @NotNull
-    @Deprecated(since = "1.21")
+    @Deprecated(since = "1.21", forRemoval = true)
+    @org.jetbrains.annotations.ApiStatus.ScheduledForRemoval(inVersion = "1.22") // Paper - will be removed via asm-utils
     static PatternType valueOf(@NotNull String name) {
         PatternType type = Registry.BANNER_PATTERN.get(NamespacedKey.fromString(name.toLowerCase(Locale.ROOT)));
         Preconditions.checkArgument(type != null, "No pattern type found with the name %s", name);
@@ -121,7 +129,8 @@ public interface PatternType extends OldEnum<PatternType>, Keyed {
      * @deprecated use {@link Registry#iterator()}.
      */
     @NotNull
-    @Deprecated(since = "1.21")
+    @Deprecated(since = "1.21", forRemoval = true)
+    @org.jetbrains.annotations.ApiStatus.ScheduledForRemoval(inVersion = "1.22") // Paper - will be removed via asm-utils
     static PatternType[] values() {
         return Lists.newArrayList(Registry.BANNER_PATTERN).toArray(new PatternType[0]);
     }

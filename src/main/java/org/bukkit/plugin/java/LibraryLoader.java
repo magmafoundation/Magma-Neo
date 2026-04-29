@@ -42,6 +42,8 @@ class LibraryLoader {
     private final RepositorySystem repository;
     private final DefaultRepositorySystemSession session;
     private final List<RemoteRepository> repositories;
+    public static java.util.function.BiFunction<URL[], ClassLoader, URLClassLoader> LIBRARY_LOADER_FACTORY; // Paper - rewrite reflection in libraries
+    public static java.util.function.Function<List<java.nio.file.Path>, List<java.nio.file.Path>> REMAPPER; // Paper - remap libraries
 
     public LibraryLoader(@NotNull Logger logger) {
         this.logger = logger;
@@ -74,7 +76,15 @@ class LibraryLoader {
 
     @Nullable
     public ClassLoader createLoader(@NotNull PluginDescriptionFile desc) {
-        if (desc.getLibraries().isEmpty()) {
+        // Paper start - plugin loader api
+        return this.createLoader(desc, null);
+    }
+
+    @Nullable
+    public ClassLoader createLoader(@NotNull PluginDescriptionFile desc, java.util.@Nullable List<java.nio.file.Path> paperLibraryPaths) {
+        if (desc.getLibraries().isEmpty() && paperLibraryPaths == null)
+        // Paper end - plugin loader api
+        {
             return null;
         }
         logger.log(Level.INFO, "[{0}] Loading {1} libraries... please wait", new Object[] {
@@ -90,15 +100,30 @@ class LibraryLoader {
         }
 
         DependencyResult result;
-        try {
+        if (!dependencies.isEmpty()) try // Paper - plugin loader api
+        {
             result = repository.resolveDependencies(session, new DependencyRequest(new CollectRequest((Dependency) null, dependencies, repositories), null));
         } catch (DependencyResolutionException ex) {
             throw new RuntimeException("Error resolving libraries", ex);
         }
+        else result = null; // Paper - plugin loader api
 
         List<URL> jarFiles = new ArrayList<>();
-        for (ArtifactResult artifact : result.getArtifactResults()) {
-            File file = artifact.getArtifact().getFile();
+        List<java.nio.file.Path> jarPaths = new ArrayList<>(); // Paper - remap libraries
+        // Paper start - plugin loader api
+        if (paperLibraryPaths != null) jarPaths.addAll(paperLibraryPaths);
+        if (result != null) for (ArtifactResult artifact : result.getArtifactResults())
+        // Paper end - plugin loader api
+        {
+            // Paper start - remap libraries
+            jarPaths.add(artifact.getArtifact().getFile().toPath());
+        }
+        if (REMAPPER != null) {
+            jarPaths = REMAPPER.apply(jarPaths);
+        }
+        for (java.nio.file.Path path : jarPaths) {
+            File file = path.toFile();
+            // Paper end - remap libraries
 
             URL url;
             try {
@@ -113,7 +138,14 @@ class LibraryLoader {
             });
         }
 
-        URLClassLoader loader = new URLClassLoader(jarFiles.toArray(new URL[jarFiles.size()]), getClass().getClassLoader());
+        // Paper start - rewrite reflection in libraries
+        URLClassLoader loader;
+        if (LIBRARY_LOADER_FACTORY == null) {
+            loader = new URLClassLoader(jarFiles.toArray(new URL[jarFiles.size()]), getClass().getClassLoader());
+        } else {
+            loader = LIBRARY_LOADER_FACTORY.apply(jarFiles.toArray(new URL[jarFiles.size()]), getClass().getClassLoader());
+        }
+        // Paper end - rewrite reflection in libraries
 
         return loader;
     }

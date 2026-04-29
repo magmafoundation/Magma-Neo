@@ -16,10 +16,12 @@ import org.jspecify.annotations.NullMarked;
 public class MethodHandleEventExecutor implements EventExecutor {
     private final Class<? extends Event> eventClass;
     private final MethodHandle handle;
+    private final @Nullable Method method;
 
     public MethodHandleEventExecutor(final Class<? extends Event> eventClass, final MethodHandle handle) {
         this.eventClass = eventClass;
         this.handle = handle;
+        this.method = null;
     }
 
     public MethodHandleEventExecutor(final Class<? extends Event> eventClass, final Method m) {
@@ -30,6 +32,7 @@ public class MethodHandleEventExecutor implements EventExecutor {
         } catch (final IllegalAccessException e) {
             throw new AssertionError("Unable to set accessible", e);
         }
+        this.method = m;
     }
 
     @Override
@@ -40,5 +43,10 @@ public class MethodHandleEventExecutor implements EventExecutor {
         } catch (final Throwable t) {
             SneakyThrow.sneaky(t);
         }
+    }
+
+    @Override
+    public String toString() {
+        return "MethodHandleEventExecutor['" + this.method + "']";
     }
 }

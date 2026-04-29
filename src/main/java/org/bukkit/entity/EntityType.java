@@ -30,7 +30,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.magmafoundation.magma.neoforge.NeoInject;
 
-public enum EntityType implements Keyed, Translatable {
+public enum EntityType implements Keyed, Translatable, net.kyori.adventure.translation.Translatable, io.papermc.paper.world.flag.FeatureDependant { // Paper - translatable
 
     // These strings MUST match the strings in nms.EntityTypes and are case sensitive.
     /**
@@ -390,9 +390,9 @@ public enum EntityType implements Keyed, Translatable {
      *
      * @param name the entity type's name
      * @return the matching entity type or null
-     * @deprecated Magic value
+     * @apiNote Internal Use Only
      */
-    @Deprecated
+    @org.jetbrains.annotations.ApiStatus.Internal // Paper
     @Contract("null -> null")
     @Nullable
     public static EntityType fromName(@Nullable String name) {
@@ -436,9 +436,40 @@ public enum EntityType implements Keyed, Translatable {
 
     @Override
     @NotNull
+    @Deprecated(forRemoval = true) // Paper
     public String getTranslationKey() {
         return Bukkit.getUnsafe().getTranslationKey(this);
     }
+
+    // Paper start
+    /**
+     * @throws IllegalArgumentException if the entity does not have a translation key (is probably a custom entity)
+     */
+    @Override
+    public @NotNull String translationKey() {
+        Preconditions.checkArgument(this != UNKNOWN, "UNKNOWN entities do not have translation keys");
+        return org.bukkit.Bukkit.getUnsafe().getTranslationKey(this);
+    }
+
+    /**
+     * Checks if the entity has default attributes.
+     *
+     * @return true if it has default attributes
+     */
+    public boolean hasDefaultAttributes() {
+        return org.bukkit.Bukkit.getUnsafe().hasDefaultEntityAttributes(this.key);
+    }
+
+    /**
+     * Gets the default attributes for the entity.
+     *
+     * @return an unmodifiable instance of Attributable for reading default attributes.
+     * @throws IllegalArgumentException if the entity does not exist of have default attributes (use {@link #hasDefaultAttributes()} first)
+     */
+    public @NotNull org.bukkit.attribute.Attributable getDefaultAttributes() {
+        return org.bukkit.Bukkit.getUnsafe().getDefaultEntityAttributes(this.key);
+    }
+    // Paper end
 
     /**
      * Gets if this EntityType is enabled by feature in a world.
@@ -446,6 +477,7 @@ public enum EntityType implements Keyed, Translatable {
      * @param world the world to check
      * @return true if this EntityType can be used to spawn an Entity for this World.
      */
+    @Deprecated(forRemoval = true, since = "1.20") // Paper
     public boolean isEnabledByFeature(@NotNull World world) {
         return Bukkit.getDataPackManager().isEnabledByFeature(this, world);
     }

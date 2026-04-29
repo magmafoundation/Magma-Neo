@@ -10,7 +10,7 @@ import org.bukkit.Material;
  * @deprecated all usage of MaterialData is deprecated and subject to removal.
  *             Use {@link org.bukkit.block.data.BlockData}.
  */
-@Deprecated
+@Deprecated(forRemoval = true, since = "1.13")
 public class MonsterEggs extends TexturedMaterial {
     private static final List<Material> textures = new ArrayList<Material>();
     static {

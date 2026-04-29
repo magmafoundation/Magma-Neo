@@ -35,8 +35,10 @@ public interface BlockState extends Metadatable {
      * Gets the metadata for this block state.
      *
      * @return block specific metadata
+     * @deprecated use {@link #getBlockData()}
      */
     @NotNull
+    @Deprecated(forRemoval = true, since = "1.13")
     MaterialData getData();
 
     /**
@@ -150,7 +152,9 @@ public interface BlockState extends Metadatable {
      * Sets the metadata for this block state.
      *
      * @param data New block specific metadata
+     * @deprecated use {@link #setBlockData(BlockData)}
      */
+    @Deprecated(forRemoval = true, since = "1.13")
     void setData(@NotNull MaterialData data);
 
     /**
@@ -240,4 +244,49 @@ public interface BlockState extends Metadatable {
      *         or 'virtual' (e.g. on an itemstack)
      */
     boolean isPlaced();
+
+    // Paper start
+    /**
+     * Checks if this block state is collidable.
+     *
+     * @return true if collidable
+     */
+    boolean isCollidable();
+
+    /**
+     * Returns an immutable list of items which would drop by destroying this block state.
+     *
+     * @return an immutable list of dropped items for the block state
+     * @throws IllegalStateException if this block state is not placed
+     */
+    @NotNull
+    default java.util.@org.jetbrains.annotations.Unmodifiable Collection<org.bukkit.inventory.ItemStack> getDrops() {
+        return this.getDrops(null);
+    }
+
+    /**
+     * Returns an immutable list of items which would drop by destroying this block state
+     * with a specific tool
+     *
+     * @param tool The tool or item in hand used for digging
+     * @return an immutable list of dropped items for the block state
+     * @throws IllegalStateException if this block state is not placed
+     */
+    @NotNull
+    default java.util.@org.jetbrains.annotations.Unmodifiable Collection<org.bukkit.inventory.ItemStack> getDrops(@Nullable org.bukkit.inventory.ItemStack tool) {
+        return this.getDrops(tool, null);
+    }
+
+    /**
+     * Returns an immutable list of items which would drop by the entity destroying this
+     * block state with a specific tool
+     *
+     * @param tool   The tool or item in hand used for digging
+     * @param entity the entity destroying the block
+     * @return an immutable list of dropped items for the block state
+     * @throws IllegalStateException if this block state is not placed
+     */
+    @NotNull
+    java.util.@org.jetbrains.annotations.Unmodifiable Collection<org.bukkit.inventory.ItemStack> getDrops(@Nullable org.bukkit.inventory.ItemStack tool, @Nullable org.bukkit.entity.Entity entity);
+    // Paper end
 }

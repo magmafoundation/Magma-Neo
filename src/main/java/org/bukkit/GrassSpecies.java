@@ -6,6 +6,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Represents the different types of grass.
+ * 
+ * @deprecated use {@link org.bukkit.block.data.BlockData}
  */
 public enum GrassSpecies {
     /**

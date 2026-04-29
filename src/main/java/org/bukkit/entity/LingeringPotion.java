@@ -3,7 +3,8 @@ package org.bukkit.entity;
 /**
  * Represents a thrown lingering potion bottle
  *
- * @deprecated lingering status depends on only on the potion item.
+ * @deprecated should not be used for anything, use {@link ThrownPotion} and
+ *             set the potion via the methods there.
  */
-@Deprecated
+@Deprecated(forRemoval = true) // Paper
 public interface LingeringPotion extends ThrownPotion {}

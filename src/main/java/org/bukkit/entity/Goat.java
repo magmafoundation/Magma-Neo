@@ -51,4 +51,13 @@ public interface Goat extends Animals {
      * @param screaming screaming status
      */
     void setScreaming(boolean screaming);
+
+    // Paper start - Goat ram API
+    /**
+     * Makes the goat ram at the specified entity
+     * 
+     * @param entity the entity to ram at
+     */
+    void ram(@org.jetbrains.annotations.NotNull LivingEntity entity);
+    // Paper end
 }

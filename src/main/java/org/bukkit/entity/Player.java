@@ -48,7 +48,6 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.messaging.PluginMessageRecipient;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.profile.PlayerProfile;
 import org.bukkit.scoreboard.Scoreboard;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -57,7 +56,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Represents a player, connected or not
  */
-public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginMessageRecipient, net.kyori.adventure.identity.Identified, net.kyori.adventure.bossbar.BossBarViewer { // Paper
+public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginMessageRecipient, net.kyori.adventure.identity.Identified, net.kyori.adventure.bossbar.BossBarViewer, com.destroystokyo.paper.network.NetworkClient { // Paper
 
     // Paper start
     @Override
@@ -254,6 +253,16 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
     @Nullable
     public InetSocketAddress getAddress();
 
+    // Paper start - Add API to get player's proxy address
+    /**
+     * Gets the socket address of this player's proxy
+     *
+     * @return the player's proxy address, null if the server doesn't have Proxy Protocol enabled, or the player didn't connect to an HAProxy instance
+     */
+    @Nullable
+    public InetSocketAddress getHAProxyAddress();
+    // Paper end - Add API to get player's proxy address
+
     /**
      * Gets if this connection has been transferred from another server.
      *
@@ -324,6 +333,14 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
      * @param message kick message
      */
     void kick(final net.kyori.adventure.text.@Nullable Component message);
+
+    /**
+     * Kicks player with custom kick message and cause.
+     *
+     * @param message kick message
+     * @param cause   kick cause
+     */
+    void kick(final net.kyori.adventure.text.@Nullable Component message, org.bukkit.event.player.PlayerKickEvent.@NotNull Cause cause);
     // Paper end
 
     /**
@@ -340,7 +357,7 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
      *         (updated) previous ban
      */
     @Nullable
-    public BanEntry<PlayerProfile> ban(@Nullable String reason, @Nullable Date expires, @Nullable String source, boolean kickPlayer);
+    public <E extends BanEntry<? super com.destroystokyo.paper.profile.PlayerProfile>> E ban(@Nullable String reason, @Nullable Date expires, @Nullable String source, boolean kickPlayer); // Paper - fix ban list API
 
     /**
      * Adds this user to the {@link ProfileBanList}. If a previous ban exists, this will
@@ -356,7 +373,7 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
      *         (updated) previous ban
      */
     @Nullable
-    public BanEntry<PlayerProfile> ban(@Nullable String reason, @Nullable Instant expires, @Nullable String source, boolean kickPlayer);
+    public <E extends BanEntry<? super com.destroystokyo.paper.profile.PlayerProfile>> E ban(@Nullable String reason, @Nullable Instant expires, @Nullable String source, boolean kickPlayer); // Paper - fix ban list API
 
     /**
      * Adds this user to the {@link ProfileBanList}. If a previous ban exists, this will
@@ -372,7 +389,7 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
      *         (updated) previous ban
      */
     @Nullable
-    public BanEntry<PlayerProfile> ban(@Nullable String reason, @Nullable Duration duration, @Nullable String source, boolean kickPlayer);
+    public <E extends BanEntry<? super com.destroystokyo.paper.profile.PlayerProfile>> E ban(@Nullable String reason, @Nullable Duration duration, @Nullable String source, boolean kickPlayer); // Paper - fix ban list API
 
     /**
      * Adds this user's current IP address to the {@link IpBanList}. If a previous ban exists, this will
@@ -456,6 +473,7 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
      *
      * @return true if player is in sneak mode
      */
+    @Override // Paper
     public boolean isSneaking();
 
     /**
@@ -463,6 +481,7 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
      *
      * @param sneak true if player should appear sneaking
      */
+    @Override // Paper
     public void setSneaking(boolean sneak);
 
     /**
@@ -934,6 +953,29 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
      */
     public void sendBlockDamage(@NotNull Location loc, float progress);
 
+    // Paper start
+    /**
+     * Send multiple block changes. This fakes a multi block change packet for each
+     * chunk section that a block change occurs. This will not actually change the world in any way.
+     *
+     * @param blockChanges A map of the positions you want to change to their new block data
+     */
+    void sendMultiBlockChange(@NotNull Map<? extends io.papermc.paper.math.Position, BlockData> blockChanges);
+
+    /**
+     * Send multiple block changes. This fakes a multi block change packet for each
+     * chunk section that a block change occurs. This will not actually change the world in any way.
+     *
+     * @param blockChanges         A map of the positions you want to change to their new block data
+     * @param suppressLightUpdates Whether to suppress light updates or not
+     * @deprecated suppressLightUpdates is no longer available in 1.20+, use {@link #sendMultiBlockChange(Map)}
+     */
+    @Deprecated
+    default void sendMultiBlockChange(@NotNull Map<? extends io.papermc.paper.math.Position, BlockData> blockChanges, boolean suppressLightUpdates) {
+        this.sendMultiBlockChange(blockChanges);
+    }
+    // Paper end
+
     /**
      * Send block damage. This fakes block break progress at a certain location
      * sourced by the provided entity. This will not actually change the block's
@@ -1220,6 +1262,233 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
     public void sendMap(@NotNull MapView map);
 
     // Paper start
+    /**
+     * Shows the player the win screen that normally is only displayed after one kills the ender dragon
+     * and exits the end for the first time.
+     * In vanilla, the win screen starts with a poem and then continues with the credits but its content can be
+     * changed by using a resource pack.
+     * <br>
+     * Calling this method does not change the value of {@link #hasSeenWinScreen()}.
+     * That means that the win screen is still displayed to a player if they leave the end for the first time, even though
+     * they have seen it before because this method was called.
+     * Note this method does not make the player invulnerable, which is normally expected when viewing credits.
+     *
+     * @see #hasSeenWinScreen()
+     * @see #setHasSeenWinScreen(boolean)
+     * @see <a href="https://minecraft.wiki/wiki/End_Poem#Technical_details">https://minecraft.wiki/wiki/End_Poem#Technical_details</a>
+     */
+    public void showWinScreen();
+
+    /**
+     * Returns whether this player has seen the win screen before.
+     * When a player leaves the end the win screen is shown to them if they have not seen it before.
+     *
+     * @return Whether this player has seen the win screen before
+     * @see #setHasSeenWinScreen(boolean)
+     * @see #showWinScreen()
+     * @see <a href="https://minecraft.wiki/wiki/End_Poem">https://minecraft.wiki/wiki/End_Poem</a>
+     */
+    public boolean hasSeenWinScreen();
+
+    /**
+     * Changes whether this player has seen the win screen before.
+     * When a player leaves the end the win screen is shown to them if they have not seen it before.
+     *
+     * @param hasSeenWinScreen Whether this player has seen the win screen before
+     * @see #hasSeenWinScreen()
+     * @see #showWinScreen()
+     * @see <a href="https://minecraft.wiki/wiki/End_Poem">https://minecraft.wiki/wiki/End_Poem</a>
+     */
+    public void setHasSeenWinScreen(boolean hasSeenWinScreen);
+    // Paper end
+
+    // Paper start
+    /**
+     * Permanently Bans the Profile and IP address currently used by the player.
+     *
+     * @param reason Reason for ban
+     * @return Ban Entry
+     * @deprecated use {@link #ban(String, Date, String)} and {@link #banIp(String, Date, String, boolean)}
+     */
+    // For reference, Bukkit defines this as nullable, while they impl isn't, we'll follow API.
+    @Nullable
+    @Deprecated(since = "1.20.4")
+    public default org.bukkit.BanEntry banPlayerFull(@Nullable String reason) {
+        return banPlayerFull(reason, null, null);
+    }
+
+    /**
+     * Permanently Bans the Profile and IP address currently used by the player.
+     *
+     * @param reason Reason for ban
+     * @param source Source of ban, or null for default
+     * @return Ban Entry
+     * @deprecated use {@link #ban(String, Date, String)} and {@link #banIp(String, Date, String, boolean)}
+     */
+    @Nullable
+    @Deprecated(since = "1.20.4")
+    public default org.bukkit.BanEntry banPlayerFull(@Nullable String reason, @Nullable String source) {
+        return banPlayerFull(reason, null, source);
+    }
+
+    /**
+     * Bans the Profile and IP address currently used by the player.
+     *
+     * @param reason  Reason for Ban
+     * @param expires When to expire the ban
+     * @return Ban Entry
+     * @deprecated use {@link #ban(String, Date, String)} and {@link #banIp(String, Date, String, boolean)}
+     */
+    @Nullable
+    @Deprecated(since = "1.20.4")
+    public default org.bukkit.BanEntry banPlayerFull(@Nullable String reason, @Nullable java.util.Date expires) {
+        return banPlayerFull(reason, expires, null);
+    }
+
+    /**
+     * Bans the Profile and IP address currently used by the player.
+     *
+     * @param reason  Reason for Ban
+     * @param expires When to expire the ban
+     * @param source  Source of the ban, or null for default
+     * @return Ban Entry
+     * @deprecated use {@link #ban(String, Date, String)} and {@link #banIp(String, Date, String, boolean)}
+     */
+    @Nullable
+    @Deprecated(since = "1.20.4")
+    public default org.bukkit.BanEntry banPlayerFull(@Nullable String reason, @Nullable java.util.Date expires, @Nullable String source) {
+        banPlayer(reason, expires, source);
+        return banPlayerIP(reason, expires, source, true);
+    }
+
+    /**
+     * Permanently Bans the IP address currently used by the player.
+     * Does not ban the Profile, use {@link #banPlayerFull(String, java.util.Date, String)}
+     *
+     * @param reason     Reason for ban
+     * @param kickPlayer Whether or not to kick the player afterwards
+     * @return Ban Entry
+     * @deprecated use {@link #ban(String, Date, String)} and {@link #banIp(String, Date, String, boolean)}
+     */
+    @Nullable
+    @Deprecated(since = "1.20.4")
+    public default org.bukkit.BanEntry banPlayerIP(@Nullable String reason, boolean kickPlayer) {
+        return banPlayerIP(reason, null, null, kickPlayer);
+    }
+
+    /**
+     * Permanently Bans the IP address currently used by the player.
+     * Does not ban the Profile, use {@link #banPlayerFull(String, java.util.Date, String)}
+     * 
+     * @param reason     Reason for ban
+     * @param source     Source of ban, or null for default
+     * @param kickPlayer Whether or not to kick the player afterwards
+     * @return Ban Entry
+     * @deprecated use {@link #ban(String, Date, String)} and {@link #banIp(String, Date, String, boolean)}
+     */
+    @Nullable
+    @Deprecated(since = "1.20.4")
+    public default org.bukkit.BanEntry banPlayerIP(@Nullable String reason, @Nullable String source, boolean kickPlayer) {
+        return banPlayerIP(reason, null, source, kickPlayer);
+    }
+
+    /**
+     * Bans the IP address currently used by the player.
+     * Does not ban the Profile, use {@link #banPlayerFull(String, java.util.Date, String)}
+     * 
+     * @param reason     Reason for Ban
+     * @param expires    When to expire the ban
+     * @param kickPlayer Whether or not to kick the player afterwards
+     * @return Ban Entry
+     * @deprecated use {@link #ban(String, Date, String)} and {@link #banIp(String, Date, String, boolean)}
+     */
+    @Nullable
+    @Deprecated(since = "1.20.4")
+    public default org.bukkit.BanEntry banPlayerIP(@Nullable String reason, @Nullable java.util.Date expires, boolean kickPlayer) {
+        return banPlayerIP(reason, expires, null, kickPlayer);
+    }
+
+    /**
+     * Permanently Bans the IP address currently used by the player.
+     * Does not ban the Profile, use {@link #banPlayerFull(String, java.util.Date, String)}
+     *
+     * @param reason Reason for ban
+     * @return Ban Entry
+     * @deprecated use {@link #ban(String, Date, String)} and {@link #banIp(String, Date, String, boolean)}
+     */
+    @Nullable
+    @Deprecated(since = "1.20.4")
+    public default org.bukkit.BanEntry banPlayerIP(@Nullable String reason) {
+        return banPlayerIP(reason, null, null);
+    }
+
+    /**
+     * Permanently Bans the IP address currently used by the player.
+     * Does not ban the Profile, use {@link #banPlayerFull(String, java.util.Date, String)}
+     * 
+     * @param reason Reason for ban
+     * @param source Source of ban, or null for default
+     * @return Ban Entry
+     * @deprecated use {@link #ban(String, Date, String)} and {@link #banIp(String, Date, String, boolean)}
+     */
+    @Nullable
+    @Deprecated(since = "1.20.4")
+    public default org.bukkit.BanEntry banPlayerIP(@Nullable String reason, @Nullable String source) {
+        return banPlayerIP(reason, null, source);
+    }
+
+    /**
+     * Bans the IP address currently used by the player.
+     * Does not ban the Profile, use {@link #banPlayerFull(String, java.util.Date, String)}
+     * 
+     * @param reason  Reason for Ban
+     * @param expires When to expire the ban
+     * @return Ban Entry
+     * @deprecated use {@link #ban(String, Date, String)} and {@link #banIp(String, Date, String, boolean)}
+     */
+    @Nullable
+    @Deprecated(since = "1.20.4")
+    public default org.bukkit.BanEntry banPlayerIP(@Nullable String reason, @Nullable java.util.Date expires) {
+        return banPlayerIP(reason, expires, null);
+    }
+
+    /**
+     * Bans the IP address currently used by the player.
+     * Does not ban the Profile, use {@link #banPlayerFull(String, java.util.Date, String)}
+     * 
+     * @param reason  Reason for Ban
+     * @param expires When to expire the ban
+     * @param source  Source of the ban or null for default
+     * @return Ban Entry
+     * @deprecated use {@link #ban(String, Date, String)} and {@link #banIp(String, Date, String, boolean)}
+     */
+    @Nullable
+    @Deprecated(since = "1.20.4")
+    public default org.bukkit.BanEntry banPlayerIP(@Nullable String reason, @Nullable java.util.Date expires, @Nullable String source) {
+        return banPlayerIP(reason, expires, source, true);
+    }
+
+    /**
+     * Bans the IP address currently used by the player.
+     * Does not ban the Profile, use {@link #banPlayerFull(String, java.util.Date, String)}
+     * 
+     * @param reason     Reason for Ban
+     * @param expires    When to expire the ban
+     * @param source     Source of the ban or null for default
+     * @param kickPlayer if the targeted player should be kicked
+     * @return Ban Entry
+     * @deprecated use {@link #ban(String, Date, String)} and {@link #banIp(String, Date, String, boolean)}
+     */
+    @Nullable
+    @Deprecated(since = "1.20.4")
+    public default org.bukkit.BanEntry banPlayerIP(@Nullable String reason, @Nullable java.util.Date expires, @Nullable String source, boolean kickPlayer) {
+        org.bukkit.BanEntry banEntry = org.bukkit.Bukkit.getServer().getBanList(org.bukkit.BanList.Type.IP).addBan(getAddress().getAddress().getHostAddress(), reason, expires, source);
+        if (kickPlayer && isOnline()) {
+            getPlayer().kickPlayer(reason);
+        }
+
+        return banEntry;
+    }
 
     /**
      * Sends an Action Bar message to the client.
@@ -1465,11 +1734,8 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
 
     /**
      * Forces an update of the player's entire inventory.
-     *
-     * @apiNote It should not be necessary for plugins to use this method. If it
-     *          is required for some reason, it is probably a bug.
      */
-    @ApiStatus.Internal
+    // @ApiStatus.Internal // Paper - is valid API
     public void updateInventory();
 
     /**
@@ -1553,6 +1819,16 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
      */
     public void resetPlayerWeather();
 
+    // Paper start
+    /**
+     * Gives the player the amount of experience specified.
+     *
+     * @param amount Exp amount to give
+     */
+    public default void giveExp(int amount) {
+        giveExp(amount, false);
+    }
+
     /**
      * Gets the player's cooldown between picking up experience orbs.
      *
@@ -1577,9 +1853,21 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
     /**
      * Gives the player the amount of experience specified.
      *
-     * @param amount Exp amount to give
+     * @param amount       Exp amount to give
+     * @param applyMending Mend players items with mending, with same behavior as picking up orbs. calls {@link #applyMending(int)}
      */
-    public void giveExp(int amount);
+    public void giveExp(int amount, boolean applyMending);
+
+    /**
+     * Applies the mending effect to any items just as picking up an orb would.
+     *
+     * Can also be called with {@link #giveExp(int, boolean)} by passing true to applyMending
+     *
+     * @param amount Exp to apply
+     * @return the remaining experience
+     */
+    public int applyMending(int amount);
+    // Paper end
 
     /**
      * Gives the player the amount of experience levels specified. Levels can
@@ -1641,6 +1929,47 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
      */
     public void setTotalExperience(int exp);
 
+    // Paper start
+    /**
+     * Gets the players total amount of experience points he collected to reach the current level and level progress.
+     *
+     * <p>This method differs from {@link #getTotalExperience()} in that this method always returns an
+     * up-to-date value that reflects the players{@link #getLevel() level} and {@link #getExp() level progress}</p>
+     *
+     * @return Current total experience points
+     * @see #getLevel()
+     * @see #getExp()
+     * @see #setExperienceLevelAndProgress(int)
+     */
+    @org.jetbrains.annotations.Range(from = 0, to = Integer.MAX_VALUE)
+    int calculateTotalExperiencePoints();
+
+    /**
+     * Updates the players level and level progress to that what would be reached when the total amount of experience
+     * had been collected.
+     *
+     * <p>This method differs from {@link #setTotalExperience(int)} in that this method actually updates the
+     * {@link #getLevel() level} and {@link #getExp() level progress} so that a subsequent call of
+     * {@link #calculateTotalExperiencePoints()} yields the same amount of points that have been set</p>
+     *
+     * @param totalExperience New total experience points
+     * @see #setLevel(int)
+     * @see #setExp(float)
+     * @see #calculateTotalExperiencePoints()
+     */
+    void setExperienceLevelAndProgress(@org.jetbrains.annotations.Range(from = 0, to = Integer.MAX_VALUE) int totalExperience);
+
+    /**
+     * Gets the total amount of experience points that are needed to reach the next level from zero progress towards it.
+     *
+     * <p>Can be used with {@link #getExp()} to calculate the current points for the current level and alike</p>
+     *
+     * @return The required experience points
+     * @see #getExp()
+     */
+    int getExperiencePointsNeededForNextLevel();
+    // Paper end
+
     /**
      * Send an experience change.
      *
@@ -1681,6 +2010,23 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
      * @param flight If flight should be allowed.
      */
     public void setAllowFlight(boolean flight);
+
+    // Paper start - flying fall damage
+    /**
+     * Allows you to enable fall damage while {@link #getAllowFlight()} is {@code true}
+     *
+     * @param flyingFallDamage Enables fall damage when {@link #getAllowFlight()} is {@code true}
+     */
+    public void setFlyingFallDamage(@NotNull net.kyori.adventure.util.TriState flyingFallDamage);
+
+    /**
+     * Allows you to get if fall damage is enabled while {@link #getAllowFlight()} is {@code true}
+     *
+     * @return A tristate of whether fall damage is enabled, not set, or disabled when {@link #getAllowFlight()} is {@code true}
+     */
+    @NotNull
+    public net.kyori.adventure.util.TriState hasFlyingFallDamage();
+    // Paper end
 
     /**
      * Hides a player from this player
@@ -1753,6 +2099,32 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
      *         player
      */
     public boolean canSee(@NotNull Entity entity);
+
+    // Paper start
+    /**
+     * Returns whether the {@code other} player is listed for {@code this}.
+     *
+     * @param other The other {@link Player} to check for listing.
+     * @return True if the {@code other} player is listed for {@code this}.
+     */
+    boolean isListed(@NotNull Player other);
+
+    /**
+     * Unlists the {@code other} player from the tablist.
+     *
+     * @param other The other {@link Player} to de-list.
+     * @return True if the {@code other} player was listed.
+     */
+    boolean unlistPlayer(@NotNull Player other);
+
+    /**
+     * Lists the {@code other} player.
+     *
+     * @param other The other {@link Player} to list.
+     * @return True if the {@code other} player was not listed.
+     */
+    boolean listPlayer(@NotNull Player other);
+    // Paper end
 
     /**
      * Checks to see if this player is currently flying or not.
@@ -3065,10 +3437,12 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
     /**
      * Open a Sign for editing by the Player.
      *
-     * The Sign must be placed in the same world as the player.
+     * The Sign must be in the same world as the player.
      *
      * @param sign The sign to edit
+     * @deprecated use {@link #openSign(Sign, Side)}
      */
+    @Deprecated
     public void openSign(@NotNull Sign sign);
 
     /**
@@ -3103,6 +3477,112 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
         return net.kyori.adventure.text.event.HoverEvent.showEntity(op.apply(net.kyori.adventure.text.event.HoverEvent.ShowEntity.of(this.getType().getKey(), this.getUniqueId(), this.displayName())));
     }
     // Paper end
+
+    // Paper start - Player Profile API
+    /**
+     * Gets a copy of this players profile
+     *
+     * @return The players profile object
+     */
+    com.destroystokyo.paper.profile.@NotNull PlayerProfile getPlayerProfile();
+
+    /**
+     * Changes the PlayerProfile for this player. This will cause this player
+     * to be re-registered to all clients that can currently see this player.
+     * <p>
+     * After executing this method, the player {@link java.util.UUID} won't
+     * be swapped, only their name and profile properties.
+     *
+     * @param profile The new profile to use
+     */
+    void setPlayerProfile(com.destroystokyo.paper.profile.@NotNull PlayerProfile profile);
+    // Paper end - Player Profile API
+
+    // Paper start - attack cooldown API
+    /**
+     * Returns the amount of ticks the current cooldown lasts
+     *
+     * @return Amount of ticks cooldown will last
+     */
+    float getCooldownPeriod();
+
+    /**
+     * Returns the percentage of attack power available based on the cooldown (zero to one).
+     *
+     * @param adjustTicks Amount of ticks to add to cooldown counter for this calculation
+     * @return Percentage of attack power available
+     */
+    float getCooledAttackStrength(float adjustTicks);
+
+    /**
+     * Reset the cooldown counter to 0, effectively starting the cooldown period.
+     */
+    void resetCooldown();
+    // Paper end - attack cooldown API
+
+    // Paper start - client option API
+    /**
+     * @return the client option value of the player
+     */
+    <T> @NotNull T getClientOption(com.destroystokyo.paper.@NotNull ClientOption<T> option);
+    // Paper end - client option API
+
+    // Paper start - elytra boost API
+    /**
+     * Boost a Player that's {@link #isGliding()} using a {@link Firework}.
+     * If the creation of the entity is cancelled, no boosting is done.
+     * This method does not fire {@link com.destroystokyo.paper.event.player.PlayerElytraBoostEvent}.
+     *
+     * @param firework The {@link Material#FIREWORK_ROCKET} to boost the player with
+     * @return The {@link Firework} boosting the Player or null if the spawning of the entity was cancelled
+     * @throws IllegalArgumentException if {@link #isGliding()} is false
+     *                                  or if the {@code firework} isn't a {@link Material#FIREWORK_ROCKET}
+     * @deprecated use {@link HumanEntity#fireworkBoost(ItemStack)} instead. Note that this method <b>does not</b>
+     *             check if the player is gliding or not.
+     */
+    default @Nullable Firework boostElytra(final @NotNull ItemStack firework) {
+        com.google.common.base.Preconditions.checkState(this.isGliding(), "Player must be gliding");
+        return this.fireworkBoost(firework);
+    }
+    // Paper end - elytra boost API
+
+    // Paper start - sendOpLevel API
+    /**
+     * Send a packet to the player indicating its operator status level.
+     * <p>
+     * <b>Note:</b> This will not persist across more than the current connection, and setting the player's operator
+     * status as a later point <i>will</i> override the effects of this.
+     *
+     * @param level The level to send to the player. Must be in {@code [0, 4]}.
+     * @throws IllegalArgumentException If the level is negative or greater than {@code 4} (i.e. not within {@code [0, 4]}).
+     */
+    void sendOpLevel(byte level);
+    // Paper end - sendOpLevel API
+
+    // Paper start - custom chat completions API
+    /**
+     * Adds custom chat completion suggestions that the client will
+     * suggest when typing in chat.
+     *
+     * @param completions custom completions
+     * @deprecated use {@link #addCustomChatCompletions(Collection)}
+     */
+    @Deprecated(since = "1.20.1")
+    void addAdditionalChatCompletions(@NotNull java.util.Collection<String> completions);
+
+    /**
+     * Removes custom chat completion suggestions that the client
+     * suggests when typing in chat.
+     *
+     * Note: this only applies to previously added custom completions,
+     * online player names are always suggested and cannot be removed.
+     *
+     * @param completions custom completions
+     * @deprecated use {@link #addCustomChatCompletions(Collection)}
+     */
+    @Deprecated(since = "1.20.1")
+    void removeAdditionalChatCompletions(@NotNull java.util.Collection<String> completions);
+    // Paper end - custom chat completions API
 
     // Spigot start
     public class Spigot extends Entity.Spigot {
@@ -3208,8 +3688,206 @@ public interface Player extends HumanEntity, Conversable, OfflinePlayer, PluginM
         // Paper end
     }
 
+    // Paper start - brand support
+    /**
+     * Returns player's client brand name. If the client didn't send this information, the brand name will be null.<br>
+     * For the Notchian client this name defaults to <code>vanilla</code>. Some modified clients report other names such as <code>forge</code>.<br>
+     * 
+     * @return client brand name
+     */
+    @Nullable
+    String getClientBrandName();
+    // Paper end
+
+    // Paper start - Teleport API
+    /**
+     * Sets the player's rotation.
+     *
+     * @param yaw   the yaw
+     * @param pitch the pitch
+     */
+    void setRotation(float yaw, float pitch);
+
+    /**
+     * Causes the player to look towards the given position.
+     *
+     * @param x            x coordinate
+     * @param y            y coordinate
+     * @param z            z coordinate
+     * @param playerAnchor What part of the player should face the given position
+     */
+    void lookAt(double x, double y, double z, @NotNull io.papermc.paper.entity.LookAnchor playerAnchor);
+
+    /**
+     * Causes the player to look towards the given position.
+     *
+     * @param position     Position to look at in the player's current world
+     * @param playerAnchor What part of the player should face the given position
+     */
+    default void lookAt(@NotNull io.papermc.paper.math.Position position, @NotNull io.papermc.paper.entity.LookAnchor playerAnchor) {
+        this.lookAt(position.x(), position.y(), position.z(), playerAnchor);
+    }
+
+    /**
+     * Causes the player to look towards the given entity.
+     *
+     * @param entity       Entity to look at
+     * @param playerAnchor What part of the player should face the entity
+     * @param entityAnchor What part of the entity the player should face
+     */
+    void lookAt(@NotNull org.bukkit.entity.Entity entity, @NotNull io.papermc.paper.entity.LookAnchor playerAnchor, @NotNull io.papermc.paper.entity.LookAnchor entityAnchor);
+    // Paper end - Teleport API
+
+    // Paper start
+    /**
+     * Displays elder guardian effect with a sound
+     *
+     * @see #showElderGuardian(boolean)
+     */
+    default void showElderGuardian() {
+        showElderGuardian(false);
+    }
+
+    /**
+     * Displays elder guardian effect and optionally plays a sound
+     *
+     * @param silent whether sound should be silenced
+     */
+    void showElderGuardian(boolean silent);
+
+    /**
+     * Returns the player's cooldown in ticks until the next Warden warning can occur.
+     *
+     * @return ticks until next Warden warning can occur. 0 means there is no cooldown left.
+     */
+    int getWardenWarningCooldown();
+
+    /**
+     * Sets the player's cooldown in ticks until next Warden warning can occur.
+     *
+     * @param cooldown ticks until next Warden warning can occur. 0 means there is no cooldown left. Values less than 0 are set to 0.
+     */
+    void setWardenWarningCooldown(int cooldown);
+
+    /**
+     * Returns time since last Warden warning in ticks.
+     *
+     * @return ticks since last Warden warning
+     */
+    int getWardenTimeSinceLastWarning();
+
+    /**
+     * Sets time since last Warden warning in ticks.
+     *
+     * @param time ticks since last Warden warning
+     */
+    void setWardenTimeSinceLastWarning(int time);
+
+    /**
+     * Returns the player's current Warden warning level.
+     *
+     * @return current Warden warning level
+     */
+    int getWardenWarningLevel();
+
+    /**
+     * Sets the player's Warden warning level.
+     * <p>
+     * <b>Note:</b> This will not actually spawn the Warden.
+     * Even if the warning level is over threshold, the player still needs to activate a Shrieker in order to summon the Warden.
+     *
+     * @param warningLevel player's Warden warning level. The warning level is internally limited to valid values.
+     */
+    void setWardenWarningLevel(int warningLevel);
+
+    /**
+     * Increases the player's Warden warning level if possible and not on cooldown.
+     * <p>
+     * <b>Note:</b> This will not actually spawn the Warden.
+     * Even if the warning level is over threshold, the player still needs to activate a Shrieker in order to summon the Warden.
+     */
+    void increaseWardenWarningLevel();
+    // Paper end
+
+    // Paper start
+    /**
+     * The idle duration is reset when the player
+     * sends specific action packets.
+     * <p>
+     * After the idle duration exceeds {@link org.bukkit.Bukkit#getIdleTimeout()}, the
+     * player will be kicked for {@link org.bukkit.event.player.PlayerKickEvent.Cause#IDLING}.
+     *
+     * @return the current idle duration of this player
+     */
+    @NotNull
+    Duration getIdleDuration();
+
+    /**
+     * Resets this player's idle duration.
+     * <p>
+     * After the idle duration exceeds {@link org.bukkit.Bukkit#getIdleTimeout()}, the
+     * player will be kicked for {@link org.bukkit.event.player.PlayerKickEvent.Cause#IDLING}.
+     *
+     * @see #getIdleDuration()
+     */
+    void resetIdleDuration();
+    // Paper end
+
+    // Paper start - Add chunk view API
+    /**
+     * Gets the a set of chunk keys for all chunks that have been sent to the player.
+     *
+     * @return an immutable set of chunk keys
+     * @apiNote currently marked as experimental to gather feedback regarding the returned set being an immutable copy
+     *          vs it potentially being an unmodifiable view of the set chunks.
+     */
+    @ApiStatus.Experimental
+    java.util.@NotNull @org.jetbrains.annotations.Unmodifiable Set<Long> getSentChunkKeys();
+
+    /**
+     * Gets the set of chunks that have been sent to the player.
+     *
+     * @return an immutable set of chunks
+     * @apiNote currently marked as experimental to gather feedback regarding the returned set being an immutable copy
+     *          vs it potentially being an unmodifiable view of the set chunks.
+     */
+    @ApiStatus.Experimental
+    java.util.@NotNull @org.jetbrains.annotations.Unmodifiable Set<org.bukkit.Chunk> getSentChunks();
+
+    /**
+     * Checks if the player has been sent a specific chunk.
+     *
+     * @param chunk the chunk to check
+     * @return true if the player has been sent the chunk, false otherwise
+     */
+    default boolean isChunkSent(@NotNull org.bukkit.Chunk chunk) {
+        return this.isChunkSent(chunk.getChunkKey());
+    }
+
+    /**
+     * Checks if the player has been sent a specific chunk.
+     *
+     * @param chunkKey the chunk key to check
+     * @return true if the player has been sent the chunk, false otherwise
+     * @see org.bukkit.Chunk#getChunkKey()
+     */
+    boolean isChunkSent(long chunkKey);
+    // Paper end
+
     @NotNull
     @Override
     Spigot spigot();
     // Spigot end
+
+    // Paper start - entity effect API
+    /**
+     * Plays an entity effect to this player for the target entity
+     * <p>
+     * If the effect is not applicable to this class of entity, it will not play.
+     *
+     * @param effect the entity effect
+     * @param target the target entity
+     */
+    void sendEntityEffect(org.bukkit.@NotNull EntityEffect effect, @NotNull Entity target);
+    // Paper end - entity effect API
 }

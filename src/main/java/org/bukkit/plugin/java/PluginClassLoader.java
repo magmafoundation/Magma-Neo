@@ -72,7 +72,7 @@ public final class PluginClassLoader extends URLClassLoader implements io.paperm
 
     @org.jetbrains.annotations.ApiStatus.Internal // Paper
     public PluginClassLoader(@Nullable final ClassLoader parent, @NotNull final PluginDescriptionFile description, @NotNull final File dataFolder, @NotNull final File file, @Nullable ClassLoader libraryLoader, JarFile jarFile, io.papermc.paper.plugin.provider.entrypoint.DependencyContext dependencyContext) throws IOException, InvalidPluginException, MalformedURLException { // Paper - use JarFile provided by SpigotPluginProvider
-        super(new URL[] { file.toURI().toURL() }, parent);
+        super(file.getName(), new URL[] { file.toURI().toURL() }, parent);
         this.loader = null; // Paper - pass null into loader field
 
         this.description = description;
@@ -83,6 +83,7 @@ public final class PluginClassLoader extends URLClassLoader implements io.paperm
         this.url = file.toURI().toURL();
         this.libraryLoader = libraryLoader;
 
+        this.logger = com.destroystokyo.paper.utils.PaperPluginLogger.getLogger(description); // Paper - Register logger early
         // Paper start
         this.dependencyContext = dependencyContext;
         this.classLoaderGroup = io.papermc.paper.plugin.provider.classloader.PaperClassLoaderStorage.instance().registerSpigotGroup(this);
@@ -124,13 +125,34 @@ public final class PluginClassLoader extends URLClassLoader implements io.paperm
 
     @Override
     public URL getResource(String name) {
-        return findResource(name);
+        // Paper start
+        URL resource = findResource(name);
+        if (resource == null && libraryLoader != null) {
+            return libraryLoader.getResource(name);
+        }
+        return resource;
+        // Paper end
     }
 
     @Override
     public Enumeration<URL> getResources(String name) throws IOException {
-        return findResources(name);
+        // Paper start
+        java.util.ArrayList<URL> resources = new java.util.ArrayList<>();
+        addEnumeration(resources, findResources(name));
+        if (libraryLoader != null) {
+            addEnumeration(resources, libraryLoader.getResources(name));
+        }
+        return Collections.enumeration(resources);
+        // Paper end
     }
+
+    // Paper start
+    private <T> void addEnumeration(java.util.ArrayList<T> list, Enumeration<T> enumeration) {
+        while (enumeration.hasMoreElements()) {
+            list.add(enumeration.nextElement());
+        }
+    }
+    // Paper end
 
     // Paper start
     @Override
@@ -282,7 +304,7 @@ public final class PluginClassLoader extends URLClassLoader implements io.paperm
         pluginState = new IllegalStateException("Initial initialization");
         this.pluginInit = javaPlugin;
 
-        javaPlugin.init(null, org.bukkit.Bukkit.getServer(), description, dataFolder, file, this); // Paper
+        javaPlugin.init(org.bukkit.Bukkit.getServer(), description, dataFolder, file, this, description, this.logger); // Paper
     }
 
     // Paper start

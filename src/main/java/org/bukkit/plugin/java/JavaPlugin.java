@@ -26,7 +26,6 @@ import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.plugin.PluginBase;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginLoader;
-import org.bukkit.plugin.PluginLogger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -47,7 +46,12 @@ public abstract class JavaPlugin extends PluginBase {
     private boolean naggable = true;
     private FileConfiguration newConfig = null;
     private File configFile = null;
-    private PluginLogger logger = null;
+    private Logger logger = null; // Paper - PluginLogger -> Logger
+    // Paper start - lifecycle events
+    @SuppressWarnings("deprecation")
+    private final io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager<org.bukkit.plugin.Plugin> lifecycleEventManager = org.bukkit.Bukkit.getUnsafe().createPluginLifecycleEventManager(this, () -> this.allowsLifecycleRegistration);
+    private boolean allowsLifecycleRegistration = true;
+    // Paper end
 
     public JavaPlugin() {
         // Paper start
@@ -69,7 +73,7 @@ public abstract class JavaPlugin extends PluginBase {
     }
 
     /**
-     * Returns the folder that the plugin data's files are located in. The
+     * Returns the folder that the plugin data files are located in. The
      * folder may not yet exist.
      *
      * @return The folder.
@@ -127,9 +131,9 @@ public abstract class JavaPlugin extends PluginBase {
     }
 
     /**
-     * Returns the plugin.yaml file containing the details for this plugin
+     * Returns the plugin.yml file containing the details for this plugin
      *
-     * @return Contents of the plugin.yaml file
+     * @return Contents of the plugin.yml file
      * @deprecated No longer applicable to all types of plugins
      */
     @NotNull
@@ -279,7 +283,11 @@ public abstract class JavaPlugin extends PluginBase {
             isEnabled = enabled;
 
             if (isEnabled) {
-                onEnable();
+                try { // Paper - lifecycle events
+                    onEnable();
+                } finally {
+                    this.allowsLifecycleRegistration = false;
+                } // Paper - lifecycle events
             } else {
                 onDisable();
             }
@@ -293,11 +301,11 @@ public abstract class JavaPlugin extends PluginBase {
     }
 
     public final void init(@NotNull PluginLoader loader, @NotNull Server server, @NotNull PluginDescriptionFile description, @NotNull File dataFolder, @NotNull File file, @NotNull ClassLoader classLoader) {
-        init(server, description, dataFolder, file, classLoader, description);
+        init(server, description, dataFolder, file, classLoader, description, com.destroystokyo.paper.utils.PaperPluginLogger.getLogger(description));
         this.pluginMeta = description;
     }
 
-    public final void init(@NotNull Server server, @NotNull PluginDescriptionFile description, @NotNull File dataFolder, @NotNull File file, @NotNull ClassLoader classLoader, @Nullable io.papermc.paper.plugin.configuration.PluginMeta configuration) {
+    public final void init(@NotNull Server server, @NotNull PluginDescriptionFile description, @NotNull File dataFolder, @NotNull File file, @NotNull ClassLoader classLoader, @Nullable io.papermc.paper.plugin.configuration.PluginMeta configuration, @NotNull Logger logger) {
         // Paper end
         this.loader = DummyPluginLoaderImplHolder.INSTANCE; // Paper
         this.loader = loader;
@@ -307,8 +315,8 @@ public abstract class JavaPlugin extends PluginBase {
         this.dataFolder = dataFolder;
         this.classLoader = classLoader;
         this.configFile = new File(dataFolder, "config.yml");
-        this.logger = new PluginLogger(this);
         this.pluginMeta = configuration; // Paper
+        this.logger = logger; // Paper
     }
 
     /**
@@ -460,4 +468,11 @@ public abstract class JavaPlugin extends PluginBase {
         }
         return plugin;
     }
+
+    // Paper start - lifecycle events
+    @Override
+    public final io.papermc.paper.plugin.lifecycle.event.@NotNull LifecycleEventManager<org.bukkit.plugin.Plugin> getLifecycleManager() {
+        return this.lifecycleEventManager;
+    }
+    // Paper end - lifecycle events
 }

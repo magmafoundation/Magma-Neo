@@ -13,7 +13,10 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Manager of data packs.
+ * 
+ * @deprecated use {@link io.papermc.paper.datapack.DatapackManager}
  */
+@Deprecated(forRemoval = true, since = "1.20") // Paper
 public interface DataPackManager {
     /**
      * Return all the available {@link DataPack}s on the server.

@@ -9,7 +9,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * @deprecated Deprecated, see usage methods for replacement(s)
  */
-@Deprecated
+@Deprecated(forRemoval = true, since = "1.19")
 public enum TreeSpecies {
     /**
      * Represents the common tree species.

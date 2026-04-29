@@ -77,4 +77,10 @@ public class TimedEventExecutor implements EventExecutor {
             executor.execute(listener, event);
         }
     }
+
+    @Override
+    @NotNull
+    public String toString() {
+        return "TimedEventExecutor['" + this.executor.toString() + "']";
+    }
 }

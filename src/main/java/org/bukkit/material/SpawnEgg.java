@@ -9,7 +9,7 @@ import org.bukkit.inventory.meta.SpawnEggMeta;
  * 
  * @deprecated use {@link SpawnEggMeta}
  */
-@Deprecated
+@Deprecated(forRemoval = true, since = "1.13")
 public class SpawnEgg extends MaterialData {
     public SpawnEgg() {
         super(Material.LEGACY_MONSTER_EGG);

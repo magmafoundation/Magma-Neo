@@ -46,8 +46,8 @@ import org.jetbrains.annotations.Nullable;
  * official replacement for the aforementioned enum. Entirely incompatible
  * changes may occur. Do not use this API in plugins.
  */
-@ApiStatus.Internal
-public interface ItemType extends Keyed, Translatable {
+@ApiStatus.Experimental // Paper - already required for registry builders
+public interface ItemType extends Keyed, Translatable, net.kyori.adventure.translation.Translatable, io.papermc.paper.world.flag.FeatureDependant { // Paper - add Translatable & feature flag API
     /**
      * Typed represents a subtype of {@link ItemType}s that have a known item meta type
      * at compile time.
@@ -1789,7 +1789,7 @@ public interface ItemType extends Keyed, Translatable {
     ItemType.Typed<ItemMeta> RABBIT_STEW = getItemType("rabbit_stew");
     ItemType.Typed<ItemMeta> RABBIT_FOOT = getItemType("rabbit_foot");
     ItemType.Typed<ItemMeta> RABBIT_HIDE = getItemType("rabbit_hide");
-    ItemType.Typed<ItemMeta> ARMOR_STAND = getItemType("armor_stand");
+    ItemType.Typed<com.destroystokyo.paper.inventory.meta.ArmorStandMeta> ARMOR_STAND = getItemType("armor_stand");
     ItemType.Typed<ItemMeta> IRON_HORSE_ARMOR = getItemType("iron_horse_armor");
     ItemType.Typed<ItemMeta> GOLDEN_HORSE_ARMOR = getItemType("golden_horse_armor");
     ItemType.Typed<ItemMeta> DIAMOND_HORSE_ARMOR = getItemType("diamond_horse_armor");
@@ -2254,6 +2254,23 @@ public interface ItemType extends Keyed, Translatable {
 //    @NotNull
 //    EquipmentSlot getEquipmentSlot();
 
+    // Paper start - improve default item attribute API
+    /**
+     * Return an immutable copy of all default {@link Attribute}s and their
+     * {@link AttributeModifier}s.
+     * <p>
+     * Default attributes are those that are always preset on some items, unless
+     * they are specifically overridden on that {@link ItemStack}. Examples include
+     * the attack damage on weapons or the armor value on armor.
+     *
+     * @return the immutable {@link Multimap} with the respective default
+     *         Attributes and modifiers, or an empty map if no attributes are set.
+     */
+    @NotNull
+    @org.jetbrains.annotations.Unmodifiable
+    Multimap<Attribute, AttributeModifier> getDefaultAttributeModifiers();
+    // Paper end - improve default item attribute API
+
     /**
      * Return an immutable copy of all default {@link Attribute}s and their
      * {@link AttributeModifier}s for a given {@link EquipmentSlot}.
@@ -2283,7 +2300,9 @@ public interface ItemType extends Keyed, Translatable {
      *
      * @param world the world to check
      * @return true if this ItemType can be used in this World.
+     * @deprecated use {@link io.papermc.paper.world.flag.FeatureFlagSetHolder#isEnabled(io.papermc.paper.world.flag.FeatureDependant)}
      */
+    @Deprecated(forRemoval = true, since = "1.21.1") // Paper
     boolean isEnabledByFeature(@NotNull World world);
 
     /**
@@ -2295,4 +2314,24 @@ public interface ItemType extends Keyed, Translatable {
     @Nullable
     @Deprecated
     Material asMaterial();
+
+    // Paper start - add Translatable
+    /**
+     * @deprecated use {@link #translationKey()} and {@link net.kyori.adventure.text.Component#translatable(net.kyori.adventure.translation.Translatable)}
+     */
+    @Deprecated(forRemoval = true)
+    @Override
+    @NotNull
+    String getTranslationKey();
+    // Paper end - add Translatable
+
+    // Paper start - expand ItemRarity API
+    /**
+     * Returns the item rarity for the item.
+     *
+     * @return the item rarity (or null if none is set)
+     */
+    @Nullable
+    ItemRarity getItemRarity();
+    // Paper end - expand ItemRarity API
 }

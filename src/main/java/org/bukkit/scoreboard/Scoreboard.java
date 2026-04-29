@@ -217,9 +217,8 @@ public interface Scoreboard {
      * @param player the player whose scores are being retrieved
      * @return immutable set of all scores tracked for the player
      * @see #getScores(String)
-     * @deprecated Scoreboards can contain entries that aren't players
      */
-    @Deprecated
+    // @Deprecated // Paper
     @NotNull
     Set<Score> getScores(@NotNull OfflinePlayer player);
 
@@ -237,9 +236,8 @@ public interface Scoreboard {
      *
      * @param player the player to drop all current scores for
      * @see #resetScores(String)
-     * @deprecated Scoreboards can contain entries that aren't players
      */
-    @Deprecated
+    // @Deprecated // Paper
     void resetScores(@NotNull OfflinePlayer player);
 
     /**
@@ -255,9 +253,8 @@ public interface Scoreboard {
      * @param player the player to search for
      * @return the player's Team or null if the player is not on a team
      * @see #getEntryTeam(String)
-     * @deprecated Scoreboards can contain entries that aren't players
      */
-    @Deprecated
+    // @Deprecated // Paper
     @Nullable
     Team getPlayerTeam(@NotNull OfflinePlayer player);
 
@@ -322,4 +319,37 @@ public interface Scoreboard {
      * @param slot the slot to remove objectives
      */
     void clearSlot(@NotNull DisplaySlot slot);
+
+    // Paper start - improve scoreboard entries
+    /**
+     * Gets all scores for an entity on this Scoreboard
+     *
+     * @param entity the entity whose scores are being retrieved
+     * @return immutable set of all scores tracked for the entity
+     * @throws IllegalArgumentException if entity is null
+     * @see #getScores(String)
+     */
+    @NotNull
+    Set<Score> getScoresFor(@NotNull org.bukkit.entity.Entity entity) throws IllegalArgumentException;
+
+    /**
+     * Removes all scores for an entity on this Scoreboard
+     *
+     * @param entity the entity to drop all current scores for
+     * @throws IllegalArgumentException if entity is null
+     * @see #resetScores(String)
+     */
+    void resetScoresFor(@NotNull org.bukkit.entity.Entity entity) throws IllegalArgumentException;
+
+    /**
+     * Gets an entity's Team on this Scoreboard
+     *
+     * @param entity the entity to search for
+     * @return the entity's Team or null if the entity is not on a team
+     * @throws IllegalArgumentException if entity is null
+     * @see #getEntryTeam(String)
+     */
+    @Nullable
+    Team getEntityTeam(@NotNull org.bukkit.entity.Entity entity) throws IllegalArgumentException;
+    // Paper end - improve scoreboard entries
 }

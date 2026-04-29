@@ -9,7 +9,7 @@ import org.bukkit.Material;
  * @deprecated all usage of MaterialData is deprecated and subject to removal.
  *             Use {@link org.bukkit.block.data.BlockData}.
  */
-@Deprecated
+@Deprecated(forRemoval = true, since = "1.13")
 public class LongGrass extends MaterialData {
     public LongGrass() {
         super(Material.LEGACY_LONG_GRASS);

@@ -17,6 +17,7 @@ public class PlayerDeathEvent extends EntityDeathEvent {
     private int newTotalExp = 0;
     private boolean keepLevel = false;
     private boolean keepInventory = false;
+    private boolean doExpDrop; // Paper - shouldDropExperience API
 
     // Paper start - adventure
     @org.jetbrains.annotations.ApiStatus.Internal
@@ -31,11 +32,19 @@ public class PlayerDeathEvent extends EntityDeathEvent {
 
     @org.jetbrains.annotations.ApiStatus.Internal
     public PlayerDeathEvent(final @NotNull Player player, final @NotNull DamageSource damageSource, final @NotNull List<ItemStack> drops, final int droppedExp, final int newExp, final int newTotalExp, final int newLevel, final @Nullable net.kyori.adventure.text.Component deathMessage) {
+        // Paper start - shouldDropExperience API
+        this(player, damageSource, drops, droppedExp, newExp, newTotalExp, newLevel, deathMessage, true);
+    }
+
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public PlayerDeathEvent(final @NotNull Player player, final @NotNull DamageSource damageSource, final @NotNull List<ItemStack> drops, final int droppedExp, final int newExp, final int newTotalExp, final int newLevel, final @Nullable net.kyori.adventure.text.Component deathMessage, final boolean doExpDrop) {
+        // Paper end - shouldDropExperience API
         super(player, damageSource, drops, droppedExp);
         this.newExp = newExp;
         this.newTotalExp = newTotalExp;
         this.newLevel = newLevel;
         this.deathMessage = deathMessage;
+        this.doExpDrop = doExpDrop; // Paper - shouldDropExperience API
     }
     // Paper end - adventure
 
@@ -51,18 +60,91 @@ public class PlayerDeathEvent extends EntityDeathEvent {
 
     @Deprecated // Paper
     public PlayerDeathEvent(@NotNull final Player player, @NotNull DamageSource damageSource, @NotNull final List<ItemStack> drops, final int droppedExp, final int newExp, final int newTotalExp, final int newLevel, @Nullable final String deathMessage) {
+        // Paper start - shouldDropExperience API
+        this(player, damageSource, drops, droppedExp, newExp, newTotalExp, newLevel, deathMessage, true);
+    }
+
+    @Deprecated // Paper
+    public PlayerDeathEvent(@NotNull final Player player, final @NotNull DamageSource damageSource, @NotNull final List<ItemStack> drops, final int droppedExp, final int newExp, final int newTotalExp, final int newLevel, @Nullable final String deathMessage, boolean doExpDrop) {
+        // Paper end - shouldDropExperience API
         super(player, damageSource, drops, droppedExp);
         this.newExp = newExp;
         this.newTotalExp = newTotalExp;
         this.newLevel = newLevel;
         this.deathMessage = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserializeOrNull(deathMessage); // Paper
+        this.doExpDrop = doExpDrop; // Paper - shouldDropExperience API
     }
+
+    @Deprecated // Paper
+    // Paper start
+    private List<ItemStack> itemsToKeep = new java.util.ArrayList<>();
+
+    /**
+     * A mutable collection to add items that the player should retain in their inventory on death (Similar to KeepInventory game rule)
+     *
+     * You <b>MUST</b> remove the item from the .getDrops() collection too or it will duplicate!
+     * 
+     * <pre>{@code
+     *    {@literal @EventHandler(ignoreCancelled = true)}
+     *     public void onPlayerDeath(PlayerDeathEvent event) {
+     *         for (Iterator<ItemStack> iterator = event.getDrops().iterator(); iterator.hasNext(); ) {
+     *             ItemStack drop = iterator.next();
+     *             List<String> lore = drop.getLore();
+     *             if (lore != null && !lore.isEmpty()) {
+     *                 if (lore.get(0).contains("(SOULBOUND)")) {
+     *                     iterator.remove();
+     *                     event.getItemsToKeep().add(drop);
+     *                 }
+     *             }
+     *         }
+     *     }
+     * }</pre>
+     *
+     * Adding an item to this list that the player did not previously have will give them the item on death.
+     * An example case could be a "Note" that "You died at X/Y/Z coordinates"
+     *
+     * @return The list to hold items to keep
+     */
+    @NotNull
+    public List<ItemStack> getItemsToKeep() {
+        return itemsToKeep;
+    }
+    // Paper end
+
+    // Paper start - shouldDropExperience API
+    /**
+     * @return should experience be dropped from this death
+     */
+    public boolean shouldDropExperience() {
+        return doExpDrop;
+    }
+
+    /**
+     * @param doExpDrop sets if experience should be dropped from this death
+     */
+    public void setShouldDropExperience(boolean doExpDrop) {
+        this.doExpDrop = doExpDrop;
+    }
+    // Paper end - shouldDropExperience API
 
     @NotNull
     @Override
     public Player getEntity() {
         return (Player) entity;
     }
+
+    // Paper start - improve death events
+    /**
+     * Clarity method for getting the player. Not really needed except
+     * for reasons of clarity.
+     *
+     * @return Player who is involved in this event
+     */
+    public @NotNull Player getPlayer() {
+        return this.getEntity();
+    }
+
+    // Paper end - improve death events
 
     // Paper start - adventure
     /**

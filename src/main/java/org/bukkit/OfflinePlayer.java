@@ -19,13 +19,29 @@ import org.jetbrains.annotations.Nullable;
  * player that is stored on the disk and can, thus, be retrieved without the
  * player needing to be online.
  */
-public interface OfflinePlayer extends ServerOperator, AnimalTamer, ConfigurationSerializable {
+public interface OfflinePlayer extends ServerOperator, AnimalTamer, ConfigurationSerializable, io.papermc.paper.persistence.PersistentDataViewHolder { // Paper - Add Offline PDC API
     /**
      * Checks if this player is currently online
+     *
+     * It should be noted that this will return true if any instance of this player is
+     * online! This instance may have disconnected. If you wish to check if this specific
+     * instance of the player is still online, see {@link OfflinePlayer#isConnected()}.
      *
      * @return true if they are online
      */
     public boolean isOnline();
+
+    // Paper start
+    /**
+     * Checks whether the connection to this player is still valid. This will return
+     * true as long as this specific instance of the player is still connected. This
+     * will return false after this instance has disconnected, even if the same player
+     * has reconnected since.
+     *
+     * @return true if this player instance is connected
+     */
+    public boolean isConnected();
+    // Paper end
 
     /**
      * Returns the name of this player
@@ -58,7 +74,7 @@ public interface OfflinePlayer extends ServerOperator, AnimalTamer, Configuratio
      * @return the player's profile
      */
     @NotNull
-    PlayerProfile getPlayerProfile();
+    com.destroystokyo.paper.profile.PlayerProfile getPlayerProfile(); // Paper
 
     /**
      * Checks if this player has had their profile banned.
@@ -66,6 +82,77 @@ public interface OfflinePlayer extends ServerOperator, AnimalTamer, Configuratio
      * @return true if banned, otherwise false
      */
     public boolean isBanned();
+
+    // Paper start
+    /**
+     * Permanently Bans this player from the server
+     *
+     * @param reason Reason for Ban
+     * @return Ban Entry
+     * @deprecated use {@link #ban(String, Date, String)}
+     */
+    @NotNull
+    @Deprecated(since = "1.20.4")
+    public default BanEntry banPlayer(@Nullable String reason) {
+        return banPlayer(reason, null, null);
+    }
+
+    /**
+     * Permanently Bans this player from the server
+     * 
+     * @param reason Reason for Ban
+     * @param source Source of the ban, or null for default
+     * @return Ban Entry
+     * @deprecated use {@link #ban(String, Date, String)}
+     */
+    @NotNull
+    @Deprecated(since = "1.20.4")
+    public default BanEntry banPlayer(@Nullable String reason, @Nullable String source) {
+        return banPlayer(reason, null, source);
+    }
+
+    /**
+     * Bans this player from the server
+     * 
+     * @param reason  Reason for Ban
+     * @param expires When to expire the ban
+     * @return Ban Entry
+     * @deprecated use {@link #ban(String, Date, String)}
+     */
+    @NotNull
+    @Deprecated(since = "1.20.4")
+    public default BanEntry banPlayer(@Nullable String reason, @Nullable java.util.Date expires) {
+        return banPlayer(reason, expires, null);
+    }
+
+    /**
+     * Bans this player from the server
+     * 
+     * @param reason  Reason for Ban
+     * @param expires When to expire the ban
+     * @param source  Source of the ban or null for default
+     * @return Ban Entry
+     * @deprecated use {@link #ban(String, Date, String)}
+     */
+    @NotNull
+    @Deprecated(since = "1.20.4")
+    public default BanEntry banPlayer(@Nullable String reason, @Nullable java.util.Date expires, @Nullable String source) {
+        return banPlayer(reason, expires, source, true);
+    }
+
+    /**
+     * @deprecated use {@link #ban(String, Date, String)}
+     */
+    @NotNull
+    @Deprecated(since = "1.20.4")
+    public default BanEntry banPlayer(@Nullable String reason, @Nullable java.util.Date expires, @Nullable String source, boolean kickIfOnline) {
+        BanEntry banEntry = Bukkit.getServer().getBanList(BanList.Type.NAME).addBan(getName(), reason, expires, source);
+        if (kickIfOnline && isOnline()) {
+            getPlayer().kickPlayer(reason);
+        }
+        return banEntry;
+    }
+    // Paper end
 
     /**
      * Adds this user to the {@link ProfileBanList}. If a previous ban exists, this will
@@ -79,7 +166,7 @@ public interface OfflinePlayer extends ServerOperator, AnimalTamer, Configuratio
      *         (updated) previous ban
      */
     @Nullable
-    public BanEntry<PlayerProfile> ban(@Nullable String reason, @Nullable Date expires, @Nullable String source);
+    public <E extends BanEntry<? super com.destroystokyo.paper.profile.PlayerProfile>> E ban(@Nullable String reason, @Nullable Date expires, @Nullable String source); // Paper - fix ban list API
 
     /**
      * Adds this user to the {@link ProfileBanList}. If a previous ban exists, this will
@@ -93,7 +180,7 @@ public interface OfflinePlayer extends ServerOperator, AnimalTamer, Configuratio
      *         (updated) previous ban
      */
     @Nullable
-    public BanEntry<PlayerProfile> ban(@Nullable String reason, @Nullable Instant expires, @Nullable String source);
+    public <E extends BanEntry<? super com.destroystokyo.paper.profile.PlayerProfile>> E ban(@Nullable String reason, @Nullable Instant expires, @Nullable String source); // Paper - fix ban list API
 
     /**
      * Adds this user to the {@link ProfileBanList}. If a previous ban exists, this will
@@ -107,7 +194,7 @@ public interface OfflinePlayer extends ServerOperator, AnimalTamer, Configuratio
      *         (updated) previous ban
      */
     @Nullable
-    public BanEntry<PlayerProfile> ban(@Nullable String reason, @Nullable Duration duration, @Nullable String source);
+    public <E extends BanEntry<? super com.destroystokyo.paper.profile.PlayerProfile>> E ban(@Nullable String reason, @Nullable Duration duration, @Nullable String source); // Paper - fix ban list API
 
     /**
      * Checks if this player is whitelisted or not
@@ -155,7 +242,9 @@ public interface OfflinePlayer extends ServerOperator, AnimalTamer, Configuratio
      * UTC.
      *
      * @return Date of last log-in for this player, or 0
+     * @deprecated The API contract is ambiguous and the implementation may or may not return the correct value given this API ambiguity. It is instead recommended use {@link #getLastLogin()} or {@link #getLastSeen()} depending on your needs.
      */
+    @Deprecated
     public long getLastPlayed();
 
     /**
@@ -178,6 +267,31 @@ public interface OfflinePlayer extends ServerOperator, AnimalTamer, Configuratio
     @Nullable
     @Deprecated
     public Location getBedSpawnLocation();
+
+    // Paper start
+    /**
+     * Gets the last date and time that this player logged into the server.
+     * <p>
+     * If the player has never played before, this will return 0. Otherwise,
+     * it will be the amount of milliseconds since midnight, January 1, 1970
+     * UTC.
+     *
+     * @return last login time
+     */
+    public long getLastLogin();
+
+    /**
+     * Gets the last date and time that this player was seen on the server.
+     * <p>
+     * If the player has never played before, this will return 0. If the
+     * player is currently online, this will return the current time.
+     * Otherwise it will be the amount of milliseconds since midnight,
+     * January 1, 1970 UTC.
+     *
+     * @return last seen time
+     */
+    public long getLastSeen();
+    // Paper end
 
     /**
      * Gets the Location where the player will spawn at, null if they
@@ -447,4 +561,21 @@ public interface OfflinePlayer extends ServerOperator, AnimalTamer, Configuratio
      */
     @Nullable
     public Location getLocation();
+
+    // Paper start - add pdc to offline player
+    /**
+     * Yields a view of the persistent data container for this offline player.
+     * In case this {@link OfflinePlayer} instance was created for an offline player, the returned view will wrap the persistent
+     * data on disk.
+     * <p>
+     * As such, this method as well as queries to the {@link io.papermc.paper.persistence.PersistentDataContainerView}
+     * may produce blocking IO requests to read the requested data from disk.
+     * Caution in its usage is hence advised.
+     *
+     * @return the persistent data container view
+     * @see io.papermc.paper.persistence.PersistentDataViewHolder#getPersistentDataContainer()
+     */
+    @Override
+    io.papermc.paper.persistence.@NotNull PersistentDataContainerView getPersistentDataContainer();
+    // Paper end - add pdc to offline player
 }
