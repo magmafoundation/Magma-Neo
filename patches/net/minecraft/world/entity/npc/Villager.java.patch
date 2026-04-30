@@ -66,6 +66,15 @@
              }
          }
  
+@@ -610,7 +_,7 @@
+         }
+ 
+         if (p_35475_.shouldRewardExp()) {
+-            this.level().addFreshEntity(new ExperienceOrb(this.level(), this.getX(), this.getY() + 0.5, this.getZ(), i));
++            this.level().addFreshEntity(new ExperienceOrb(this.level(), this.getX(), this.getY() + 0.5, this.getZ(), i, org.bukkit.entity.ExperienceOrb.SpawnReason.VILLAGER_TRADE, this.getTradingPlayer(), this)); // Paper
+         }
+     }
+ 
 @@ -636,7 +_,7 @@
  
      @Override
@@ -86,15 +95,26 @@
          );
      }
  
-@@ -799,7 +_,7 @@
+@@ -799,10 +_,17 @@
  
      @Override
      public void thunderHit(ServerLevel p_35409_, LightningBolt p_35410_) {
 -        if (p_35409_.getDifficulty() != Difficulty.PEACEFUL) {
+-            LOGGER.info("Villager {} was struck by lightning {}.", this, p_35410_);
 +        if (p_35409_.getDifficulty() != Difficulty.PEACEFUL && net.neoforged.neoforge.event.EventHooks.canLivingConvert(this, EntityType.WITCH, (timer) -> {})) {
-             LOGGER.info("Villager {} was struck by lightning {}.", this, p_35410_);
++            // Paper - Add EntityZapEvent; move log down, event can cance
              Witch witch = EntityType.WITCH.create(p_35409_);
              if (witch != null) {
++                // Paper start - Add EntityZapEvent
++                if (org.bukkit.craftbukkit.event.CraftEventFactory.callEntityZapEvent(this, p_35410_, witch).isCancelled()) {
++                    return;
++                }
++                if (org.spigotmc.SpigotConfig.logVillagerDeaths) Villager.LOGGER.info("Villager {} was struck by lightning {}.", this, p_35410_); // Move down
++                // Paper end - Add EntityZapEvent
++
+                 witch.moveTo(this.getX(), this.getY(), this.getZ(), this.getYRot(), this.getXRot());
+                 witch.finalizeSpawn(p_35409_, p_35409_.getCurrentDifficultyAt(witch.blockPosition()), MobSpawnType.CONVERSION, null);
+                 witch.setNoAi(this.isNoAi());
 @@ -812,7 +_,13 @@
                  }
  

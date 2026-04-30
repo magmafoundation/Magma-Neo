@@ -31,7 +31,7 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
 @SerializableAs("PlayerProfile")
-public final class CraftPlayerProfile implements PlayerProfile {
+public final class CraftPlayerProfile implements PlayerProfile, com.destroystokyo.paper.profile.SharedPlayerProfile { // Paper
     @Nonnull
     public static GameProfile validateSkullProfile(@Nonnull GameProfile gameProfile) {
         // The GameProfile needs to contain either both a uuid and textures, or a name.
@@ -117,8 +117,10 @@ public final class CraftPlayerProfile implements PlayerProfile {
         }
     }
 
-    void removeProperty(String propertyName) {
-        properties.removeAll(propertyName);
+    // Paper start - change return value for shared interface
+    public boolean removeProperty(String propertyName) {
+        return !this.properties.removeAll(propertyName).isEmpty();
+        // Paper end
     }
 
     void rebuildDirtyProperties() {
@@ -146,7 +148,7 @@ public final class CraftPlayerProfile implements PlayerProfile {
 
     @Override
     public CompletableFuture<PlayerProfile> update() {
-        return CompletableFuture.supplyAsync(this::getUpdatedProfile, Util.backgroundExecutor());
+        return CompletableFuture.supplyAsync(this::getUpdatedProfile, Util.PROFILE_EXECUTOR); // Paper - don't submit BLOCKING PROFILE LOOKUPS to the world gen thread
     }
 
     private CraftPlayerProfile getUpdatedProfile() {

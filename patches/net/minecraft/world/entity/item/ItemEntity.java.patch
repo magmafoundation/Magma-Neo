@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/entity/item/ItemEntity.java
 +++ b/net/minecraft/world/entity/item/ItemEntity.java
-@@ -49,6 +_,11 @@
+@@ -49,6 +_,12 @@
      @Nullable
      public UUID target;
      public final float bobOffs;
@@ -9,6 +9,7 @@
 +     */
 +    public int lifespan = ItemEntity.LIFETIME;
 +    private int lastTick = net.minecraft.server.MinecraftServer.currentTick - 1; // CraftBukkit
++    public boolean canMobPickup = true; // Paper - Item#canEntityPickup
  
      public ItemEntity(EntityType<? extends ItemEntity> p_31991_, Level p_31992_) {
          super(p_31991_, p_31992_);
@@ -214,7 +215,7 @@
              this.discard();
          }
      }
-@@ -343,9 +_,62 @@
+@@ -343,9 +_,85 @@
              ItemStack itemstack = this.getItem();
              Item item = itemstack.getItem();
              int i = itemstack.getCount();
@@ -223,14 +224,37 @@
 +            // CraftBukkit start - fire PlayerPickupItemEvent
 +            int canHold = p_32040_.getInventory().canHold(itemstack);
 +            int remaining = i - canHold;
++            boolean flyAtPlayer = false; // Paper
++
++            // Paper start - PlayerAttemptPickupItemEvent
++            if (this.pickupDelay <= 0) {
++                org.bukkit.event.player.PlayerAttemptPickupItemEvent attemptEvent = new org.bukkit.event.player.PlayerAttemptPickupItemEvent((org.bukkit.entity.Player) p_32040_.getBukkitEntity(), (org.bukkit.entity.Item) this.getBukkitEntity(), remaining);
++                this.level().getCraftServer().getPluginManager().callEvent(attemptEvent);
++                flyAtPlayer = attemptEvent.getFlyAtPlayer();
++                if (attemptEvent.isCancelled()) {
++                    if (flyAtPlayer) {
++                        p_32040_.take(this, i);
++                    }
++                    return;
++                }
++            }
++            // Paper end - PlayerAttemptPickupItemEvent
++
++
 +            if (this.pickupDelay <= 0 && canHold > 0) {
 +                itemstack.setCount(canHold);
 +                // Call legacy event
 +                org.bukkit.event.player.PlayerPickupItemEvent playerEvent = new org.bukkit.event.player.PlayerPickupItemEvent((org.bukkit.entity.Player) p_32040_.getBukkitEntity(), (org.bukkit.entity.Item) this.getBukkitEntity(), remaining);
 +                playerEvent.setCancelled(!playerEvent.getPlayer().getCanPickupItems());
 +                this.level().getCraftServer().getPluginManager().callEvent(playerEvent);
++                flyAtPlayer = playerEvent.getFlyAtPlayer(); // Paper
 +                if (playerEvent.isCancelled()) {
 +                    itemstack.setCount(i); // SPIGOT-5294 - restore count
++                    // Paper start
++                    if (flyAtPlayer) {
++                        p_32040_.take(this, i);
++                    }
++                    // Paper end
 +                    return;
 +                }
 +                // Call newer event afterwards
@@ -271,7 +295,7 @@
 +                net.neoforged.neoforge.event.EventHooks.fireItemPickupPost(this, p_32040_, originalCopy);
 +                // Update `i` to reflect the actual pickup amount. Vanilla is wrong here and always reports the whole stack.
 +                i = originalCopy.getCount() - itemstack.getCount();
-+
++                if (flyAtPlayer) // Paper - PlayerPickupItemEvent
                  p_32040_.take(this, i);
                  if (itemstack.isEmpty()) {
 +                    this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.PICKUP); // CraftBukkit - add Bukkit remove cause

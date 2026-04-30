@@ -1,6 +1,6 @@
 --- a/net/minecraft/server/network/ServerConnectionListener.java
 +++ b/net/minecraft/server/network/ServerConnectionListener.java
-@@ -48,11 +_,12 @@
+@@ -48,16 +_,26 @@
  
  public class ServerConnectionListener {
      private static final Logger LOGGER = LogUtils.getLogger();
@@ -15,6 +15,20 @@
      );
      final MinecraftServer server;
      public volatile boolean running;
+     private final List<ChannelFuture> channels = Collections.synchronizedList(Lists.newArrayList());
+     final List<Connection> connections = Collections.synchronizedList(Lists.newArrayList());
++    // Paper start - prevent blocking on adding a new connection while the server is ticking
++    private final java.util.Queue<Connection> pending = new java.util.concurrent.ConcurrentLinkedQueue<>();
++    private final void addPending() {
++        Connection connection;
++        while ((connection = pending.poll()) != null) {
++            connections.add(connection);
++        }
++    }
++    // Paper end - prevent blocking on adding a new connection while the server is ticking
+ 
+     public ServerConnectionListener(MinecraftServer p_9707_) {
+         this.server = p_9707_;
 @@ -65,6 +_,8 @@
      }
  
@@ -33,7 +47,13 @@
                      if (ServerConnectionListener.this.server.repliesToStatus()) {
                          channelpipeline.addLast("legacy_query", new LegacyQueryHandler(ServerConnectionListener.this.getServer()));
                      }
-@@ -98,9 +_,19 @@
+@@ -94,13 +_,24 @@
+                     Connection.configureSerialization(channelpipeline, PacketFlow.SERVERBOUND, false, null);
+                     int i = ServerConnectionListener.this.server.getRateLimitPacketsPerSecond();
+                     Connection connection = (Connection)(i > 0 ? new RateKickingConnection(i) : new Connection(PacketFlow.SERVERBOUND));
+-                    ServerConnectionListener.this.connections.add(connection);
++                    //ServerConnectionListener.this.connections.add(connection); // Paper
++                    pending.add(connection); // Paper - prevent blocking on adding a new connection while the server is ticking
                      connection.configurePacketHandler(channelpipeline);
                      connection.setListenerForServerboundHandshake(new ServerHandshakePacketListenerImpl(ServerConnectionListener.this.server, connection));
                  }
@@ -56,11 +76,12 @@
  
      public SocketAddress startMemoryChannel() {
          ChannelFuture channelfuture;
-@@ -146,6 +_,13 @@
+@@ -146,6 +_,14 @@
  
      public void tick() {
          synchronized (this.connections) {
 +            // Spigot Start
++            this.addPending(); // Paper - prevent blocking on adding a new connection while the server is ticking
 +            // This prevents players from 'gaming' the server, and strategically relogging to increase their position in the tick order
 +            if ( org.spigotmc.SpigotConfig.playerShuffle > 0 && MinecraftServer.currentTick % org.spigotmc.SpigotConfig.playerShuffle == 0 )
 +            {

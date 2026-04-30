@@ -206,6 +206,7 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
     private double healthScale = 20;
     private CraftWorldBorder clientWorldBorder = null;
     private BorderChangeListener clientWorldBorderListener = createWorldBorderListener();
+    public org.bukkit.event.player.PlayerResourcePackStatusEvent.Status resourcePackStatus; // Paper - more resource pack API
 
     public CraftPlayer(CraftServer server, ServerPlayer entity) {
         super(server, entity);
@@ -333,6 +334,20 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
         getHandle().transferCookieConnection.sendPacket(new ClientboundTransferPacket(host, port));
     }
 
+    // Paper start - Implement NetworkClient
+    @Override
+    public int getProtocolVersion() {
+        if (getHandle().connection == null) return -1;
+        return getHandle().connection.connection.protocolVersion;
+    }
+
+    @Override
+    public InetSocketAddress getVirtualHost() {
+        if (getHandle().connection == null) return null;
+        return getHandle().connection.connection.virtualHost;
+    }
+    // Paper end
+
     @Override
     public double getEyeHeight(boolean ignorePose) {
         if (ignorePose) {
@@ -385,6 +400,117 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
             sendMessage(sender, message);
         }
     }
+
+    // Paper start
+    @Override
+    @Deprecated
+    public void sendActionBar(BaseComponent[] message) {
+        if (getHandle().connection == null) return;
+        net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket packet = new net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket(org.bukkit.craftbukkit.util.CraftChatMessage.fromJSON(net.md_5.bungee.chat.ComponentSerializer.toString(message)));
+        getHandle().connection.send(packet);
+    }
+
+    @Override
+    @Deprecated
+    public void sendActionBar(String message) {
+        if (getHandle().connection == null || message == null || message.isEmpty()) return;
+        getHandle().connection.send(new net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket(CraftChatMessage.fromStringOrNull(message)));
+    }
+
+    @Override
+    @Deprecated
+    public void sendActionBar(char alternateChar, String message) {
+        if (message == null || message.isEmpty()) return;
+        sendActionBar(org.bukkit.ChatColor.translateAlternateColorCodes(alternateChar, message));
+    }
+
+    @Override
+    public void setPlayerListHeaderFooter(BaseComponent[] header, BaseComponent[] footer) {
+        if (header != null) {
+            String headerJson = net.md_5.bungee.chat.ComponentSerializer.toString(header);
+            playerListHeader = net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.gson().deserialize(headerJson);
+        } else {
+            playerListHeader = null;
+        }
+        if (footer != null) {
+            String footerJson = net.md_5.bungee.chat.ComponentSerializer.toString(footer);
+            playerListFooter = net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.gson().deserialize(footerJson);
+        } else {
+            playerListFooter = null;
+        }
+        updatePlayerListHeaderFooter();
+    }
+
+    @Override
+    public void setPlayerListHeaderFooter(BaseComponent header, BaseComponent footer) {
+        this.setPlayerListHeaderFooter(header == null ? null : new BaseComponent[] { header },
+                footer == null ? null : new BaseComponent[] { footer });
+    }
+
+    @Override
+    public void setTitleTimes(int fadeInTicks, int stayTicks, int fadeOutTicks) {
+        getHandle().connection.send(new ClientboundSetTitlesAnimationPacket(fadeInTicks, stayTicks, fadeOutTicks));
+    }
+
+    @Override
+    public void setSubtitle(BaseComponent[] subtitle) {
+        final ClientboundSetSubtitleTextPacket packet = new ClientboundSetSubtitleTextPacket(org.bukkit.craftbukkit.util.CraftChatMessage.fromJSON(net.md_5.bungee.chat.ComponentSerializer.toString(subtitle)));
+        getHandle().connection.send(packet);
+    }
+
+    @Override
+    public void setSubtitle(BaseComponent subtitle) {
+        setSubtitle(new BaseComponent[] { subtitle });
+    }
+
+    @Override
+    public void showTitle(BaseComponent[] title) {
+        final ClientboundSetTitleTextPacket packet = new ClientboundSetTitleTextPacket(org.bukkit.craftbukkit.util.CraftChatMessage.fromJSON(net.md_5.bungee.chat.ComponentSerializer.toString(title)));
+        getHandle().connection.send(packet);
+    }
+
+    @Override
+    public void showTitle(BaseComponent title) {
+        showTitle(new BaseComponent[] { title });
+    }
+
+    @Override
+    public void showTitle(BaseComponent[] title, BaseComponent[] subtitle, int fadeInTicks, int stayTicks, int fadeOutTicks) {
+        setTitleTimes(fadeInTicks, stayTicks, fadeOutTicks);
+        setSubtitle(subtitle);
+        showTitle(title);
+    }
+
+    @Override
+    public void showTitle(BaseComponent title, BaseComponent subtitle, int fadeInTicks, int stayTicks, int fadeOutTicks) {
+        setTitleTimes(fadeInTicks, stayTicks, fadeOutTicks);
+        setSubtitle(subtitle);
+        showTitle(title);
+    }
+
+    @Override
+    public void sendTitle(com.destroystokyo.paper.Title title) {
+        Preconditions.checkNotNull(title, "Title is null");
+        setTitleTimes(title.getFadeIn(), title.getStay(), title.getFadeOut());
+        setSubtitle(title.getSubtitle() == null ? new BaseComponent[0] : title.getSubtitle());
+        showTitle(title.getTitle());
+    }
+
+    @Override
+    public void updateTitle(com.destroystokyo.paper.Title title) {
+        Preconditions.checkNotNull(title, "Title is null");
+        setTitleTimes(title.getFadeIn(), title.getStay(), title.getFadeOut());
+        if (title.getSubtitle() != null) {
+            setSubtitle(title.getSubtitle());
+        }
+        showTitle(title.getTitle());
+    }
+
+    @Override
+    public void hideTitle() {
+        getHandle().connection.send(new ClientboundClearTitlesPacket(false));
+    }
+    // Paper end
 
     @Override
     public String getDisplayName() {
@@ -551,7 +677,20 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
 
         if (getHandle().connection == null) return;
 
-        getHandle().connection.chat(msg, PlayerChatMessage.system(msg), false);
+        // Paper start - Improve chat handling
+        if (ServerGamePacketListenerImpl.isChatMessageIllegal(msg)) {
+            this.getHandle().connection.disconnect(Component.translatable("multiplayer.disconnect.illegal_characters"));
+        } else {
+            if (msg.startsWith("/")) {
+                this.getHandle().connection.handleCommand(msg);
+            } else {
+                final PlayerChatMessage playerChatMessage = PlayerChatMessage.system(msg).withUnsignedContent(Component.literal(msg));
+                // TODO chat decorating
+                // TODO text filtering
+                this.getHandle().connection.chat(msg, playerChatMessage, false);
+            }
+        }
+        // Paper end - Improve chat handling
     }
 
     @Override
@@ -1995,6 +2134,13 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
     }
     // Paper end - adventure
 
+    // Paper start - more resource pack API
+    @Override
+    public org.bukkit.event.player.PlayerResourcePackStatusEvent.Status getResourcePackStatus() {
+        return this.resourcePackStatus;
+    }
+    // Paper end - more resource pack API
+
     @Override
     public void removeResourcePack(UUID id) {
         Preconditions.checkArgument(id != null, "Resource pack id cannot be null");
@@ -2099,12 +2245,13 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
 
     @Override
     public void setFlying(boolean value) {
+        boolean needsUpdate = getHandle().getAbilities().flying != value; // Paper - Only refresh abilities if needed
         if (!getAllowFlight()) {
             Preconditions.checkArgument(!value, "Player is not allowed to fly (check #getAllowFlight())");
         }
 
         getHandle().getAbilities().flying = value;
-        getHandle().onUpdateAbilities();
+        if (needsUpdate) this.getHandle().onUpdateAbilities(); // Paper - Only refresh abilities if needed
     }
 
     @Override
@@ -2229,6 +2376,9 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
     }
 
     public void setRealHealth(double health) {
+        if (Double.isNaN(health)) {
+            return;
+        } // Paper - Check for NaN
         this.health = health;
     }
 
@@ -2427,8 +2577,22 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
 
     @Override
     public String getLocale() {
-        return getHandle().language;
+        // Paper start - Locale change event
+        final String locale = this.getHandle().language;
+        return locale != null ? locale : "en_us";
+        // Paper end
     }
+
+    // Paper start
+    public void setAffectsSpawning(boolean affects) {
+        this.getHandle().affectsSpawning = affects;
+    }
+
+    @Override
+    public boolean getAffectsSpawning() {
+        return this.getHandle().affectsSpawning;
+    }
+    // Paper end
 
     @Override
     public void updateCommands() {

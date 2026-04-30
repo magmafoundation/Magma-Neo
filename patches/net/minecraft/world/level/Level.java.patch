@@ -9,7 +9,7 @@
      public static final Codec<ResourceKey<Level>> RESOURCE_KEY_CODEC = ResourceKey.codec(Registries.DIMENSION);
      public static final ResourceKey<Level> OVERWORLD = ResourceKey.create(Registries.DIMENSION, ResourceLocation.withDefaultNamespace("overworld"));
      public static final ResourceKey<Level> NETHER = ResourceKey.create(Registries.DIMENSION, ResourceLocation.withDefaultNamespace("the_nether"));
-@@ -114,7 +_,66 @@
+@@ -114,7 +_,68 @@
      private final RegistryAccess registryAccess;
      private final DamageSources damageSources;
      private long subTickCount;
@@ -27,7 +27,7 @@
 +    public boolean preventPoiUpdated = false; // CraftBukkit - SPIGOT-5710
 +    public boolean captureBlockStates = false;
 +    public boolean captureTreeGeneration = false;
-+    public java.util.Map<net.minecraft.core.BlockPos, org.bukkit.craftbukkit.block.CapturedBlockState> capturedBlockStates = new java.util.LinkedHashMap<>();
++    public java.util.Map<net.minecraft.core.BlockPos, org.bukkit.craftbukkit.block.CraftBlockState> capturedBlockStates = new java.util.LinkedHashMap<>(); // Paper
 +    public java.util.Map<net.minecraft.core.BlockPos, net.minecraft.world.level.block.entity.BlockEntity> capturedTileEntities = new java.util.HashMap<>();
 +    public List<net.minecraft.world.entity.item.ItemEntity> captureDrops;
 +    public final it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<org.bukkit.entity.SpawnCategory> ticksPerSpawnCategory = new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>();
@@ -46,6 +46,8 @@
 +    protected org.spigotmc.TickLimiter entityLimiter; // Spigot
 +    protected org.spigotmc.TickLimiter tileLimiter; // Spigot
 +    private int tileTickPosition; // Spigot
++    public final java.util.Map<net.minecraft.world.level.Explosion.CacheKey, Float> explosionDensityCache = new java.util.HashMap<>(); // Paper - Optimize explosions
++    public java.util.ArrayDeque<net.minecraft.world.level.block.RedstoneTorchBlock.Toggle> redstoneUpdateInfos; // Paper - Faster redstone torch rapid clock removal; Move from Map in BlockRedstoneTorch to here
 +
 +    public org.bukkit.craftbukkit.CraftWorld getWorld() {
 +        return this.world;
@@ -162,7 +164,33 @@
      public boolean isInWorldBounds(BlockPos p_46740_) {
          return !this.isOutsideBuildHeight(p_46740_) && isInWorldBoundsHorizontal(p_46740_);
      }
-@@ -191,6 +_,39 @@
+@@ -187,10 +_,65 @@
+         return this.getChunk(SectionPos.blockToSectionCoord(p_46746_.getX()), SectionPos.blockToSectionCoord(p_46746_.getZ()));
+     }
+ 
++    @Override
++    public final boolean hasChunkAt(BlockPos pos) {
++        return getChunkIfLoaded(pos.getX() >> 4, pos.getZ() >> 4) != null; // Paper - Perf: Optimize Level.hasChunkAt(BlockPosition)Z
++    }
++
++    public final boolean isLoadedAndInBounds(BlockPos blockposition) { // Paper - final for inline
++        return getWorldBorder().isWithinBounds(blockposition) && getChunkIfLoadedImmediately(blockposition.getX() >> 4, blockposition.getZ() >> 4) != null;
++    }
++
++    public @Nullable LevelChunk getChunkIfLoaded(int x, int z) { // Overridden in WorldServer for ABI compat which has final
++        return ((net.minecraft.server.level.ServerLevel) this).getChunkSource().getChunkAtIfLoadedImmediately(x, z);
++    }
++
++    public final @Nullable LevelChunk getChunkIfLoaded(BlockPos blockposition) {
++        return ((net.minecraft.server.level.ServerLevel) this).getChunkSource().getChunkAtIfLoadedImmediately(blockposition.getX() >> 4, blockposition.getZ() >> 4);
++    }
++
++    //  reduces need to do isLoaded before getType
++    public final @Nullable BlockState getBlockStateIfLoadedAndInBounds(BlockPos blockposition) {
++        return getWorldBorder().isWithinBounds(blockposition) ? getBlockStateIfLoaded(blockposition) : null;
++    }
++
+     public LevelChunk getChunk(int p_46727_, int p_46728_) {
          return (LevelChunk)this.getChunk(p_46727_, p_46728_, ChunkStatus.FULL);
      }
  
@@ -238,7 +266,7 @@
          if (this.isOutsideBuildHeight(p_46605_)) {
              return false;
          } else if (!this.isClientSide && this.isDebug()) {
-@@ -216,11 +_,61 @@
+@@ -216,11 +_,62 @@
          } else {
              LevelChunk levelchunk = this.getChunkAt(p_46605_);
              Block block = p_46606_.getBlock();
@@ -253,7 +281,8 @@
 +            // CraftBukkit start - capture blockstates
 +            boolean captured = false;
 +            if (this.captureBlockStates && !this.capturedBlockStates.containsKey(p_46605_)) {
-+                org.bukkit.craftbukkit.block.CapturedBlockState blockstate = org.bukkit.craftbukkit.block.CapturedBlockState.getBlockState(this, p_46605_, p_46607_);
++                org.bukkit.craftbukkit.block.CraftBlockState blockstate = (org.bukkit.craftbukkit.block.CraftBlockState) world.getBlockAt(p_46605_.getX(), p_46605_.getY(), p_46605_.getZ()).getState(); // Paper - use CB getState to get a suitable snapshot
++                blockstate.setFlag(p_46607_); // Paper - set flag
 +                this.capturedBlockStates.put(p_46605_.immutable(), blockstate);
 +                captured = true;
 +            }
@@ -343,7 +372,7 @@
 +                // CraftBukkit start
 +                iblockdata1.updateIndirectNeighbourShapes(this, blockposition, k, j - 1); // Don't call an event for the old block to limit event spam
 +                org.bukkit.craftbukkit.CraftWorld world = ((net.minecraft.server.level.ServerLevel) this).getWorld();
-+                if (world != null) {
++                if (world != null && ((net.minecraft.server.level.ServerLevel)this).hasPhysicsEvent) { // Paper - BlockPhysicsEvent
 +                    org.bukkit.event.block.BlockPhysicsEvent event = new org.bukkit.event.block.BlockPhysicsEvent(world.getBlockAt(blockposition.getX(), blockposition.getY(), blockposition.getZ()), org.bukkit.craftbukkit.block.data.CraftBlockData.fromData(iblockdata));
 +                    this.getCraftServer().getPluginManager().callEvent(event);
 +
@@ -381,7 +410,7 @@
      public BlockState getBlockState(BlockPos p_46732_) {
 +        // CraftBukkit start - tree generation
 +        if (captureTreeGeneration) {
-+            org.bukkit.craftbukkit.block.CapturedBlockState previous = capturedBlockStates.get(p_46732_);
++            org.bukkit.craftbukkit.block.CraftBlockState previous = this.capturedBlockStates.get(p_46732_); // Paper
 +            if (previous != null) {
 +                return previous.getHandle();
 +            }
@@ -390,7 +419,7 @@
          if (this.isOutsideBuildHeight(p_46732_)) {
              return Blocks.VOID_AIR.defaultBlockState();
          } else {
-@@ -489,39 +_,83 @@
+@@ -489,39 +_,82 @@
          (this.tickingBlockEntities ? this.pendingBlockEntityTickers : this.blockEntityTickers).add(p_151526_);
      }
  
@@ -436,9 +465,9 @@
 -        while (iterator.hasNext()) {
 -            TickingBlockEntity tickingblockentity = iterator.next();
 +        int tilesThisCycle = 0;
-+        for (tileLimiter.initTick();
-+                tilesThisCycle < blockEntityTickers.size() && (tilesThisCycle % 10 != 0 || tileLimiter.shouldContinue());
-+                tileTickPosition++, tilesThisCycle++) {
++        var toRemove = new it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet<TickingBlockEntity>(); // Paper - Fix MC-117075; use removeAll
++        toRemove.add(null); // Paper - Fix MC-117075
++        for (tileTickPosition = 0; tileTickPosition < this.blockEntityTickers.size(); tileTickPosition++) { // Paper - Disable tick limiters
 +            tileTickPosition = (tileTickPosition < blockEntityTickers.size()) ? tileTickPosition : 0;
 +            TickingBlockEntity tickingblockentity = (TickingBlockEntity) this.blockEntityTickers.get(tileTickPosition);
 +            // Spigot end
@@ -446,12 +475,13 @@
 -                iterator.remove();
 +                // Spigot start
 +                tilesThisCycle--;
-+                this.blockEntityTickers.remove(tileTickPosition--);
++                toRemove.add(tickingblockentity); // Paper - Fix MC-117075; use removeAll
 +                // Spigot end
              } else if (flag && this.shouldTickBlocksAt(tickingblockentity.getPos())) {
                  tickingblockentity.tick();
              }
          }
++        this.blockEntityTickers.removeAll(toRemove); // Paper - Fix MC-117075
  
 +        timings.tileEntityTick.stopTiming(); // Spigot
          this.tickingBlockEntities = false;
@@ -465,14 +495,16 @@
 +            net.neoforged.neoforge.server.timings.TimeTracker.ENTITY_UPDATE.trackStart(p_46655_);
              p_46654_.accept(p_46655_);
          } catch (Throwable throwable) {
-             CrashReport crashreport = CrashReport.forThrowable(throwable, "Ticking entity");
-             CrashReportCategory crashreportcategory = crashreport.addCategory("Entity being ticked");
-             p_46655_.fillCrashReportCategory(crashreportcategory);
-+            if (net.neoforged.neoforge.common.NeoForgeConfig.SERVER.removeErroringEntities.get()) {
-+                com.mojang.logging.LogUtils.getLogger().error("{}", crashreport.getFriendlyReport(net.minecraft.ReportType.CRASH));
-+                p_46655_.discard();
-+            } else
-             throw new ReportedException(crashreport);
+-            CrashReport crashreport = CrashReport.forThrowable(throwable, "Ticking entity");
+-            CrashReportCategory crashreportcategory = crashreport.addCategory("Entity being ticked");
+-            p_46655_.fillCrashReportCategory(crashreportcategory);
+-            throw new ReportedException(crashreport);
++            // Paper start - Prevent block entity and entity crashes
++            final String msg = String.format("Entity threw exception at %s:%s,%s,%s", p_46655_.level().getWorld().getName(), p_46655_.getX(), p_46655_.getY(), p_46655_.getZ());
++            MinecraftServer.LOGGER.error(msg, throwable);
++            p_46655_.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DISCARD); // Magma
++            p_46655_.discard();
++            // Paper end - Prevent block entity and entity crashes
 +        } finally {
 +            net.neoforged.neoforge.server.timings.TimeTracker.ENTITY_UPDATE.trackEnd(p_46655_);
          }
@@ -635,11 +667,10 @@
  
          public static final Codec<Level.ExplosionInteraction> CODEC = StringRepresentable.fromEnum(Level.ExplosionInteraction::values);
          private final String id;
-@@ -1118,5 +_,38 @@
-         public String getSerializedName() {
+@@ -1119,4 +_,48 @@
              return this.id;
          }
-+    }
+     }
 +
 +    // Neo: Variable day time code
 +
@@ -672,5 +703,16 @@
 +        long result = (long)dayTimeStep;
 +        setDayTimeFraction(dayTimeStep - result);
 +        return result;
-     }
++    }
++
++    // Paper start - respect global sound events gamerule
++    public List<net.minecraft.server.level.ServerPlayer> getPlayersForGlobalSoundGamerule() {
++        return this.getGameRules().getBoolean(GameRules.RULE_GLOBAL_SOUND_EVENTS) ? ((net.minecraft.server.level.ServerLevel) this).getServer().getPlayerList().players : ((net.minecraft.server.level.ServerLevel) this).players();
++    }
++
++    public double getGlobalSoundRangeSquared(java.util.function.Function<org.spigotmc.SpigotWorldConfig, Integer> rangeFunction) {
++        final double range = rangeFunction.apply(this.spigotConfig);
++        return range <= 0 ? 64.0 * 64.0 : range * range; // 64 is taken from default in ServerLevel#levelEvent
++    }
++    // Paper end - respect global sound events gamerule
  }

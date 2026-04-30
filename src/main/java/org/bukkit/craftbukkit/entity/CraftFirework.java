@@ -128,4 +128,11 @@ public class CraftFirework extends CraftProjectile implements Firework {
     public void setShotAtAngle(boolean shotAtAngle) {
         getHandle().getEntityData().set(FireworkRocketEntity.DATA_SHOT_AT_ANGLE, shotAtAngle);
     }
+
+    // Paper start
+    @Override
+    public java.util.UUID getSpawningEntity() {
+        return getHandle().spawningEntity;
+    }
+    // Paper end
 }

@@ -12,13 +12,17 @@
      @Nullable
      private volatile PacketListener disconnectListener;
      @Nullable
-@@ -107,6 +_,21 @@
+@@ -107,6 +_,25 @@
      private volatile DisconnectionDetails delayedDisconnect;
      @Nullable
      BandwidthDebugMonitor bandwidthDebugMonitor;
 +    @Nullable
 +    private ProtocolInfo<?> inboundProtocol;
 +    public String hostname = ""; // CraftBukkit - add field
++    // Paper start - NetworkClient implementation
++    public int protocolVersion;
++    public java.net.InetSocketAddress virtualHost;
++    // Paper end
 +
 +    // Paper start - add utility methods
 +    public final net.minecraft.server.level.ServerPlayer getPlayer() {

@@ -1,0 +1,11 @@
+--- a/net/minecraft/server/rcon/thread/RconThread.java
++++ b/net/minecraft/server/rcon/thread/RconThread.java
+@@ -57,7 +_,7 @@
+     @Nullable
+     public static RconThread create(ServerInterface p_11616_) {
+         DedicatedServerProperties dedicatedserverproperties = p_11616_.getProperties();
+-        String s = p_11616_.getServerIp();
++        String s = dedicatedserverproperties.rconIp; // Paper - Configurable rcon ip
+         if (s.isEmpty()) {
+             s = "0.0.0.0";
+         }

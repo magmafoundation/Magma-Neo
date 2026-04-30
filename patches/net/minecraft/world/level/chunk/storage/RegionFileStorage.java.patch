@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/level/chunk/storage/RegionFileStorage.java
 +++ b/net/minecraft/world/level/chunk/storage/RegionFileStorage.java
-@@ -28,6 +_,10 @@
+@@ -28,18 +_,23 @@
          this.info = p_326161_;
      }
  
@@ -11,7 +11,13 @@
      private RegionFile getRegionFile(ChunkPos p_63712_) throws IOException {
          long i = ChunkPos.asLong(p_63712_.getRegionX(), p_63712_.getRegionZ());
          RegionFile regionfile = this.regionCache.getAndMoveToFirst(i);
-@@ -40,6 +_,7 @@
+         if (regionfile != null) {
+             return regionfile;
+         } else {
+-            if (this.regionCache.size() >= 256) {
++            if (this.regionCache.size() >= io.papermc.paper.configuration.GlobalConfiguration.get().misc.regionFileCacheSize) { // Paper - Sanitise RegionFileCache and make configurable
+                 this.regionCache.removeLast().close();
+             }
  
              FileUtil.createDirectoriesSafe(this.folder);
              Path path = this.folder.resolve("r." + p_63712_.getRegionX() + "." + p_63712_.getRegionZ() + ".mca");

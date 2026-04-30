@@ -1,11 +1,26 @@
 --- a/net/minecraft/world/entity/EntitySelector.java
 +++ b/net/minecraft/world/entity/EntitySelector.java
-@@ -33,7 +_,7 @@
+@@ -20,6 +_,11 @@
+ 
+     private EntitySelector() {
+     }
++    // Paper start - Affects Spawning API
++    public static final Predicate<Entity> PLAYER_AFFECTS_SPAWNING = (entity) -> {
++        return !entity.isSpectator() && entity.isAlive() && entity instanceof Player player && player.affectsSpawning;
++    };
++    // Paper end - Affects Spawning API
+ 
+     public static Predicate<Entity> withinDistance(double p_20411_, double p_20412_, double p_20413_, double p_20414_) {
+         double d0 = p_20414_ * p_20414_;
+@@ -33,9 +_,9 @@
              ? Predicates.alwaysFalse()
              : NO_SPECTATORS.and(
                  p_20430_ -> {
 -                    if (!p_20430_.isPushable()) {
 +                    if (!p_20430_.canCollideWithBukkit(p_20422_) || !p_20422_.canCollideWithBukkit(p_20430_)) { // CraftBukkit - collidable API
                          return false;
-                     } else if (!p_20422_.level().isClientSide || p_20430_ instanceof Player && ((Player)p_20430_).isLocalPlayer()) {
+-                    } else if (!p_20422_.level().isClientSide || p_20430_ instanceof Player && ((Player)p_20430_).isLocalPlayer()) {
++                    } else if (p_20422_ instanceof Player && p_20430_ instanceof Player && !io.papermc.paper.configuration.GlobalConfiguration.get().collisions.enablePlayerCollisions) { // Paper - Configurable player collision
                          Team team1 = p_20430_.getTeam();
+                         Team.CollisionRule team$collisionrule1 = team1 == null ? Team.CollisionRule.ALWAYS : team1.getCollisionRule();
+                         if (team$collisionrule1 == Team.CollisionRule.NEVER) {

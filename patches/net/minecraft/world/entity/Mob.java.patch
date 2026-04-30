@@ -133,7 +133,7 @@
      }
  
      @Override
-@@ -539,7 +_,7 @@
+@@ -539,12 +_,17 @@
              && this.canPickUpLoot()
              && this.isAlive()
              && !this.dead
@@ -142,6 +142,16 @@
              Vec3i vec3i = this.getPickupReach();
  
              for (ItemEntity itementity : this.level()
+                 .getEntitiesOfClass(ItemEntity.class, this.getBoundingBox().inflate((double)vec3i.getX(), (double)vec3i.getY(), (double)vec3i.getZ()))) {
+                 if (!itementity.isRemoved() && !itementity.getItem().isEmpty() && !itementity.hasPickUpDelay() && this.wantsToPickUp(itementity.getItem())) {
++                    // Paper start - Item#canEntityPickup
++                    if (!itementity.canMobPickup) {
++                        continue;
++                    }
++                    // Paper end - Item#canEntityPickup
+                     this.pickUpItem(itementity);
+                 }
+             }
 @@ -559,18 +_,25 @@
  
      protected void pickUpItem(ItemEntity p_21471_) {
@@ -200,7 +210,7 @@
          return itemattributemodifiers.compute(this.getAttributeBaseValue(Attributes.ATTACK_DAMAGE), EquipmentSlot.MAINHAND);
      }
  
-@@ -701,7 +_,9 @@
+@@ -701,23 +_,34 @@
  
      @Override
      public void checkDespawn() {
@@ -209,22 +219,42 @@
 +            this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
              this.discard();
          } else if (!this.isPersistenceRequired() && !this.requiresCustomPersistence()) {
-             Entity entity = this.level().getNearestPlayer(this, -1.0);
-@@ -710,12 +_,14 @@
-                 int i = this.getType().getCategory().getDespawnDistance();
-                 int j = i * i;
-                 if (d0 > (double)j && this.removeWhenFarAway(d0)) {
+-            Entity entity = this.level().getNearestPlayer(this, -1.0);
++            Player entity = this.level().findNearbyPlayer(this, -1.0D, EntitySelector.PLAYER_AFFECTS_SPAWNING); // Paper - Affects Spawning API
+             if (entity != null) {
+-                double d0 = entity.distanceToSqr(this);
+-                int i = this.getType().getCategory().getDespawnDistance();
+-                int j = i * i;
+-                if (d0 > (double)j && this.removeWhenFarAway(d0)) {
++                // Paper start - Configurable despawn distances
++                final io.papermc.paper.configuration.WorldConfiguration.Entities.Spawning.DespawnRangePair despawnRangePair = this.level().paperConfig().entities.spawning.despawnRanges.get(this.getType().getCategory());
++                final io.papermc.paper.configuration.type.DespawnRange.Shape shape = this.level().paperConfig().entities.spawning.despawnRangeShape;
++                final double dy = Math.abs(entity.getY() - this.getY());
++                final double dySqr = Math.pow(dy, 2);
++                final double dxSqr = Math.pow(entity.getX() - this.getX(), 2);
++                final double dzSqr = Math.pow(entity.getZ() - this.getZ(), 2);
++                final double distanceSquared = dxSqr + dzSqr + dySqr;
++                // Despawn if hard/soft limit is exceeded
++                if (despawnRangePair.hard().shouldDespawn(shape, dxSqr, dySqr, dzSqr, dy) && this.removeWhenFarAway(distanceSquared)) {
 +                    this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
                      this.discard();
                  }
  
-                 int k = this.getType().getCategory().getNoDespawnDistance();
-                 int l = k * k;
-                 if (this.noActionTime > 600 && this.random.nextInt(800) == 0 && d0 > (double)l && this.removeWhenFarAway(d0)) {
-+                    this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
-                     this.discard();
-                 } else if (d0 < (double)l) {
+-                int k = this.getType().getCategory().getNoDespawnDistance();
+-                int l = k * k;
+-                if (this.noActionTime > 600 && this.random.nextInt(800) == 0 && d0 > (double)l && this.removeWhenFarAway(d0)) {
+-                    this.discard();
+-                } else if (d0 < (double)l) {
++                if (despawnRangePair.soft().shouldDespawn(shape, dxSqr, dySqr, dzSqr, dy)) {
++                    if (this.noActionTime > 600 && this.random.nextInt(800) == 0 && this.removeWhenFarAway(distanceSquared)) {
++                        this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN); // CraftBukkit - add Bukkit remove cause
++                        this.discard();
++                    }
++                } else {
++                    // Paper end - Configurable despawn distances
                      this.noActionTime = 0;
+                 }
+             }
 @@ -729,6 +_,15 @@
      @Override
      protected final void serverAiStep() {

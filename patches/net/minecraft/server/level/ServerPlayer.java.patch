@@ -1,9 +1,11 @@
 --- a/net/minecraft/server/level/ServerPlayer.java
 +++ b/net/minecraft/server/level/ServerPlayer.java
-@@ -204,6 +_,7 @@
+@@ -203,7 +_,8 @@
+     private int levitationStartTime;
      private boolean disconnected;
      private int requestedViewDistance = 2;
-     public String language = "en_us";
+-    public String language = "en_us";
++    public String language = null; // CraftBukkit - default  // Paper - default to null
 +    public java.util.Locale adventure$locale = java.util.Locale.US; // Paper
      @Nullable
      private Vec3 startingToFallPosition;
@@ -19,10 +21,12 @@
              ServerPlayer.this.connection.send(new ClientboundContainerSetDataPacket(p_143455_.containerId, p_143456_, p_143457_));
          }
      };
-@@ -277,6 +_,23 @@
+@@ -276,6 +_,24 @@
+     public final Object object;
      private int containerCounter;
      public boolean wonGame;
- 
++    private int containerUpdateDelay; // Paper - Configurable container update tick rate
++
 +    // CraftBukkit start
 +    public org.bukkit.craftbukkit.entity.CraftPlayer.TransferCookieConnection transferCookieConnection;
 +    public String displayName;
@@ -39,10 +43,9 @@
 +    public String kickLeaveMessage = null; // SPIGOT-3034: Forward leave message to PlayerQuitEvent
 +    // CraftBukkit end
 +    public boolean isRealPlayer; // Paper
-+
+ 
      public ServerPlayer(MinecraftServer p_254143_, ServerLevel p_254435_, GameProfile p_253651_, ClientInformation p_301997_) {
          super(p_254435_, p_254435_.getSharedSpawnPos(), p_254435_.getSharedSpawnAngle(), p_253651_);
-         this.textFilter = p_254143_.createTextFilterForPlayer(this);
 @@ -287,6 +_,12 @@
          this.moveTo(this.adjustSpawnLocation(p_254435_, p_254435_.getSharedSpawnPos()).getBottomCenter(), 0.0F, 0.0F);
          this.updateOptions(p_301997_);
@@ -149,6 +152,20 @@
          this.gameMode.tick();
          this.wardenSpawnTracker.tick();
          this.spawnInvulnerableTime--;
+@@ -496,7 +_,12 @@
+             this.invulnerableTime--;
+         }
+ 
+-        this.containerMenu.broadcastChanges();
++        // Paper start - Configurable container update tick rate
++        if (--containerUpdateDelay <= 0) {
++            this.containerMenu.broadcastChanges();
++            containerUpdateDelay = this.level().paperConfig().tickRates.containerUpdate;
++        }
++        // Paper end - Configurable container update tick rate
+         if (!this.level().isClientSide && !this.containerMenu.stillValid(this)) {
+             this.closeContainer();
+             this.containerMenu = this.inventoryMenu;
 @@ -565,7 +_,7 @@
              if (this.getHealth() != this.lastSentHealth
                  || this.lastSentFood != this.foodData.getFoodLevel()
@@ -361,7 +378,25 @@
          if (this.isRemoved()) {
              return null;
          } else {
-@@ -870,6 +_,7 @@
+@@ -865,11 +_,23 @@
+             ServerLevel serverlevel1 = this.serverLevel();
+             ResourceKey<Level> resourcekey = serverlevel1.dimension();
+             if (serverlevel.dimension() == resourcekey) {
+-                this.connection.teleport(p_350472_.pos().x, p_350472_.pos().y, p_350472_.pos().z, p_350472_.yRot(), p_350472_.xRot());
+-                this.connection.resetPosition();
++                // Paper start - gateway-specific teleport event
++                if (this.portalProcess != null && this.portalProcess.isSamePortal(((net.minecraft.world.level.block.EndGatewayBlock) net.minecraft.world.level.block.Blocks.END_GATEWAY)) && this.serverLevel().getBlockEntity(this.portalProcess.getEntryPosition()) instanceof net.minecraft.world.level.block.entity.TheEndGatewayBlockEntity theEndGatewayBlockEntity) {
++                    org.bukkit.Location to = org.bukkit.craftbukkit.util.CraftLocation.toBukkit(p_350472_.pos(), this.serverLevel().getWorld(), p_350472_.yRot(), p_350472_.xRot());
++                    final com.destroystokyo.paper.event.player.PlayerTeleportEndGatewayEvent event = new com.destroystokyo.paper.event.player.PlayerTeleportEndGatewayEvent(this.getBukkitEntity(), this.getBukkitEntity().getLocation(), to, new org.bukkit.craftbukkit.block.CraftEndGateway(to.getWorld(), theEndGatewayBlockEntity));
++                    if (!event.callEvent() || event.getTo() == null) {
++                        return null;
++                    }
++                    this.connection.teleport(event.getTo());
++                } else {
++                    // Paper end - gateway-specific teleport event
++                    this.connection.teleport(p_350472_.pos().x, p_350472_.pos().y, p_350472_.pos().z, p_350472_.yRot(), p_350472_.xRot());
++                    this.connection.resetPosition();
++                } // Paper
                  p_350472_.postDimensionTransition().onTransition(this);
                  return this;
              } else {
@@ -727,7 +762,7 @@
 +            org.bukkit.event.player.PlayerChangedMainHandEvent event = new org.bukkit.event.player.PlayerChangedMainHandEvent(getBukkitEntity(), getMainArm() == HumanoidArm.LEFT ? org.bukkit.inventory.MainHand.LEFT : org.bukkit.inventory.MainHand.RIGHT);
 +            this.server.server.getPluginManager().callEvent(event);
 +        }
-+        if (!this.language.equals(p_301998_.language())) {
++        if (this.language == null || !this.language.equals(p_301998_.language())) { // Paper
 +            org.bukkit.event.player.PlayerLocaleChangeEvent event = new org.bukkit.event.player.PlayerLocaleChangeEvent(getBukkitEntity(), p_301998_.language());
 +            this.server.server.getPluginManager().callEvent(event);
 +        }
@@ -1008,7 +1043,7 @@
 +
 +    @Override
 +    public boolean isImmobile() {
-+        return super.isImmobile() || !getBukkitEntity().isOnline();
++        return super.isImmobile() || (this.connection != null && this.connection.isDisconnected()); // Paper - Fix duplication bugs
 +    }
 +
 +    @Override

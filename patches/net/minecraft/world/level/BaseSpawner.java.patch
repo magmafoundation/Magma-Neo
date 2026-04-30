@@ -1,6 +1,12 @@
 --- a/net/minecraft/world/level/BaseSpawner.java
 +++ b/net/minecraft/world/level/BaseSpawner.java
-@@ -49,6 +_,7 @@
+@@ -44,15 +_,17 @@
+     public int maxNearbyEntities = 6;
+     public int requiredPlayerRange = 16;
+     public int spawnRange = 4;
++    private int tickDelay = 0; // Paper - Configurable mob spawner tick rate
+ 
+     public void setEntityId(EntityType<?> p_253682_, @Nullable Level p_254041_, RandomSource p_254221_, BlockPos p_254050_) {
          this.getOrCreateNextSpawnData(p_254041_, p_254221_, p_254050_)
              .getEntityToSpawn()
              .putString("id", BuiltInRegistries.ENTITY_TYPE.getKey(p_253682_).toString());
@@ -8,7 +14,33 @@
      }
  
      private boolean isNearPlayer(Level p_151344_, BlockPos p_151345_) {
-@@ -151,20 +_,29 @@
+-        return p_151344_.hasNearbyAlivePlayer(
++        return p_151344_.hasNearbyAlivePlayerThatAffectsSpawning( // Paper - Affects Spawning API
+             (double)p_151345_.getX() + 0.5, (double)p_151345_.getY() + 0.5, (double)p_151345_.getZ() + 0.5, (double)this.requiredPlayerRange
+         );
+     }
+@@ -77,13 +_,18 @@
+     }
+ 
+     public void serverTick(ServerLevel p_151312_, BlockPos p_151313_) {
++        // Paper start - Configurable mob spawner tick rate
++        if (spawnDelay > 0 && --tickDelay > 0) return;
++        tickDelay = p_151312_.paperConfig().tickRates.mobSpawner;
++        if (tickDelay == -1) { return; } // If disabled
++        // Paper end - Configurable mob spawner tick rate
+         if (this.isNearPlayer(p_151312_, p_151313_)) {
+-            if (this.spawnDelay == -1) {
++            if (this.spawnDelay < -tickDelay) { // Paper - Configurable mob spawner tick rate
+                 this.delay(p_151312_, p_151313_);
+             }
+ 
+             if (this.spawnDelay > 0) {
+-                this.spawnDelay--;
++                this.spawnDelay -= tickDelay; // Paper - Configurable mob spawner tick rate
+             } else {
+                 boolean flag = false;
+                 RandomSource randomsource = p_151312_.getRandom();
+@@ -151,20 +_,31 @@
  
                          entity.moveTo(entity.getX(), entity.getY(), entity.getZ(), randomsource.nextFloat() * 360.0F, 0.0F);
                          if (entity instanceof Mob mob) {
@@ -35,6 +67,8 @@
                          }
  
 -                        if (!p_151312_.tryAddFreshEntityWithPassengers(entity)) {
++                        entity.spawnedViaMobSpawner = true; // Paper
++                        flag = true; // Paper
 +                        // CraftBukkit start
 +                        if (org.bukkit.craftbukkit.event.CraftEventFactory.callSpawnerSpawnEvent(entity, p_151313_).isCancelled()) {
 +                            continue;
@@ -44,6 +78,15 @@
                              this.delay(p_151312_, p_151313_);
                              return;
                          }
+@@ -175,7 +_,7 @@
+                             ((Mob)entity).spawnAnim();
+                         }
+ 
+-                        flag = true;
++                        //flag = true; // Paper - moved up above cancellable event
+                     }
+                 }
+ 
 @@ -308,5 +_,12 @@
  
      public double getoSpin() {

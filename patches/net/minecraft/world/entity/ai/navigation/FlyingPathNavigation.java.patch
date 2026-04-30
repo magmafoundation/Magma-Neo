@@ -1,0 +1,11 @@
+--- a/net/minecraft/world/entity/ai/navigation/FlyingPathNavigation.java
++++ b/net/minecraft/world/entity/ai/navigation/FlyingPathNavigation.java
+@@ -40,7 +_,7 @@
+ 
+     @Override
+     public Path createPath(Entity p_26430_, int p_26431_) {
+-        return this.createPath(p_26430_.blockPosition(), p_26431_);
++        return this.createPath(p_26430_.blockPosition(), p_26430_, p_26431_); // Paper - EntityPathfindEvent
+     }
+ 
+     @Override

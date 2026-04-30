@@ -222,4 +222,28 @@ public final class CraftItemFactory implements ItemFactory {
         return io.papermc.paper.adventure.PaperAdventure.asAdventure(CraftItemStack.asNMSCopy(itemStack).getDisplayName());
     }
     // Paper end - Adventure
+
+    // Paper start - ensure server conversions API
+    // TODO: DO WE NEED THIS?
+    @Override
+    public ItemStack ensureServerConversions(ItemStack item) {
+        return CraftItemStack.asCraftMirror(CraftItemStack.asNMSCopy(item));
+    }
+    // Paper end - ensure server conversions API
+
+    // Paper start - add getI18NDisplayName
+    @Override
+    public String getI18NDisplayName(ItemStack item) {
+        net.minecraft.world.item.ItemStack nms = null;
+        if (item instanceof CraftItemStack) {
+            nms = ((CraftItemStack) item).handle;
+        }
+
+        if (nms == null) {
+            nms = CraftItemStack.asNMSCopy(item);
+        }
+
+        return nms != null ? net.minecraft.locale.Language.getInstance().getOrDefault(nms.getItem().getDescriptionId(nms)) : null;
+    }
+    // Paper end - add getI18NDisplayName
 }

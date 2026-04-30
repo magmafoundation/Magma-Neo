@@ -310,7 +310,7 @@
          p_155004_.awardRecipes(list);
  
          for (RecipeHolder<?> recipeholder : list) {
-@@ -467,24 +_,41 @@
+@@ -467,26 +_,43 @@
      }
  
      public List<RecipeHolder<?>> getRecipesToAwardAndPopExperience(ServerLevel p_154996_, Vec3 p_154997_) {
@@ -340,7 +340,8 @@
          if (f != 0.0F && Math.random() < (double)f) {
              i++;
          }
-+
+ 
+-        ExperienceOrb.award(p_154999_, p_155000_, i);
 +        // CraftBukkit start - fire FurnaceExtractEvent / BlockExpEvent
 +        org.bukkit.event.block.BlockExpEvent event;
 +        if (amount != 0) {
@@ -351,6 +352,8 @@
 +        p_154999_.getCraftServer().getPluginManager().callEvent(event);
 +        i = event.getExpToDrop();
 +        // CraftBukkit end
- 
-         ExperienceOrb.award(p_154999_, p_155000_, i);
++
++        ExperienceOrb.award(p_154999_, p_155000_, i, org.bukkit.entity.ExperienceOrb.SpawnReason.FURNACE, entityhuman); // Paper
      }
+ 
+     @Override

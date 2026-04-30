@@ -21,7 +21,7 @@
      protected int jumpTriggerTime;
      public float oBob;
      public float bob;
-@@ -193,6 +_,20 @@
+@@ -193,6 +_,21 @@
      public Entity currentExplosionCause;
      private boolean ignoreFallDamageFromCurrentImpulse;
      private int currentImpulseContextResetGraceTime;
@@ -29,6 +29,7 @@
 +    private final java.util.Collection<MutableComponent> suffixes = new java.util.LinkedList<>();
 +    @Nullable private Pose forcedPose;
 +    private long lastDayTimeTick = -1L; // Neo: Used to limit TIME_SINCE_REST increases when day length is non-standard. No need to persist, at most Phantoms will spawn one tick too early for each save/load cycle.
++    public boolean affectsSpawning = true; // Paper - Affects Spawning API
 +
 +    // CraftBukkit start
 +    public boolean fauxSleeping;
@@ -136,6 +137,14 @@
                  this.heal(1.0F);
              }
  
+@@ -566,6 +_,7 @@
+         this.playShoulderEntityAmbientSound(this.getShoulderEntityLeft());
+         this.playShoulderEntityAmbientSound(this.getShoulderEntityRight());
+         if (!this.level().isClientSide && (this.fallDistance > 0.5F || this.isInWater()) || this.abilities.flying || this.isSleeping() || this.isInPowderSnow) {
++            if (!this.level().paperConfig().entities.behavior.parrotsAreUnaffectedByPlayerMovement) // Paper - Add option to make parrots stay
+             this.removeEntitiesOnShoulder();
+         }
+     }
 @@ -630,6 +_,7 @@
  
      @Override
@@ -762,12 +771,37 @@
          }
      }
  
-@@ -1799,27 +_,38 @@
+@@ -1799,27 +_,68 @@
          }
      }
  
++    // Paper start
++    public Entity releaseLeftShoulderEntity() {
++        Entity entity = this.respawnEntityOnShoulder0(this.getShoulderEntityLeft());
++        if (entity != null) {
++            this.setShoulderEntityLeft(new CompoundTag());
++        }
++        return entity;
++    }
++
++    public Entity releaseRightShoulderEntity() {
++        Entity entity = this.respawnEntityOnShoulder0(this.getShoulderEntityRight());
++        if (entity != null) {
++            this.setShoulderEntityRight(new CompoundTag());
++        }
++        return entity;
++    }
++    // Paper - maintain old signature
++
++
 +    // Magma start - mixin
-     protected void removeEntitiesOnShoulder() {
++    public java.util.concurrent.atomic.AtomicReference<Entity> magma$respawnEntityOnShoulderEntity = new java.util.concurrent.atomic.AtomicReference<>(null);
++    public Entity respawnEntityOnShoulder0(CompoundTag tag) {
++        respawnEntityOnShoulder(tag);
++        return magma$respawnEntityOnShoulderEntity.getAndSet(null);
++    }
++
+     public void removeEntitiesOnShoulder() {
          if (this.timeEntitySatOnShoulder + 20L < this.level().getGameTime()) {
 +            // CraftBukkit start
              this.respawnEntityOnShoulder(this.getShoulderEntityLeft());
@@ -796,6 +830,11 @@
                  p_352835_.setPos(this.getX(), this.getY() + 0.7F, this.getZ());
 -                ((ServerLevel)this.level()).addWithUUID(p_352835_);
 -            });
++                // double add todo: magma comeback once finished patching all and refactor this do not launch with this
++                boolean addedToWorld = ((ServerLevel) this.level()).addWithUUID(p_352835_);
++                if(addedToWorld) {
++                    magma$respawnEntityOnShoulderEntity.set(p_352835_);
++                }
 +                return ((ServerLevel) this.level()).addWithUUID(p_352835_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.SHOULDER_ENTITY); // CraftBukkit
 +            }).orElse(true); // CraftBukkit
          }

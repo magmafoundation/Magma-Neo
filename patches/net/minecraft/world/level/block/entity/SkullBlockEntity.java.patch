@@ -1,0 +1,11 @@
+--- a/net/minecraft/world/level/block/entity/SkullBlockEntity.java
++++ b/net/minecraft/world/level/block/entity/SkullBlockEntity.java
+@@ -103,7 +_,7 @@
+                 ProfileResult profileresult = p_339676_.sessionService().fetchProfile(p_339663_, true);
+                 return Optional.ofNullable(profileresult).map(ProfileResult::profile);
+             }
+-        }, Util.backgroundExecutor());
++        }, Util.PROFILE_EXECUTOR); // Paper - don't submit BLOCKING PROFILE LOOKUPS to the world gen thread
+     }
+ 
+     public static void clear() {

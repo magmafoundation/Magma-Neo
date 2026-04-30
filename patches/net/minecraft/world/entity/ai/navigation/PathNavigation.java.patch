@@ -1,5 +1,72 @@
 --- a/net/minecraft/world/entity/ai/navigation/PathNavigation.java
 +++ b/net/minecraft/world/entity/ai/navigation/PathNavigation.java
+@@ -109,7 +_,14 @@
+ 
+     @Nullable
+     public Path createPath(BlockPos p_26546_, int p_26547_) {
+-        return this.createPath(ImmutableSet.of(p_26546_), 8, false, p_26547_);
++        // Paper start - EntityPathfindEvent
++        return this.createPath(p_26546_, null, p_26547_);
++    }
++
++    @Nullable
++    public Path createPath(BlockPos target, @Nullable Entity entity, int distance) {
++        return this.createPath(ImmutableSet.of(target), entity, 8, false, distance);
++        // Paper end - EntityPathfindEvent
+     }
+ 
+     @Nullable
+@@ -119,7 +_,7 @@
+ 
+     @Nullable
+     public Path createPath(Entity p_26534_, int p_26535_) {
+-        return this.createPath(ImmutableSet.of(p_26534_.blockPosition()), 16, true, p_26535_);
++        return this.createPath(ImmutableSet.of(p_26534_.blockPosition()), p_26534_, 16, true, p_26535_); // Paper - EntityPathfindEvent
+     }
+ 
+     @Nullable
+@@ -129,6 +_,17 @@
+ 
+     @Nullable
+     protected Path createPath(Set<BlockPos> p_148223_, int p_148224_, boolean p_148225_, int p_148226_, float p_148227_) {
++        // Paper start - EntityPathfindEvent
++        return this.createPath(p_148223_, null, p_148224_, p_148225_, p_148226_, p_148227_);
++    }
++
++    @Nullable
++    protected Path createPath(Set<BlockPos> positions, @Nullable Entity target, int range, boolean useHeadPos, int distance) {
++        return this.createPath(positions, target, range, useHeadPos, distance, (float) this.mob.getAttributeValue(Attributes.FOLLOW_RANGE));
++    }
++
++    @Nullable protected Path createPath(Set<BlockPos> p_148223_, @Nullable Entity target, int p_148224_, boolean p_148225_, int p_148226_, float p_148227_) {
++        // Paper end - EntityPathfindEvent
+         if (p_148223_.isEmpty()) {
+             return null;
+         } else if (this.mob.getY() < (double)this.level.getMinBuildHeight()) {
+@@ -138,6 +_,23 @@
+         } else if (this.path != null && !this.path.isDone() && p_148223_.contains(this.targetPos)) {
+             return this.path;
+         } else {
++            // Paper start - EntityPathfindEvent
++            boolean copiedSet = false;
++            for (BlockPos possibleTarget : p_148223_) {
++                if (!this.mob.getCommandSenderWorld().getWorldBorder().isWithinBounds(possibleTarget) || !new com.destroystokyo.paper.event.entity.EntityPathfindEvent(this.mob.getBukkitEntity(), // Paper - don't path out of world border
++                        io.papermc.paper.util.MCUtil.toLocation(this.mob.level(), possibleTarget), target == null ? null : target.getBukkitEntity()).callEvent()) {
++                    if (!copiedSet) {
++                        copiedSet = true;
++                        p_148223_ = new java.util.HashSet<>(p_148223_);
++                    }
++                    // note: since we copy the set this remove call is safe, since we're iterating over the old copy
++                    p_148223_.remove(possibleTarget);
++                    if (p_148223_.isEmpty()) {
++                        return null;
++                    }
++                }
++            }
++            // Paper end - EntityPathfindEvent
+             this.level.getProfiler().push("pathfind");
+             BlockPos blockpos = p_148225_ ? this.mob.blockPosition().above() : this.mob.blockPosition();
+             int i = (int)(p_148227_ + (float)p_148224_);
 @@ -232,10 +_,10 @@
          Vec3 vec3 = this.getTempMobPos();
          this.maxDistanceToWaypoint = this.mob.getBbWidth() > 0.75F ? this.mob.getBbWidth() / 2.0F : 0.75F - this.mob.getBbWidth() / 2.0F;

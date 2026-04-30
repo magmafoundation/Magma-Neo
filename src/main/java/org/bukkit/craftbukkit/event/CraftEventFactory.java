@@ -1178,6 +1178,17 @@ public class CraftEventFactory {
         return event;
     }
 
+    // Paper start - Add orb
+    public static PlayerExpChangeEvent callPlayerExpChangeEvent(net.minecraft.world.entity.player.Player entity, net.minecraft.world.entity.ExperienceOrb entityOrb) {
+        Player player = (Player) entity.getBukkitEntity();
+        ExperienceOrb source = (ExperienceOrb) entityOrb.getBukkitEntity();
+        int expAmount = source.getExperience();
+        PlayerExpChangeEvent event = new PlayerExpChangeEvent(player, source, expAmount);
+        Bukkit.getPluginManager().callEvent(event);
+        return event;
+    }
+    // Paper end
+
     public static boolean handleBlockGrowEvent(Level world, BlockPos pos, net.minecraft.world.level.block.state.BlockState block) {
         return handleBlockGrowEvent(world, pos, block, 3);
     }
@@ -1224,6 +1235,14 @@ public class CraftEventFactory {
         horse.getBukkitEntity().getServer().getPluginManager().callEvent(event);
         return !event.isCancelled();
     }
+
+    // Paper start
+    public static com.destroystokyo.paper.event.entity.EntityZapEvent callEntityZapEvent(Entity entity, Entity lightning, Entity changedEntity) {
+        com.destroystokyo.paper.event.entity.EntityZapEvent event = new com.destroystokyo.paper.event.entity.EntityZapEvent(entity.getBukkitEntity(), (LightningStrike) lightning.getBukkitEntity(), changedEntity.getBukkitEntity());
+        entity.getBukkitEntity().getServer().getPluginManager().callEvent(event);
+        return event;
+    }
+    // Paper end
 
     public static boolean callEntityChangeBlockEvent(Entity entity, BlockPos position, net.minecraft.world.level.block.state.BlockState newBlock) {
         return callEntityChangeBlockEvent(entity, position, newBlock, false);
@@ -1313,6 +1332,17 @@ public class CraftEventFactory {
         return crafterCraftEvent;
     }
 
+    // Paper start
+    @Deprecated
+    public static com.destroystokyo.paper.event.entity.ProjectileCollideEvent callProjectileCollideEvent(Entity entity, EntityHitResult position) {
+        Projectile projectile = (Projectile) entity.getBukkitEntity();
+        org.bukkit.entity.Entity collided = position.getEntity().getBukkitEntity();
+        com.destroystokyo.paper.event.entity.ProjectileCollideEvent event = new com.destroystokyo.paper.event.entity.ProjectileCollideEvent(projectile, collided);
+        Bukkit.getPluginManager().callEvent(event);
+        return event;
+    }
+    // Paper end
+
     public static ProjectileLaunchEvent callProjectileLaunchEvent(Entity entity) {
         Projectile bukkitEntity = (Projectile) entity.getBukkitEntity();
         ProjectileLaunchEvent event = new ProjectileLaunchEvent(bukkitEntity);
@@ -1337,8 +1367,15 @@ public class CraftEventFactory {
         if (position.getType() == HitResult.Type.ENTITY) {
             hitEntity = ((EntityHitResult) position).getEntity().getBukkitEntity();
         }
+        // Paper start - legacy event
+        boolean cancelled = false;
+        if (hitEntity != null && position instanceof EntityHitResult entityHitResult) {
+            cancelled = callProjectileCollideEvent(entity, entityHitResult).isCancelled();
+        }
+        // Paper end
 
         ProjectileHitEvent event = new ProjectileHitEvent((Projectile) entity.getBukkitEntity(), hitEntity, hitBlock, hitFace);
+        event.setCancelled(cancelled); // Paper - propagate legacy event cancellation to modern event
         entity.level().getCraftServer().getPluginManager().callEvent(event);
         return event;
     }
@@ -1939,4 +1976,13 @@ public class CraftEventFactory {
 
         Bukkit.getPluginManager().callEvent(new EntityRemoveEvent(entity.getBukkitEntity(), cause));
     }
+
+    // Paper start - PlayerUseUnknownEntityEvent
+    public static void callPlayerUseUnknownEntityEvent(net.minecraft.world.entity.player.Player player, net.minecraft.network.protocol.game.ServerboundInteractPacket packet, InteractionHand hand, @Nullable net.minecraft.world.phys.Vec3 vector) {
+        new com.destroystokyo.paper.event.player.PlayerUseUnknownEntityEvent(
+                (Player) player.getBukkitEntity(), packet.getEntityId(), packet.isAttack(),
+                CraftEquipmentSlot.getHand(hand),
+                vector != null ? CraftVector.toBukkit(vector) : null).callEvent();
+    }
+    // Paper end - PlayerUseUnknownEntityEvent
 }

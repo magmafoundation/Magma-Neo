@@ -1,0 +1,18 @@
+--- a/net/minecraft/world/item/FireworkRocketItem.java
++++ b/net/minecraft/world/item/FireworkRocketItem.java
+@@ -42,6 +_,7 @@
+                 vec3.z + (double)direction.getStepZ() * 0.15,
+                 itemstack
+             );
++            fireworkrocketentity.spawningEntity = p_41216_.getPlayer() == null ? null : p_41216_.getPlayer().getUUID(); // Paper
+             level.addFreshEntity(fireworkrocketentity);
+             itemstack.shrink(1);
+         }
+@@ -55,6 +_,7 @@
+             ItemStack itemstack = p_41219_.getItemInHand(p_41220_);
+             if (!p_41218_.isClientSide) {
+                 FireworkRocketEntity fireworkrocketentity = new FireworkRocketEntity(p_41218_, itemstack, p_41219_);
++                fireworkrocketentity.spawningEntity = p_41219_.getUUID(); // Paper
+                 p_41218_.addFreshEntity(fireworkrocketentity);
+                 itemstack.consume(1, p_41219_);
+                 p_41219_.awardStat(Stats.ITEM_USED.get(this));

@@ -32,7 +32,7 @@
      public Vec3 getPosition() {
          return this.worldPosition;
      }
-@@ -496,13 +_,13 @@
+@@ -496,20 +_,26 @@
          Component component = Component.translatable("chat.type.admin", this.getDisplayName(), p_81367_).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC);
          if (this.server.getGameRules().getBoolean(GameRules.RULE_SENDCOMMANDFEEDBACK)) {
              for (ServerPlayer serverplayer : this.server.getPlayerList().getPlayers()) {
@@ -48,6 +48,20 @@
              this.server.sendSystemMessage(component);
          }
      }
+ 
+     public void sendFailure(Component p_81353_) {
++        // Paper start - Add UnknownCommandEvent
++        this.sendFailure(p_81353_, true);
++    }
++
++    public void sendFailure(Component p_81353_, boolean withStyle) {
++        // Paper end - Add UnknownCommandEvent
+         if (this.source.acceptsFailure() && !this.silent) {
+-            this.source.sendSystemMessage(Component.empty().append(p_81353_).withStyle(ChatFormatting.RED));
++            this.source.sendSystemMessage(withStyle ? Component.empty().append(p_81353_).withStyle(ChatFormatting.RED) : p_81353_); // Paper - Add UnknownCommandEvent
+         }
+     }
+ 
 @@ -591,4 +_,10 @@
      public boolean isSilent() {
          return this.silent;

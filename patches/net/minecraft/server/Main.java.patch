@@ -137,7 +137,7 @@
 -
              File file1 = new File(optionset.valueOf(optionspec9));
 -            Services services = Services.create(new YggdrasilAuthenticationService(Proxy.NO_PROXY), file1);
-+            Services services = Services.create(new YggdrasilAuthenticationService(Proxy.NO_PROXY), file1, optionset); // Paper - pass OptionSet to load paper config files
++            Services services = Services.create(new com.destroystokyo.paper.profile.PaperAuthenticationService(Proxy.NO_PROXY), file1, optionset); // Paper - pass OptionSet to load paper config files; override authentication service
              String s = Optional.ofNullable(optionset.valueOf(optionspec10)).orElse(dedicatedserversettings.getProperties().levelName);
 +            if (s == null || s.isEmpty() || new File(file1, s).getAbsolutePath().equals(new File(s).getAbsolutePath())) {
 +                LOGGER.error("Invalid world directory specified, must not be null, empty or the same directory as your universe! " + s);

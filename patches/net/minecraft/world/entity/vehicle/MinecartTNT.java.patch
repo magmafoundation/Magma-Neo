@@ -1,5 +1,19 @@
 --- a/net/minecraft/world/entity/vehicle/MinecartTNT.java
 +++ b/net/minecraft/world/entity/vehicle/MinecartTNT.java
+@@ -46,6 +_,13 @@
+     public void tick() {
+         super.tick();
+         if (this.fuse > 0) {
++            // Paper start - Configurable TNT height nerf
++            if (this.level().paperConfig().fixes.tntEntityHeightNerf.test(v -> this.getY() > v)) {
++                this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.OUT_OF_WORLD); // Magma - add Bukkit remove cause
++                this.discard();
++                return;
++            }
++            // Paper end - Configurable TNT height nerf
+             this.fuse--;
+             this.level().addParticle(ParticleTypes.SMOKE, this.getX(), this.getY() + 0.5, this.getZ(), 0.0, 0.0, 0.0);
+         } else if (this.fuse == 0) {
 @@ -99,18 +_,16 @@
                  d0 = 5.0;
              }

@@ -30,7 +30,7 @@
      private static final Logger LOGGER = LogUtils.getLogger();
      public static final int LATENCY_CHECK_INTERVAL = 15000;
      private static final int CLOSED_LISTENER_TIMEOUT = 15000;
-@@ -42,13 +_,33 @@
+@@ -42,13 +_,34 @@
      private boolean closed = false;
      private int latency;
      private volatile boolean suspendFlushingOnServerThread = false;
@@ -39,6 +39,7 @@
 +     */
 +    protected net.neoforged.neoforge.network.connection.ConnectionType connectionType;
 +    public final java.util.Map<java.util.UUID, net.kyori.adventure.resource.ResourcePackCallback> packCallbacks = new java.util.concurrent.ConcurrentHashMap<>(); // Paper - adventure resource pack callbacks
++    private static final long KEEPALIVE_LIMIT = Long.getLong("paper.playerconnection.keepalive", 30) * 1000; // Paper - provide property to set keepalive limit
  
 -    public ServerCommonPacketListenerImpl(MinecraftServer p_295057_, Connection p_294822_, CommonListenerCookie p_301980_) {
 +    public ServerCommonPacketListenerImpl(MinecraftServer p_295057_, Connection p_294822_, CommonListenerCookie p_301980_, net.minecraft.server.level.ServerPlayer player) { // CraftBukkit
@@ -65,14 +66,25 @@
      }
  
      private void close() {
-@@ -68,6 +_,7 @@
+@@ -68,12 +_,17 @@
  
      @Override
      public void handleKeepAlive(ServerboundKeepAlivePacket p_294627_) {
-+        PacketUtils.ensureRunningOnSameThread(p_294627_, this, this.player.serverLevel()); // CraftBukkit
++        //PacketUtils.ensureRunningOnSameThread(p_294627_, this, this.player.serverLevel()); // CraftBukkit // Paper - handle ServerboundKeepAlivePacket async
          if (this.keepAlivePending && p_294627_.getId() == this.keepAliveChallenge) {
              int i = (int)(Util.getMillis() - this.keepAliveTime);
              this.latency = (this.latency * 3 + i) / 4;
+             this.keepAlivePending = false;
+         } else if (!this.isSingleplayerOwner()) {
+-            this.disconnect(TIMEOUT_DISCONNECTION_MESSAGE);
++            // Paper start - This needs to be handled on the main thread for plugins
++            server.submit(() -> {
++                this.disconnect(ServerCommonPacketListenerImpl.TIMEOUT_DISCONNECTION_MESSAGE);
++            });
++            // Paper end - This needs to be handled on the main thread for plugins
+         }
+     }
+ 
 @@ -81,9 +_,81 @@
      public void handlePong(ServerboundPongPacket p_295142_) {
      }
@@ -150,13 +162,13 @@
 +    }
 +
 +    public final boolean isDisconnected() {
-+        return !this.player.joining && !this.connection.isConnected();
++        return (!this.player.joining && !this.connection.isConnected()) || this.processedDisconnect; // Paper - Fix duplication bugs
 +    }
 +    // CraftBukkit end
  
      @Override
      public void handleResourcePackResponse(ServerboundResourcePackPacket p_295695_) {
-@@ -92,17 +_,38 @@
+@@ -92,26 +_,55 @@
              LOGGER.info("Disconnecting {} due to resource pack {} rejection", this.playerProfile().getName(), p_295695_.id());
              this.disconnect(Component.translatable("multiplayer.requiredTexturePrompt.disconnect"));
          }
@@ -174,7 +186,11 @@
 +        }
 +        // Paper end
 +
-+        this.cserver.getPluginManager().callEvent(new org.bukkit.event.player.PlayerResourcePackStatusEvent(getCraftPlayer(), p_295695_.id(), org.bukkit.event.player.PlayerResourcePackStatusEvent.Status.values()[p_295695_.action().ordinal()])); // CraftBukkit
++        // Paper start - store last pack status
++        org.bukkit.event.player.PlayerResourcePackStatusEvent.Status packStatus = org.bukkit.event.player.PlayerResourcePackStatusEvent.Status.values()[p_295695_.action().ordinal()];
++        player.getBukkitEntity().resourcePackStatus = packStatus;
++        this.cserver.getPluginManager().callEvent(new org.bukkit.event.player.PlayerResourcePackStatusEvent(this.getCraftPlayer(), p_295695_.id(), packStatus)); // CraftBukkit
++        // Paper end - store last pack status
      }
  
      @Override
@@ -190,12 +206,30 @@
  
      protected void keepConnectionAlive() {
          this.server.getProfiler().push("keepAlive");
-         long i = Util.getMillis();
+-        long i = Util.getMillis();
 -        if (!this.isSingleplayerOwner() && i - this.keepAliveTime >= 15000L) {
-+        if (!this.isSingleplayerOwner() && i - this.keepAliveTime >= 25000L) { // CraftBukkit
-             if (this.keepAlivePending) {
+-            if (this.keepAlivePending) {
++        // Paper start - give clients a longer time to respond to pings as per pre 1.12.2 timings
++        // This should effectively place the keepalive handling back to "as it was" before 1.12.2
++        long currentTime = Util.getMillis();
++        long elapsedTime = currentTime - this.keepAliveTime;
++        if (!this.isSingleplayerOwner() && elapsedTime >= 15000L) { // Paper - use vanilla's 15000L between keep alive packets
++            if (this.keepAlivePending && !this.processedDisconnect && elapsedTime >= KEEPALIVE_LIMIT) { // Paper - check keepalive limit, don't fire if already disconnected
                  this.disconnect(TIMEOUT_DISCONNECTION_MESSAGE);
-             } else if (this.checkIfClosed(i)) {
+-            } else if (this.checkIfClosed(i)) {
++            } else if (this.checkIfClosed(currentTime)) { // Paper
+                 this.keepAlivePending = true;
+-                this.keepAliveTime = i;
+-                this.keepAliveChallenge = i;
++                this.keepAliveTime = currentTime;
++                this.keepAliveChallenge = currentTime;
+                 this.send(new ClientboundKeepAlivePacket(this.keepAliveChallenge));
+             }
+         }
++        // Paper end - give clients a longer time to respond to pings as per pre 1.12.2 timings
+ 
+         this.server.getProfiler().pop();
+     }
 @@ -141,7 +_,19 @@
          this.send(p_294278_, null);
      }

@@ -7,7 +7,6 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import joptsimple.OptionParser;
@@ -15,6 +14,7 @@ import joptsimple.OptionSet;
 import joptsimple.util.PathConverter;
 
 public class Main {
+    public static final java.time.Instant BOOT_TIME = java.time.Instant.now(); // Paper - track initial start time
     public static boolean useJline = true;
     public static boolean useConsole = true;
 
@@ -166,6 +166,14 @@ public class Main {
                         .defaultsTo(new File[] {})
                         .describedAs("Jar file");
                 // Paper end
+
+                // Paper start
+                acceptsAll(asList("server-name"), "Name of the server")
+                        .withRequiredArg()
+                        .ofType(String.class)
+                        .defaultsTo("Unknown Server")
+                        .describedAs("Name");
+                // Paper end
             }
         };
 
@@ -239,16 +247,18 @@ public class Main {
                     Calendar deadline = Calendar.getInstance();
                     deadline.add(Calendar.DAY_OF_YEAR, -28);
                     if (buildDate.before(deadline.getTime())) {
-                        System.err.println("*** Error, this build is outdated ***");
-                        System.err.println("*** Please download a new build as per instructions from https://www.spigotmc.org/go/outdated-spigot ***");
-                        System.err.println("*** Server will start in 20 seconds ***");
-                        Thread.sleep(TimeUnit.SECONDS.toMillis(20));
+                        // Paper start - This is some stupid bullshit
+                        System.err.println("*** Warning, you've not updated in a while! ***");
+                        System.err.println("*** Please download a new build as per instructions from https://papermc.io/downloads/paper ***"); // Paper
+                        //System.err.println("*** Server will start in 20 seconds ***");
+                        //Thread.sleep(TimeUnit.SECONDS.toMillis(20));
+                        // Paper end
                     }
                 }
 
-                System.setProperty("library.jansi.version", "Paper"); // Paper - set meaningless jansi version to prevent git builds from crashing on Windows
-                System.out.println("Loading libraries, please wait...");
-                // net.minecraft.server.Main.main(options); - Magma not needed
+                //System.out.println("Loading libraries, please wait...");
+                //net.minecraft.server.Main.main(options);
+                //io.papermc.paper.PaperBootstrap.boot(options);
             } catch (Throwable t) {
                 t.printStackTrace();
             }

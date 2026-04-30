@@ -40,6 +40,20 @@
      }
  
      @Override
+@@ -165,6 +_,13 @@
+         return new ChunkAccess.TicksToSave(this.blockTicks, this.fluidTicks);
+     }
+ 
++    // Paper start
++    @Override
++    public long getInhabitedTime() {
++        return this.level.paperConfig().chunks.fixedChunkInhabitedTime < 0 ? super.getInhabitedTime() : this.level.paperConfig().chunks.fixedChunkInhabitedTime;
++    }
++    // Paper end
++
+     @Override
+     public GameEventListenerRegistry getListenerRegistry(int p_251193_) {
+         return this.level instanceof ServerLevel serverlevel
 @@ -209,6 +_,18 @@
          }
      }
@@ -286,17 +300,16 @@
                          BlockState blockstate = LevelChunk.this.getBlockState(blockpos);
                          if (this.blockEntity.getType().isValid(blockstate)) {
                              this.ticker.tick(LevelChunk.this.level, this.blockEntity.getBlockPos(), blockstate, this.blockEntity);
-@@ -700,7 +_,16 @@
+@@ -700,7 +_,14 @@
                          CrashReport crashreport = CrashReport.forThrowable(throwable, "Ticking block entity");
                          CrashReportCategory crashreportcategory = crashreport.addCategory("Block entity being ticked");
                          this.blockEntity.fillCrashReportCategory(crashreportcategory);
-+
-+                        if (net.neoforged.neoforge.common.NeoForgeConfig.SERVER.removeErroringBlockEntities.get()) {
-+                            LOGGER.error("{}", crashreport.getFriendlyReport(net.minecraft.ReportType.CRASH));
-+                            blockEntity.setRemoved();
-+                            LevelChunk.this.removeBlockEntity(blockEntity.getBlockPos());
-+                        } else
-                         throw new ReportedException(crashreport);
+-                        throw new ReportedException(crashreport);
++                        // Paper start - Prevent block entity and entity crashes
++                        final String msg = String.format("BlockEntity threw exception at %s:%s,%s,%s", LevelChunk.this.getLevel().getWorld().getName(), this.getPos().getX(), this.getPos().getY(), this.getPos().getZ());
++                        net.minecraft.server.MinecraftServer.LOGGER.error(msg, throwable);
++                        LevelChunk.this.removeBlockEntity(this.getPos());
++                        // Paper end - Prevent block entity and entity crashes
 +                    } finally {
 +                        this.blockEntity.tickTimer.stopTiming(); // Spigot
 +                        net.neoforged.neoforge.server.timings.TimeTracker.BLOCK_ENTITY_UPDATE.trackEnd(blockEntity);

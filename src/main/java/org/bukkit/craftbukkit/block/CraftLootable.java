@@ -4,11 +4,9 @@ import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import org.bukkit.Location;
 import org.bukkit.Nameable;
 import org.bukkit.World;
-import org.bukkit.craftbukkit.CraftLootTable;
-import org.bukkit.loot.LootTable;
 import org.bukkit.loot.Lootable;
 
-public abstract class CraftLootable<T extends RandomizableContainerBlockEntity> extends CraftContainer<T> implements Nameable, Lootable {
+public abstract class CraftLootable<T extends RandomizableContainerBlockEntity> extends CraftContainer<T> implements Nameable, Lootable, com.destroystokyo.paper.loottable.PaperLootableBlockInventory { // Paper
     public CraftLootable(World world, T tileEntity) {
         super(world, tileEntity);
     }
@@ -26,29 +24,17 @@ public abstract class CraftLootable<T extends RandomizableContainerBlockEntity> 
         }
     }
 
+    // Paper start - move to PaperLootableBlockInventory
     @Override
-    public LootTable getLootTable() {
-        return CraftLootTable.minecraftToBukkit(getSnapshot().lootTable);
+    public net.minecraft.world.level.Level getNMSWorld() {
+        return ((org.bukkit.craftbukkit.CraftWorld) this.getWorld()).getHandle();
     }
 
     @Override
-    public void setLootTable(LootTable table) {
-        setLootTable(table, getSeed());
+    public net.minecraft.world.RandomizableContainer getRandomizableContainer() {
+        return this.getSnapshot();
     }
-
-    @Override
-    public long getSeed() {
-        return getSnapshot().lootTableSeed;
-    }
-
-    @Override
-    public void setSeed(long seed) {
-        setLootTable(getLootTable(), seed);
-    }
-
-    private void setLootTable(LootTable table, long seed) {
-        getSnapshot().setLootTable(CraftLootTable.bukkitToMinecraft(table), seed);
-    }
+    // Paper end - move to PaperLootableBlockInventory
 
     @Override
     public abstract CraftLootable<T> copy();

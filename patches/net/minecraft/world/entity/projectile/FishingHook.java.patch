@@ -173,6 +173,15 @@
                      double d0 = player.getX() - this.getX();
                      double d1 = player.getY() - this.getY();
                      double d2 = player.getZ() - this.getZ();
+@@ -466,7 +_,7 @@
+                     itementity.setDeltaMovement(d0 * 0.1, d1 * 0.1 + Math.sqrt(Math.sqrt(d0 * d0 + d1 * d1 + d2 * d2)) * 0.08, d2 * 0.1);
+                     this.level().addFreshEntity(itementity);
+                     player.level()
+-                        .addFreshEntity(new ExperienceOrb(player.level(), player.getX(), player.getY() + 0.5, player.getZ() + 0.5, this.random.nextInt(6) + 1));
++                        .addFreshEntity(new ExperienceOrb(player.level(), player.getX(), player.getY() + 0.5, player.getZ() + 0.5, this.random.nextInt(6) + 1, org.bukkit.entity.ExperienceOrb.SpawnReason.FISHING, this.getPlayerOwner(), this)); // Paper
+                     if (itemstack.is(ItemTags.FISHES)) {
+                         player.awardStat(Stats.FISH_CAUGHT, 1);
+                     }
 @@ -476,10 +_,29 @@
              }
  

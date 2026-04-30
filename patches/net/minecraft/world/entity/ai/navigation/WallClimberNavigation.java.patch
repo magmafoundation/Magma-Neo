@@ -1,5 +1,17 @@
 --- a/net/minecraft/world/entity/ai/navigation/WallClimberNavigation.java
 +++ b/net/minecraft/world/entity/ai/navigation/WallClimberNavigation.java
+@@ -16,9 +_,9 @@
+     }
+ 
+     @Override
+-    public Path createPath(BlockPos p_26589_, int p_26590_) {
++    public Path createPath(BlockPos p_26589_, @Nullable Entity entity, int p_26590_) { // Paper - EntityPathfindEvent
+         this.pathToPosition = p_26589_;
+-        return super.createPath(p_26589_, p_26590_);
++        return super.createPath(p_26589_, entity, p_26590_); // Paper - EntityPathfindEvent
+     }
+ 
+     @Override
 @@ -45,11 +_,12 @@
              super.tick();
          } else {

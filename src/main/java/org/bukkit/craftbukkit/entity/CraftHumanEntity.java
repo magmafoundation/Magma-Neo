@@ -518,6 +518,30 @@ public class CraftHumanEntity extends CraftLivingEntity implements HumanEntity {
         getHandle().getCooldowns().addCooldown(CraftItemType.bukkitToMinecraft(material), ticks);
     }
 
+    // Paper start
+    @Override
+    public org.bukkit.entity.Entity releaseLeftShoulderEntity() {
+        if (!getHandle().getShoulderEntityLeft().isEmpty()) {
+            Entity entity = getHandle().releaseLeftShoulderEntity();
+            if (entity != null) {
+                return entity.getBukkitEntity();
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public org.bukkit.entity.Entity releaseRightShoulderEntity() {
+        if (!getHandle().getShoulderEntityRight().isEmpty()) {
+            Entity entity = getHandle().releaseRightShoulderEntity();
+            if (entity != null) {
+                return entity.getBukkitEntity();
+            }
+        }
+        return null;
+    }
+    // Paper end
+
     @Override
     public boolean discoverRecipe(NamespacedKey recipe) {
         return discoverRecipes(Arrays.asList(recipe)) != 0;

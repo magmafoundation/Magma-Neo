@@ -424,20 +424,25 @@ public class CraftScheduler implements BukkitScheduler {
                 try {
                     task.run();
                 } catch (final Throwable throwable) {
+                    // Paper start
+                    final String logMessage = String.format(
+                            "Task #%s for %s generated an exception",
+                            task.getTaskId(),
+                            task.getOwner().getDescription().getFullName());
                     task.getOwner().getLogger().log(
                             Level.WARNING,
-                            String.format(
-                                    "Task #%s for %s generated an exception",
-                                    task.getTaskId(),
-                                    task.getOwner().getDescription().getFullName()),
+                            logMessage,
                             throwable);
+                    org.bukkit.Bukkit.getServer().getPluginManager().callEvent(
+                            new com.destroystokyo.paper.event.server.ServerExceptionEvent(new com.destroystokyo.paper.exception.ServerSchedulerException(logMessage, throwable, task)));
+                    // Paper end
                 } finally {
                     currentTask = null;
                 }
                 parsePending();
             } else {
-                debugTail = debugTail.setNext(new CraftAsyncDebugger(currentTick + RECENT_TICKS, task.getOwner(), task.getTaskClass()));
-                executor.execute(task);
+                // this.debugTail = this.debugTail.setNext(new CraftAsyncDebugger(currentTick + CraftScheduler.RECENT_TICKS, task.getOwner(), task.getTaskClass())); // Paper
+                this.executor.execute(new com.destroystokyo.paper.ServerSchedulerReportingWrapper(task)); // Paper
                 // We don't need to parse pending
                 // (async tasks must live with race-conditions if they attempt to cancel between these few lines of code)
             }
@@ -453,7 +458,7 @@ public class CraftScheduler implements BukkitScheduler {
         pending.addAll(temp);
         temp.clear();
         co.aikar.timings.MinecraftTimings.bukkitSchedulerFinishTimer.stopTiming(); // Paper
-        debugHead = debugHead.getNextHead(currentTick);
+        //this.debugHead = this.debugHead.getNextHead(currentTick); // Paper
     }
 
     private void addTask(final CraftTask task) {
@@ -517,10 +522,9 @@ public class CraftScheduler implements BukkitScheduler {
 
     @Override
     public String toString() {
-        int debugTick = currentTick;
-        StringBuilder string = new StringBuilder("Recent tasks from ").append(debugTick - RECENT_TICKS).append('-').append(debugTick).append('{');
-        debugHead.debugTo(string);
-        return string.append('}').toString();
+        // Paper start
+        return "";
+        // Paper end
     }
 
     @Deprecated

@@ -255,7 +255,6 @@ import org.bukkit.scoreboard.Criteria;
 import org.bukkit.structure.StructureManager;
 import org.bukkit.util.StringUtil;
 import org.bukkit.util.permissions.DefaultPermissions;
-import org.magmafoundation.magma.Magma;
 import org.magmafoundation.magma.deps.snakeyaml.LoaderOptions;
 import org.magmafoundation.magma.deps.snakeyaml.Yaml;
 import org.magmafoundation.magma.deps.snakeyaml.constructor.SafeConstructor;
@@ -263,7 +262,7 @@ import org.magmafoundation.magma.deps.snakeyaml.error.MarkedYAMLException;
 import org.magmafoundation.magma.neoforge.NeoInject;
 
 public final class CraftServer implements Server {
-    private final String serverName = "Magma";
+    private final String serverName = io.papermc.paper.ServerBuildInfo.buildInfo().brandName(); // Paper
     private final String serverVersion;
     private final String bukkitVersion = Versioning.getBukkitVersion();
     private final Logger logger = Logger.getLogger("Minecraft");
@@ -305,10 +304,12 @@ public final class CraftServer implements Server {
     private final List<CraftPlayer> playerView;
     public int reloadCount;
     public Set<String> activeCompatibilities = Collections.emptySet();
+    public static Exception excessiveVelEx; // Paper - Velocity warnings
 
     static {
         ConfigurationSerialization.registerClass(CraftOfflinePlayer.class);
         ConfigurationSerialization.registerClass(CraftPlayerProfile.class);
+        ConfigurationSerialization.registerClass(com.destroystokyo.paper.profile.CraftPlayerProfile.class); // Paper
         CraftItemFactory.instance();
         CraftEntityFactory.instance();
     }
@@ -322,7 +323,7 @@ public final class CraftServer implements Server {
                 return player.getBukkitEntity();
             }
         }));
-        this.serverVersion = Magma.getVersion(); // Magma
+        this.serverVersion = io.papermc.paper.ServerBuildInfo.buildInfo().asString(io.papermc.paper.ServerBuildInfo.StringRepresentation.VERSION_SIMPLE); // Paper - improve version
         this.structureManager = new CraftStructureManager(console.getStructureManager(), console.registryAccess());
         this.dataPackManager = new CraftDataPackManager(this.getServer().getPackRepository());
         this.serverTickManager = new CraftServerTickManager(console.tickRateManager());
@@ -491,6 +492,7 @@ public final class CraftServer implements Server {
         if (type == PluginLoadOrder.STARTUP) {
             helpMap.clear();
             helpMap.initializeGeneralTopics();
+            if (io.papermc.paper.configuration.GlobalConfiguration.get().misc.loadPermissionsYmlBeforePlugins) loadCustomPermissions(); // Paper
         }
 
         Plugin[] plugins = pluginManager.getPlugins();
@@ -510,7 +512,7 @@ public final class CraftServer implements Server {
             commandMap.registerServerAliases();
             DefaultPermissions.registerCorePermissions();
             CraftDefaultPermissions.registerCorePermissions();
-            loadCustomPermissions();
+            if (!io.papermc.paper.configuration.GlobalConfiguration.get().misc.loadPermissionsYmlBeforePlugins) this.loadCustomPermissions(); // Paper
             helpMap.initializeCommands();
             syncCommands();
         }
@@ -606,6 +608,13 @@ public final class CraftServer implements Server {
     public String getBukkitVersion() {
         return bukkitVersion;
     }
+
+    // Paper start - expose game version
+    @Override
+    public String getMinecraftVersion() {
+        return console.getServerVersion();
+    }
+    // Paper end
 
     @Override
     public List<CraftPlayer> getOnlinePlayers() {
@@ -932,7 +941,7 @@ public final class CraftServer implements Server {
     public boolean dispatchCommand(CommandSender sender, String commandLine) {
         Preconditions.checkArgument(sender != null, "sender cannot be null");
         Preconditions.checkArgument(commandLine != null, "commandLine cannot be null");
-        org.spigotmc.AsyncCatcher.catchOp("command dispatch"); // Spigot
+        org.spigotmc.AsyncCatcher.catchOp("Command Dispatched Async: " + commandLine); // Spigot // Paper - Include command in error message
 
         if (commandMap.dispatch(sender, commandLine)) {
             return true;
@@ -940,7 +949,13 @@ public final class CraftServer implements Server {
 
         // Spigot start
         if (!org.spigotmc.SpigotConfig.unknownCommandMessage.isEmpty()) {
-            sender.sendMessage(org.spigotmc.SpigotConfig.unknownCommandMessage);
+            // Paper start
+            org.bukkit.event.command.UnknownCommandEvent event = new org.bukkit.event.command.UnknownCommandEvent(sender, commandLine, net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(org.spigotmc.SpigotConfig.unknownCommandMessage));
+            this.getPluginManager().callEvent(event);
+            if (event.message() != null) {
+                sender.sendMessage(event.message());
+            }
+            // Paper end
         }
         // Spigot end
 
@@ -1781,7 +1796,7 @@ public final class CraftServer implements Server {
         if (result == null) {
             GameProfile profile = null;
             // Only fetch an online UUID in online mode
-            if (getOnlineMode() || org.spigotmc.SpigotConfig.bungee) { // Spigot: bungee = online mode, for now.
+            if (this.getOnlineMode() || io.papermc.paper.configuration.GlobalConfiguration.get().proxies.isProxyOnlineMode()) { // Paper - Add setting for proxy online mode status
                 // This is potentially blocking :(
                 profile = console.getProfileCache().get(name).orElse(null);
             }
@@ -2083,6 +2098,7 @@ public final class CraftServer implements Server {
         return helpMap;
     }
 
+    @Override // Paper - add override
     public SimpleCommandMap getCommandMap() {
         return commandMap;
     }
@@ -2685,6 +2701,82 @@ public final class CraftServer implements Server {
             this.adventure$audiences = com.google.common.collect.Iterables.concat(java.util.Collections.singleton(this.getConsoleSender()), this.getOnlinePlayers());
         }
         return this.adventure$audiences;
+    }
+
+    @Override
+    public void reloadPermissions() {
+        pluginManager.clearPermissions();
+        if (io.papermc.paper.configuration.GlobalConfiguration.get().misc.loadPermissionsYmlBeforePlugins) loadCustomPermissions();
+        for (Plugin plugin : pluginManager.getPlugins()) {
+            for (Permission perm : plugin.getDescription().getPermissions()) {
+                try {
+                    pluginManager.addPermission(perm);
+                } catch (IllegalArgumentException ex) {
+                    getLogger().log(Level.WARNING, "Plugin " + plugin.getDescription().getFullName() + " tried to register permission '" + perm.getName() + "' but it's already registered", ex);
+                }
+            }
+        }
+        if (!io.papermc.paper.configuration.GlobalConfiguration.get().misc.loadPermissionsYmlBeforePlugins) loadCustomPermissions();
+        DefaultPermissions.registerCorePermissions();
+        CraftDefaultPermissions.registerCorePermissions();
+    }
+
+    @Override
+    public boolean reloadCommandAliases() {
+        Set<String> removals = getCommandAliases().keySet().stream()
+                .map(key -> key.toLowerCase(java.util.Locale.ENGLISH))
+                .collect(java.util.stream.Collectors.toSet());
+        getCommandMap().getKnownCommands().keySet().removeIf(removals::contains);
+        File file = getCommandsConfigFile();
+        try {
+            commandsConfiguration.load(file);
+        } catch (FileNotFoundException ex) {
+            return false;
+        } catch (IOException | org.bukkit.configuration.InvalidConfigurationException ex) {
+            Bukkit.getLogger().log(Level.SEVERE, "Cannot load " + file, ex);
+            return false;
+        }
+        commandMap.registerServerAliases();
+        return true;
+    }
+
+    @Override
+    public boolean suggestPlayerNamesWhenNullTabCompletions() {
+        return io.papermc.paper.configuration.GlobalConfiguration.get().commands.suggestPlayerNamesWhenNullTabCompletions;
+    }
+
+    @Override
+    public com.destroystokyo.paper.profile.PlayerProfile createProfile(@Nonnull UUID uuid) {
+        return createProfile(uuid, null);
+    }
+
+    @Override
+    public com.destroystokyo.paper.profile.PlayerProfile createProfile(@Nonnull String name) {
+        return createProfile(null, name);
+    }
+
+    @Override
+    public com.destroystokyo.paper.profile.PlayerProfile createProfile(@Nullable UUID uuid, @Nullable String name) {
+        Player player = uuid != null ? Bukkit.getPlayer(uuid) : (name != null ? Bukkit.getPlayerExact(name) : null);
+        if (player != null) return new com.destroystokyo.paper.profile.CraftPlayerProfile((CraftPlayer) player);
+
+        return new com.destroystokyo.paper.profile.CraftPlayerProfile(uuid, name);
+    }
+
+    @Override
+    public com.destroystokyo.paper.profile.PlayerProfile createProfileExact(@Nullable UUID uuid, @Nullable String name) {
+        Player player = uuid != null ? Bukkit.getPlayer(uuid) : (name != null ? Bukkit.getPlayerExact(name) : null);
+        if (player == null) {
+            return new com.destroystokyo.paper.profile.CraftPlayerProfile(uuid, name);
+        }
+
+        if (java.util.Objects.equals(uuid, player.getUniqueId()) && java.util.Objects.equals(name, player.getName())) {
+            return new com.destroystokyo.paper.profile.CraftPlayerProfile((CraftPlayer) player);
+        }
+
+        final com.destroystokyo.paper.profile.CraftPlayerProfile profile = new com.destroystokyo.paper.profile.CraftPlayerProfile(uuid, name);
+        profile.getGameProfile().getProperties().putAll(((CraftPlayer) player).getHandle().getGameProfile().getProperties());
+        return profile;
     }
     // Paper end
 }

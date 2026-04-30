@@ -103,7 +103,11 @@ public class CraftLivingEntity extends CraftEntity implements LivingEntity {
     @Override
     public void setHealth(double health) {
         health = (float) health;
-        Preconditions.checkArgument(health >= 0 && health <= this.getMaxHealth(), "Health value (%s) must be between 0 and %s", health, this.getMaxHealth());
+        // Paper start - Be more informative
+        Preconditions.checkArgument(health >= 0 && health <= this.getMaxHealth(),
+                "Health value (%s) must be between 0 and %s. (attribute base value: %s%s)",
+                health, this.getMaxHealth(), this.getHandle().getAttribute(Attributes.MAX_HEALTH).getBaseValue(), this instanceof CraftPlayer ? ", player: " + this.getName() : "");
+        // Paper end
 
         // during world generation, we don't want to run logic for dropping items and xp
         if (getHandle().generation && health == 0) {
@@ -280,10 +284,29 @@ public class CraftLivingEntity extends CraftEntity implements LivingEntity {
     }
 
     @Override
-    public void setArrowsInBody(int count) {
+    public void setArrowsInBody(final int count, final boolean fireEvent) { // Paper
         Preconditions.checkArgument(count >= 0, "New arrow amount must be >= 0");
-        getHandle().getEntityData().set(net.minecraft.world.entity.LivingEntity.DATA_ARROW_COUNT_ID, count);
+        if (!fireEvent) { // Paper
+            getHandle().getEntityData().set(net.minecraft.world.entity.LivingEntity.DATA_ARROW_COUNT_ID, count);
+            // Paper start
+        } else {
+            this.getHandle().setArrowCount(count);
+        }
+        // Paper end
     }
+
+    // Paper start - Add methods for working with arrows stuck in living entities
+    @Override
+    public void setNextArrowRemoval(final int ticks) {
+        Preconditions.checkArgument(ticks >= 0, "New amount of ticks before next arrow removal must be >= 0");
+        this.getHandle().removeArrowTime = ticks;
+    }
+
+    @Override
+    public int getNextArrowRemoval() {
+        return this.getHandle().removeArrowTime;
+    }
+    // Paper end - Add methods for working with arrows stuck in living entities
 
     @Override
     public void damage(double amount) {
@@ -383,6 +406,16 @@ public class CraftLivingEntity extends CraftEntity implements LivingEntity {
     public Player getKiller() {
         return getHandle().lastHurtByPlayer == null ? null : (Player) getHandle().lastHurtByPlayer.getBukkitEntity();
     }
+
+    // Paper start
+    @Override
+    public void setKiller(Player killer) {
+        net.minecraft.server.level.ServerPlayer entityPlayer = killer == null ? null : ((CraftPlayer) killer).getHandle();
+        getHandle().lastHurtByPlayer = entityPlayer;
+        getHandle().lastHurtByMob = entityPlayer;
+        getHandle().lastHurtByPlayerTime = entityPlayer == null ? 0 : 100; // 100 value taken from EntityLiving#damageEntity
+    }
+    // Paper end
 
     @Override
     public boolean addPotionEffect(PotionEffect effect) {
@@ -809,4 +842,16 @@ public class CraftLivingEntity extends CraftEntity implements LivingEntity {
         getHandle().persistentInvisibility = invisible;
         getHandle().setSharedFlag(5, invisible);
     }
+
+    // Paper start
+    @Override
+    public int getArrowsStuck() {
+        return this.getHandle().getArrowCount();
+    }
+
+    @Override
+    public void setArrowsStuck(final int arrows) {
+        this.getHandle().setArrowCount(arrows);
+    }
+    // Paper end
 }

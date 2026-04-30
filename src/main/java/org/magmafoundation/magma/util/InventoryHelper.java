@@ -37,6 +37,7 @@ public class InventoryHelper {
             return null;
         }
         // Spigot end
+        // todo: magma come back and add snapshot support paper/server-patch#0160
         org.bukkit.block.BlockState state = block.getState();
         if (state instanceof InventoryHolder) {
             return (InventoryHolder) state;

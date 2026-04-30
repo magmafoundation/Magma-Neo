@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/entity/Entity.java
 +++ b/net/minecraft/world/entity/Entity.java
-@@ -128,7 +_,34 @@
+@@ -128,7 +_,107 @@
  import net.minecraft.world.scores.Team;
  import org.slf4j.Logger;
  
@@ -12,6 +12,79 @@
 +    static boolean isLevelAtLeast(CompoundTag tag, int level) {
 +        return tag.contains("Bukkit.updateLevel") && tag.getInt("Bukkit.updateLevel") >= level;
 +    }
++
++    // Paper start - Share random for entities to make them more random
++    public static RandomSource SHARED_RANDOM = new RandomRandomSource();
++    private static final class RandomRandomSource extends java.util.Random implements net.minecraft.world.level.levelgen.BitRandomSource {
++        private boolean locked = false;
++
++        @Override
++        public synchronized void setSeed(long seed) {
++            if (locked) {
++                LOGGER.error("Ignoring setSeed on Entity.SHARED_RANDOM", new Throwable());
++            } else {
++                super.setSeed(seed);
++                locked = true;
++            }
++        }
++
++        @Override
++        public RandomSource fork() {
++            return new net.minecraft.world.level.levelgen.LegacyRandomSource(this.nextLong());
++        }
++
++        @Override
++        public net.minecraft.world.level.levelgen.PositionalRandomFactory forkPositional() {
++            return new net.minecraft.world.level.levelgen.LegacyRandomSource.LegacyPositionalRandomFactory(this.nextLong());
++        }
++
++        // these below are added to fix reobf issues that I don't wanna deal with right now
++        @Override
++        public int next(int bits) {
++            return super.next(bits);
++        }
++
++        @Override
++        public int nextInt(int origin, int bound) {
++            return net.minecraft.world.level.levelgen.BitRandomSource.super.nextInt(origin, bound);
++        }
++
++        @Override
++        public long nextLong() {
++            return net.minecraft.world.level.levelgen.BitRandomSource.super.nextLong();
++        }
++
++        @Override
++        public int nextInt() {
++            return net.minecraft.world.level.levelgen.BitRandomSource.super.nextInt();
++        }
++
++        @Override
++        public int nextInt(int bound) {
++            return net.minecraft.world.level.levelgen.BitRandomSource.super.nextInt(bound);
++        }
++
++        @Override
++        public boolean nextBoolean() {
++            return net.minecraft.world.level.levelgen.BitRandomSource.super.nextBoolean();
++        }
++
++        @Override
++        public float nextFloat() {
++            return net.minecraft.world.level.levelgen.BitRandomSource.super.nextFloat();
++        }
++
++        @Override
++        public double nextDouble() {
++            return net.minecraft.world.level.levelgen.BitRandomSource.super.nextDouble();
++        }
++
++        @Override
++        public double nextGaussian() {
++            return super.nextGaussian();
++        }
++    }
++    // Paper end - Share random for entities to make them more random
 +
 +    private org.bukkit.craftbukkit.entity.CraftEntity bukkitEntity;
 +
@@ -49,7 +122,7 @@
      public double zOld;
      public boolean noPhysics;
 -    protected final RandomSource random = RandomSource.create();
-+    public RandomSource random = RandomSource.create();
++    public RandomSource random = SHARED_RANDOM; // Paper - Share random for entities to make them more random
      public int tickCount;
      private int remainingFireTicks = -this.getFireImmuneTicks();
      public boolean wasTouchingWater;
@@ -60,7 +133,7 @@
      private final Set<TagKey<Fluid>> fluidOnEyes = new HashSet<>();
      public int invulnerableTime;
      protected boolean firstTick = true;
-@@ -244,6 +_,43 @@
+@@ -244,6 +_,66 @@
      @Nullable
      private BlockState inBlockState = null;
  
@@ -86,6 +159,29 @@
 +    public long activatedTick = Integer.MIN_VALUE;
 +    public void inactiveTick() { }
 +    // Spigot end
++    protected int numCollisions = 0; // Paper - Cap entity collisions
++    public boolean spawnedViaMobSpawner; // Paper - Yes this name is similar to above, upstream took the better one
++    // Paper start - Entity origin API
++    @org.jetbrains.annotations.Nullable
++    private org.bukkit.util.Vector origin;
++    @org.jetbrains.annotations.Nullable
++    private UUID originWorld;
++
++    public void setOrigin(@javax.annotation.Nonnull org.bukkit.Location location) {
++        this.origin = location.toVector();
++        this.originWorld = location.getWorld().getUID();
++    }
++
++    @org.jetbrains.annotations.Nullable
++    public org.bukkit.util.Vector getOriginVector() {
++        return this.origin != null ? this.origin.clone() : null;
++    }
++
++    @org.jetbrains.annotations.Nullable
++    public UUID getOriginWorld() {
++        return this.originWorld;
++    }
++    // Paper end - Entity origin API
 +
 +    public float getBukkitYaw() {
 +        return this.yRot;
@@ -183,7 +279,7 @@
 @@ -380,6 +_,32 @@
      }
  
-     protected void setRot(float p_19916_, float p_19917_) {
+     public void setRot(float p_19916_, float p_19917_) {
 +        // CraftBukkit start - yaw was sometimes set to NaN, so we need to set it back to 0
 +        if (Float.isNaN(p_19916_)) {
 +            p_19916_ = 0;
@@ -251,6 +347,19 @@
          }
  
          this.checkBelowWorld();
+@@ -488,7 +_,11 @@
+     }
+ 
+     public void checkBelowWorld() {
+-        if (this.getY() < (double)(this.level().getMinBuildHeight() - 64)) {
++        // Paper start - Configurable nether ceiling damage
++        if (this.getY() < (double) (this.level.getMinBuildHeight() - 64) || (this.level.getWorld().getEnvironment() == org.bukkit.World.Environment.NETHER
++                && this.level.paperConfig().environment.netherCeilingVoidDamageHeight.test(v -> this.getY() >= v)
++                && (!(this instanceof Player player) || !player.getAbilities().invulnerable))) {
++            // Paper end - Configurable nether ceiling damage
+             this.onBelowWorld();
+         }
+     }
 @@ -517,14 +_,47 @@
  
      public void lavaHurt() {
@@ -639,6 +748,26 @@
              this.addAdditionalSaveData(p_20241_);
              if (this.isVehicle()) {
                  ListTag listtag1 = new ListTag();
+@@ -1720,6 +_,19 @@
+                 }
+             }
+ 
++            // Paper start
++            if (this.origin != null) {
++                UUID originWorld = this.originWorld != null ? this.originWorld : this.level != null ? this.level.getWorld().getUID() : null;
++                if (originWorld != null) {
++                    p_20241_.putUUID("Paper.OriginWorld", originWorld);
++                }
++                p_20241_.put("Paper.Origin", this.newDoubleList(origin.getX(), origin.getY(), origin.getZ()));
++            }
++            // Save entity's from mob spawner status
++            if (spawnedViaMobSpawner) {
++                p_20241_.putBoolean("Paper.FromMobSpawner", true);
++            }
++            // Paper end
+             return p_20241_;
+         } catch (Throwable throwable) {
+             CrashReport crashreport = CrashReport.forThrowable(throwable, "Saving entity NBT");
 @@ -1784,6 +_,8 @@
                  this.setGlowingTag(p_20259_.getBoolean("Glowing"));
                  this.setTicksFrozen(p_20259_.getInt("TicksFrozen"));
@@ -648,7 +777,7 @@
                  if (p_20259_.contains("Tags", 9)) {
                      this.tags.clear();
                      ListTag listtag3 = p_20259_.getList("Tags", 8);
-@@ -1801,6 +_,45 @@
+@@ -1801,6 +_,61 @@
              } else {
                  throw new IllegalStateException("Entity has invalid rotation");
              }
@@ -690,6 +819,22 @@
 +                this.persistentInvisibility = bukkitInvisible;
 +            }
 +            // CraftBukkit end
++
++            // Paper start
++            ListTag originTag = p_20259_.getList("Paper.Origin", net.minecraft.nbt.Tag.TAG_DOUBLE);
++            if (!originTag.isEmpty()) {
++                UUID originWorld = null;
++                if (p_20259_.contains("Paper.OriginWorld")) {
++                    originWorld = p_20259_.getUUID("Paper.OriginWorld");
++                } else if (this.level != null) {
++                    originWorld = this.level.getWorld().getUID();
++                }
++                this.originWorld = originWorld;
++                origin = new org.bukkit.util.Vector(originTag.getDouble(0), originTag.getDouble(1), originTag.getDouble(2));
++            }
++
++            spawnedViaMobSpawner = p_20259_.getBoolean("Paper.FromMobSpawner"); // Restore entity's from mob spawner status
++            // Paper end
 +
          } catch (Throwable throwable) {
              CrashReport crashreport = CrashReport.forThrowable(throwable, "Loading entity NBT");
@@ -798,6 +943,14 @@
 +        }
 +        // CraftBukkit end
          this.setSharedFlag(4, p_20283_);
+     }
+ 
+@@ -2299,6 +_,7 @@
+ 
+     @Nullable
+     public PlayerTeam getTeam() {
++        if (!this.level().paperConfig().scoreboards.allowNonPlayerEntitiesOnScoreboards && !(this instanceof Player)) { return null; } // Paper - Perf: Disable Scoreboards for non players by default
+         return this.level().getScoreboard().getPlayersTeam(this.getScoreboardName());
      }
  
 @@ -2310,8 +_,12 @@

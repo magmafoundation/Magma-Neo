@@ -114,7 +114,7 @@
          thread.setDaemon(true);
          thread.setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandler(LOGGER));
          thread.start();
-@@ -132,6 +_,18 @@
+@@ -132,6 +_,19 @@
              this.setPreventProxyConnections(dedicatedserverproperties.preventProxyConnections);
              this.setLocalIp(dedicatedserverproperties.serverIp);
          }
@@ -124,6 +124,7 @@
 +        org.spigotmc.SpigotConfig.registerCommands();
 +        // Spigot end
 +        io.papermc.paper.util.ObfHelper.INSTANCE.getClass(); // Paper - load mappings for stacktrace deobf and etc.
++        com.destroystokyo.paper.VersionHistoryManager.INSTANCE.getClass(); // Paper - load version history now
 +        // Paper start - initialize global and world-defaults configuration
 +        this.paperConfigurations.initializeGlobalConfiguration(this.registryAccess());
 +        this.paperConfigurations.initializeWorldDefaultsConfiguration(this.registryAccess());
@@ -133,7 +134,7 @@
  
          this.setPvpAllowed(dedicatedserverproperties.pvp);
          this.setFlightAllowed(dedicatedserverproperties.allowFlight);
-@@ -161,12 +_,23 @@
+@@ -161,23 +_,34 @@
              return false;
          }
  
@@ -160,7 +161,11 @@
              LOGGER.warn("To change this, set \"online-mode\" to \"true\" in the server.properties file.");
          }
  
-@@ -177,7 +_,7 @@
+         if (this.convertOldUsers()) {
+-            this.getProfileCache().save();
++            this.getProfileCache().save(false); // Paper - Perf: Async GameProfileCache saving
+         }
+ 
          if (!OldUsersConverter.serverReadyAfterUserconversion(this)) {
              return false;
          } else {
@@ -248,6 +253,19 @@
 +            // CraftBukkit end
          }
 +        co.aikar.timings.MinecraftTimings.serverCommandTimer.stopTiming(); // Spigot
+     }
+ 
+     @Override
+@@ -447,7 +_,11 @@
+     @Override
+     public boolean enforceSecureProfile() {
+         DedicatedServerProperties dedicatedserverproperties = this.getProperties();
+-        return dedicatedserverproperties.enforceSecureProfile && dedicatedserverproperties.onlineMode && this.services.canValidateProfileKeys();
++        // Paper start - Add setting for proxy online mode status
++        return dedicatedserverproperties.enforceSecureProfile
++                && io.papermc.paper.configuration.GlobalConfiguration.get().proxies.isProxyOnlineMode()
++                && this.services.canValidateProfileKeys();
++        // Paper end - Add setting for proxy online mode status
      }
  
      @Override

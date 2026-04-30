@@ -28,7 +28,7 @@
          return fallingblockentity;
      }
  
-@@ -128,6 +_,7 @@
+@@ -128,17 +_,28 @@
      @Override
      public void tick() {
          if (this.blockState.isAir()) {
@@ -36,7 +36,20 @@
              this.discard();
          } else {
              Block block = this.blockState.getBlock();
-@@ -138,7 +_,7 @@
+             this.time++;
+             this.applyGravity();
+             this.move(MoverType.SELF, this.getDeltaMovement());
++            // Paper start - Configurable falling blocks height nerf
++            if (this.level().paperConfig().fixes.fallingBlockHeightNerf.test(v -> this.getY() > v)) {
++                if (this.dropItem && this.level().getGameRules().getBoolean(GameRules.RULE_DOENTITYDROPS)) {
++                    this.spawnAtLocation(block);
++                }
++                this.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.OUT_OF_WORLD); // Magma - add Bukkit remove cause
++                this.discard();
++                return;
++            }
++            // Paper end - Configurable falling blocks height nerf
+             this.handlePortal();
              if (!this.level().isClientSide && (this.isAlive() || this.forceTickAfterTeleportToDuplicate)) {
                  BlockPos blockpos = this.blockPosition();
                  boolean flag = this.blockState.getBlock() instanceof ConcretePowderBlock;
@@ -89,3 +102,12 @@
                                  this.discard();
                                  if (this.dropItem && this.level().getGameRules().getBoolean(GameRules.RULE_DOENTITYDROPS)) {
                                      this.callOnBrokenAfterFall(block, blockpos);
+@@ -298,7 +_,7 @@
+             this.dropItem = p_31964_.getBoolean("DropItem");
+         }
+ 
+-        if (p_31964_.contains("TileEntityData", 10)) {
++        if (nbt.contains("TileEntityData", 10) && !(this.level().paperConfig().entities.spawning.filterBadTileEntityNbtFromFallingBlocks && this.blockState.getBlock() instanceof net.minecraft.world.level.block.GameMasterBlock)) { // Paper - Filter bad block entity nbt data from falling blocks
+             this.blockData = p_31964_.getCompound("TileEntityData").copy();
+         }
+ 

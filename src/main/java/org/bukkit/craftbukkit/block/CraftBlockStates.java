@@ -373,15 +373,31 @@ public final class CraftBlockStates {
     }
 
     public static BlockState getBlockState(Block block) {
+        // Paper start
+        return CraftBlockStates.getBlockState(block, true);
+    }
+
+    public static BlockState getBlockState(Block block, boolean useSnapshot) {
+        // Paper end
         Preconditions.checkNotNull(block, "block is null");
         CraftBlock craftBlock = (CraftBlock) block;
         CraftWorld world = (CraftWorld) block.getWorld();
         BlockPos blockPosition = craftBlock.getPosition();
         net.minecraft.world.level.block.state.BlockState blockData = craftBlock.getNMS();
         BlockEntity tileEntity = craftBlock.getHandle().getBlockEntity(blockPosition);
-        CraftBlockState blockState = getBlockState(world, blockPosition, blockData, tileEntity);
-        blockState.setWorldHandle(craftBlock.getHandle()); // Inject the block's generator access
-        return blockState;
+        // Paper start - block state snapshots
+        boolean prev = CraftBlockEntityState.DISABLE_SNAPSHOT;
+        CraftBlockEntityState.DISABLE_SNAPSHOT = !useSnapshot;
+        try {
+            // Paper end
+            CraftBlockState blockState = getBlockState(world, blockPosition, blockData, tileEntity);
+            blockState.setWorldHandle(craftBlock.getHandle()); // Inject the block's generator access
+            return blockState;
+            // Paper start
+        } finally {
+            CraftBlockEntityState.DISABLE_SNAPSHOT = prev;
+        }
+        // Paper end
     }
 
     @Deprecated

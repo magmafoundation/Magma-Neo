@@ -298,7 +298,7 @@
 +            }
 +            // Drop event experience
 +            if (flag && event != null) {
-+                blockstate1.getBlock().popExperience(this.level, p_9281_, event.getExpToDrop());
++                blockstate1.getBlock().popExperience(this.level, p_9281_, event.getExpToDrop(), this.player); // Paper
 +            }
 +            return true;
 +            // CraftBukkit end

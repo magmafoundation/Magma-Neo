@@ -1,6 +1,6 @@
 --- a/net/minecraft/server/network/ServerLoginPacketListenerImpl.java
 +++ b/net/minecraft/server/network/ServerLoginPacketListenerImpl.java
-@@ -45,6 +_,29 @@
+@@ -45,8 +_,32 @@
  import org.slf4j.Logger;
  
  public class ServerLoginPacketListenerImpl implements ServerLoginPacketListener, TickablePacketListener, org.bukkit.craftbukkit.entity.CraftPlayer.TransferCookieConnection {
@@ -29,7 +29,10 @@
 +
      private static final AtomicInteger UNIQUE_THREAD_ID = new AtomicInteger(0);
      static final Logger LOGGER = LogUtils.getLogger();
++    private static final java.util.concurrent.ExecutorService authenticatorPool = java.util.concurrent.Executors.newCachedThreadPool(new com.google.common.util.concurrent.ThreadFactoryBuilder().setNameFormat("User Authenticator #%d").setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandler(LOGGER)).build()); // Paper - Cache authenticator threads
      private static final int MAX_TICKS_BEFORE_LOGIN = 600;
+     private final byte[] challenge;
+     final MinecraftServer server;
 @@ -59,6 +_,7 @@
      private GameProfile authenticatedProfile;
      private final String serverId = "";
@@ -38,19 +41,32 @@
  
      public ServerLoginPacketListenerImpl(MinecraftServer p_10027_, Connection p_10028_, boolean p_320815_) {
          this.server = p_10027_;
-@@ -73,6 +_,12 @@
-             this.verifyLoginAndFinishConnectionSetup(Objects.requireNonNull(this.authenticatedProfile));
-         }
+@@ -69,9 +_,23 @@
  
+     @Override
+     public void tick() {
++        // Paper start - Do not allow logins while the server is shutting down
++        if (!MinecraftServer.getServer().isRunning()) {
++            this.disconnect(org.bukkit.craftbukkit.util.CraftChatMessage.fromString(org.spigotmc.SpigotConfig.restartMessage)[0]);
++            return;
++        }
++        // Paper end - Do not allow logins while the server is shutting down
+         if (this.state == ServerLoginPacketListenerImpl.State.VERIFYING) {
+-            this.verifyLoginAndFinishConnectionSetup(Objects.requireNonNull(this.authenticatedProfile));
+-        }
++            if (this.connection.isConnected()) { // Paper - prevent logins to be processed even though disconnect was called
++                this.verifyLoginAndFinishConnectionSetup(Objects.requireNonNull(this.authenticatedProfile));
++            } // Paper - prevent logins to be processed even though disconnect was called
++        }
++
 +        // CraftBukkit start
 +        if (this.state == ServerLoginPacketListenerImpl.State.WAITING_FOR_COOKIES && !this.player.getBukkitEntity().isAwaitingCookies()) {
 +            this.postCookies(this.authenticatedProfile);
 +        }
 +        // CraftBukkit end
-+
+ 
          if (this.state == ServerLoginPacketListenerImpl.State.WAITING_FOR_DUPE_DISCONNECT
              && !this.isPlayerAlreadyInWorld(Objects.requireNonNull(this.authenticatedProfile))) {
-             this.finishLoginAndWaitForClient(this.authenticatedProfile);
 @@ -112,6 +_,13 @@
          return this.requestedUsername != null ? this.requestedUsername + " (" + s + ")" : s;
      }
@@ -71,7 +87,8 @@
              } else {
 -                this.startClientVerification(UUIDUtil.createOfflineProfile(this.requestedUsername));
 +                // CraftBukkit start
-+                Thread thread = new Thread("User Authenticator #" + ServerLoginPacketListenerImpl.UNIQUE_THREAD_ID.incrementAndGet()) {
++                // Paper start - Cache authenticator threads
++                authenticatorPool.execute(new Runnable() {
 +                    @Override
 +                    public void run() {
 +                        try {
@@ -84,9 +101,8 @@
 +                            server.server.getLogger().log(java.util.logging.Level.WARNING, "Exception verifying " + ServerLoginPacketListenerImpl.this.requestedUsername, ex);
 +                        }
 +                    }
-+                };
-+                thread.setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandler(ServerLoginPacketListenerImpl.LOGGER));
-+                thread.start();
++                });
++                // Paper end - Cache authenticator threads
 +                // CraftBukkit end
              }
          }
@@ -138,6 +154,16 @@
              if (flag) {
                  this.state = ServerLoginPacketListenerImpl.State.WAITING_FOR_DUPE_DISCONNECT;
              } else {
+@@ -184,7 +_,8 @@
+             throw new IllegalStateException("Protocol error", cryptexception);
+         }
+ 
+-        Thread thread = new Thread("User Authenticator #" + UNIQUE_THREAD_ID.incrementAndGet()) {
++        // Paper start - Cache authenticator threads
++        authenticatorPool.execute(new Runnable() {
+             @Override
+             public void run() {
+                 String s1 = Objects.requireNonNull(ServerLoginPacketListenerImpl.this.requestedUsername, "Player name not initialized");
 @@ -193,11 +_,19 @@
                      ProfileResult profileresult = ServerLoginPacketListenerImpl.this.server.getSessionService().hasJoinedServer(s1, s, this.getAddress());
                      if (profileresult != null) {
@@ -166,7 +192,8 @@
 -                        ServerLoginPacketListenerImpl.this.startClientVerification(UUIDUtil.createOfflineProfile(s1));
 +                        ServerLoginPacketListenerImpl.this.startClientVerification(createOfflineProfile(s1)); // Spigot
                      } else {
-                         ServerLoginPacketListenerImpl.this.disconnect(Component.translatable("multiplayer.disconnect.authservers_down"));
+-                        ServerLoginPacketListenerImpl.this.disconnect(Component.translatable("multiplayer.disconnect.authservers_down"));
++                        ServerLoginPacketListenerImpl.this.disconnect(io.papermc.paper.adventure.PaperAdventure.asVanilla(io.papermc.paper.configuration.GlobalConfiguration.get().messages.kick.authenticationServersDown)); // Paper - Configurable kick message
                          ServerLoginPacketListenerImpl.LOGGER.error("Couldn't verify username because servers are unavailable");
                      }
 +                    // CraftBukkit start - catch all exceptions
@@ -177,10 +204,18 @@
                  }
              }
  
-@@ -225,6 +_,40 @@
-         thread.start();
-     }
- 
+@@ -220,10 +_,43 @@
+                     ? ((InetSocketAddress)socketaddress).getAddress()
+                     : null;
+             }
+-        };
+-        thread.setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandler(LOGGER));
+-        thread.start();
+-    }
++        });
++        // Paper end - Cache authenticator threads
++    }
++
 +    // CraftBukkit start
 +    private void callPlayerPreLoginEvents(GameProfile gameprofile) throws Exception {
 +        String playerName = gameprofile.getName();
@@ -214,10 +249,9 @@
 +        }
 +    }
 +    // CraftBukkit end
-+
+ 
      @Override
      public void handleCustomQueryPacket(ServerboundCustomQueryAnswerPacket p_295398_) {
-         this.disconnect(ServerCommonPacketListenerImpl.DISCONNECT_UNEXPECTED_QUERY);
 @@ -232,11 +_,12 @@
  
      @Override

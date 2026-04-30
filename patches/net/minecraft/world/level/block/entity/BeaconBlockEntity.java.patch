@@ -28,7 +28,7 @@
                  if (p_155111_.checkingBeamSections.size() <= 1) {
                      beaconblockentity$beaconbeamsection = new BeaconBlockEntity.BeaconBeamSection(j1);
                      p_155111_.checkingBeamSections.add(beaconblockentity$beaconbeamsection);
-@@ -233,31 +_,71 @@
+@@ -233,31 +_,78 @@
          super.setRemoved();
      }
  
@@ -60,11 +60,18 @@
 +        }
 +    }
 +
-+    private static void applyEffect(List<Player> list, @Nullable Holder<MobEffect> mobeffectlist, int j, int i) {
-+        {
-+
++    private static void applyEffect(List<Player> list, @Nullable Holder<MobEffect> mobeffectlist, int j, int i, boolean isPrimary, BlockPos worldPosition) { // Paper - BeaconEffectEvent
++        if (!list.isEmpty()) { // Paper - BeaconEffectEvent
++            // Paper start - BeaconEffectEvent
++            org.bukkit.block.Block block = org.bukkit.craftbukkit.block.CraftBlock.at(((Player) list.get(0)).level(), worldPosition);
++            org.bukkit.potion.PotionEffect effect = org.bukkit.craftbukkit.potion.CraftPotionUtil.toBukkit(new MobEffectInstance(mobeffectlist, j, i, true, true));
++            // Paper end - BeaconEffectEvent
 +            for (Player player : list) {
-+                player.addEffect(new MobEffectInstance(mobeffectlist, j, i, true, true), org.bukkit.event.entity.EntityPotionEffectEvent.Cause.BEACON);
++                // Paper start - BeaconEffectEvent
++                com.destroystokyo.paper.event.block.BeaconEffectEvent event = new com.destroystokyo.paper.event.block.BeaconEffectEvent(block, effect, (org.bukkit.entity.Player) player.getBukkitEntity(), isPrimary);
++                if (org.bukkit.craftbukkit.event.CraftEventFactory.callEvent(event).isCancelled()) continue;
++                player.addEffect(new MobEffectInstance(org.bukkit.craftbukkit.potion.CraftPotionUtil.fromBukkit(event.getEffect())), org.bukkit.event.entity.EntityPotionEffectEvent.Cause.BEACON);
++                // Paper end - BeaconEffectEvent
 +            }
 +        }
 +    }
@@ -106,10 +113,10 @@
 +            int j = getLevel(p_155100_);
 +            List list = getHumansInRange(p_155098_, p_155099_, p_155100_);
 +
-+            applyEffect(list, p_316599_, j, b0);
++            applyEffect(list, p_316599_, j, b0, true, p_155099_); // Paper - BeaconEffectEvent
 +
 +            if(hasSecondaryEffect(p_155100_, p_316599_, p_316343_)) {
-+                applyEffect(list, p_316343_, j, 0);
++                applyEffect(list, p_316343_, j, 0, false, p_155099_); // Paper - BeaconEffectEvent
              }
          }
      }

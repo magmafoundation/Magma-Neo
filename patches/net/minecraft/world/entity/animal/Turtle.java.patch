@@ -19,6 +19,15 @@
      }
  
      @Override
+@@ -369,7 +_,7 @@
+             RandomSource randomsource = this.animal.getRandom();
+             if (this.level.getGameRules().getBoolean(GameRules.RULE_DOMOBLOOT)) {
+                 this.level
+-                    .addFreshEntity(new ExperienceOrb(this.level, this.animal.getX(), this.animal.getY(), this.animal.getZ(), randomsource.nextInt(7) + 1));
++                    .addFreshEntity(new ExperienceOrb(this.level, this.animal.getX(), this.animal.getY(), this.animal.getZ(), randomsource.nextInt(7) + 1, org.bukkit.entity.ExperienceOrb.SpawnReason.BREED, serverplayer)); // Paper;
+             }
+         }
+     }
 @@ -509,6 +_,7 @@
                      this.turtle.setLayingEgg(true);
                  } else if (this.turtle.layEggCounter > this.adjustedTickDelay(200)) {

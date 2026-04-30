@@ -1,5 +1,13 @@
 --- a/net/minecraft/world/level/block/NetherPortalBlock.java
 +++ b/net/minecraft/world/level/block/NetherPortalBlock.java
+@@ -38,6 +_,7 @@
+ import net.minecraft.world.phys.shapes.VoxelShape;
+ import org.slf4j.Logger;
+ 
++// todo: Magma - Add CB Events here with mixin protections
+ public class NetherPortalBlock extends Block implements Portal {
+     public static final MapCodec<NetherPortalBlock> CODEC = simpleCodec(NetherPortalBlock::new);
+     public static final EnumProperty<Direction.Axis> AXIS = BlockStateProperties.HORIZONTAL_AXIS;
 @@ -69,7 +_,7 @@
  
      @Override
@@ -9,3 +17,17 @@
              && p_221800_.getGameRules().getBoolean(GameRules.RULE_DOMOBSPAWNING)
              && p_221802_.nextInt(2000) < p_221800_.getDifficulty().getId()) {
              while (p_221800_.getBlockState(p_221801_).is(this)) {
+@@ -129,6 +_,13 @@
+             WorldBorder worldborder = serverlevel.getWorldBorder();
+             double d0 = DimensionType.getTeleportationScale(p_350444_.dimensionType(), serverlevel.dimensionType());
+             BlockPos blockpos = worldborder.clampToBounds(p_350334_.getX() * d0, p_350334_.getY(), p_350334_.getZ() * d0);
++            // Paper start - Configurable portal search radius
++            int portalSearchRadius = serverlevel.paperConfig().environment.portalSearchRadius;
++            if (p_350334_.level().paperConfig().environment.portalSearchVanillaDimensionScaling && flag) { // flag = is going to nether
++                portalSearchRadius = (int) (portalSearchRadius / serverlevel.dimensionType().coordinateScale());
++            }
++            // Paper end - Configurable portal search radius
++            // magma todo - // CraftPortalEvent event = entity.callPortalEvent(entity, CraftLocation.toBukkit(blockposition1, worldserver1.getWorld()), PlayerTeleportEvent.TeleportCause.NETHER_PORTAL, portalSearchRadius, worldserver1.paperConfig().environment.portalCreateRadius); // Paper - use custom portal search radius
+             return this.getExitPortal(serverlevel, p_350334_, p_350764_, blockpos, flag, worldborder);
+         }
+     }

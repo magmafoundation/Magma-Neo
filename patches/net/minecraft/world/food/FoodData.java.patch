@@ -42,7 +42,7 @@
      public void tick(Player p_38711_) {
          Difficulty difficulty = p_38711_.level().getDifficulty();
          this.lastFoodLevel = this.foodLevel;
-@@ -38,29 +_,41 @@
+@@ -38,29 +_,42 @@
              if (this.saturationLevel > 0.0F) {
                  this.saturationLevel = Math.max(this.saturationLevel - 1.0F, 0.0F);
              } else if (difficulty != Difficulty.PEACEFUL) {
@@ -68,6 +68,7 @@
 -                p_38711_.heal(f / 6.0F);
 -                this.addExhaustion(f);
 +                entityhuman.setHealRegainReason(org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason.SATIATED); // Magma - add regain reason
++                entityhuman.setHealFastRegen(true); // Paper - This is fast regen
 +                entityhuman.heal(f / 6.0F);
 +                entityhuman.setExhaustionReason(org.bukkit.event.entity.EntityExhaustionEvent.ExhaustionReason.REGEN); // Magma
 +                entityhuman.causeFoodExhaustion(f);

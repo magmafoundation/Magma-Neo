@@ -1,0 +1,11 @@
+--- a/net/minecraft/network/protocol/game/ClientboundSetPlayerTeamPacket.java
++++ b/net/minecraft/network/protocol/game/ClientboundSetPlayerTeamPacket.java
+@@ -199,7 +_,7 @@
+             ComponentSerialization.TRUSTED_STREAM_CODEC.encode(p_323527_, this.displayName);
+             p_323527_.writeByte(this.options);
+             p_323527_.writeUtf(this.nametagVisibility);
+-            p_323527_.writeUtf(this.collisionRule);
++            p_323527_.writeUtf(!io.papermc.paper.configuration.GlobalConfiguration.get().collisions.enablePlayerCollisions ? "never" : this.collisionRule); // Paper - Configurable player collision
+             p_323527_.writeEnum(this.color);
+             ComponentSerialization.TRUSTED_STREAM_CODEC.encode(p_323527_, this.playerPrefix);
+             ComponentSerialization.TRUSTED_STREAM_CODEC.encode(p_323527_, this.playerSuffix);

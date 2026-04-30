@@ -1,0 +1,46 @@
+--- a/net/minecraft/world/entity/ai/navigation/GroundPathNavigation.java
++++ b/net/minecraft/world/entity/ai/navigation/GroundPathNavigation.java
+@@ -41,7 +_,7 @@
+     }
+ 
+     @Override
+-    public Path createPath(BlockPos p_26475_, int p_26476_) {
++    public Path createPath(BlockPos p_26475_, @org.jetbrains.annotations.Nullable Entity entity, int p_26476_) { // Paper - EntityPathfindEvent
+         LevelChunk levelchunk = this.level
+             .getChunkSource()
+             .getChunkNow(SectionPos.blockToSectionCoord(p_26475_.getX()), SectionPos.blockToSectionCoord(p_26475_.getZ()));
+@@ -56,7 +_,7 @@
+                 }
+ 
+                 if (blockpos.getY() > this.level.getMinBuildHeight()) {
+-                    return super.createPath(blockpos.above(), p_26476_);
++                    return super.createPath(blockpos.above(), entity, p_26476_); // Paper - EntityPathfindEvent
+                 }
+ 
+                 while (blockpos.getY() < this.level.getMaxBuildHeight() && levelchunk.getBlockState(blockpos).isAir()) {
+@@ -67,7 +_,7 @@
+             }
+ 
+             if (!levelchunk.getBlockState(p_26475_).isSolid()) {
+-                return super.createPath(p_26475_, p_26476_);
++                return super.createPath(p_26475_, entity, p_26476_); // Paper - EntityPathfindEvent
+             } else {
+                 BlockPos blockpos1 = p_26475_.above();
+ 
+@@ -75,14 +_,14 @@
+                     blockpos1 = blockpos1.above();
+                 }
+ 
+-                return super.createPath(blockpos1, p_26476_);
++                return super.createPath(blockpos1, entity, p_26476_); // Paper - EntityPathfindEvent
+             }
+         }
+     }
+ 
+     @Override
+     public Path createPath(Entity p_26465_, int p_26466_) {
+-        return this.createPath(p_26465_.blockPosition(), p_26466_);
++        return this.createPath(p_26465_.blockPosition(), p_26465_, p_26466_); // Paper - EntityPathfindEvent
+     }
+ 
+     private int getSurfaceY() {

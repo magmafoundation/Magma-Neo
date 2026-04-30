@@ -35,7 +35,7 @@
 @@ -94,7 +_,7 @@
  
      @Nullable
-     private String getStringRaw(String p_139879_) {
+     public String getStringRaw(String p_139879_) {
 -        return (String)this.properties.get(p_139879_);
 +        return (String) getOverride(p_139879_, this.properties.getProperty(p_139879_)); // CraftBukkit
      }

@@ -1,0 +1,8 @@
+--- a/net/minecraft/world/inventory/ContainerSynchronizer.java
++++ b/net/minecraft/world/inventory/ContainerSynchronizer.java
+@@ -11,4 +_,5 @@
+     void sendCarriedChange(AbstractContainerMenu p_150533_, ItemStack p_150534_);
+ 
+     void sendDataChange(AbstractContainerMenu p_150527_, int p_150528_, int p_150529_);
++
+ }

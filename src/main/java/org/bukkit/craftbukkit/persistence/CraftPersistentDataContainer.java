@@ -175,4 +175,10 @@ public class CraftPersistentDataContainer implements PersistentDataContainer {
     public String serialize() {
         return CraftNBTTagConfigSerializer.serialize(toTagCompound());
     }
+
+    // Paper start
+    public void clear() {
+        this.customDataTags.clear();
+    }
+    // Paper end
 }

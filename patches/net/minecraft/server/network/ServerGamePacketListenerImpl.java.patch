@@ -44,6 +44,24 @@
  
      @Override
      public void tick() {
+@@ -264,7 +_,7 @@
+         if (this.clientIsFloating && !this.player.isSleeping() && !this.player.isPassenger() && !this.player.isDeadOrDying()) {
+             if (++this.aboveGroundTickCount > this.getMaximumFlyingTicks(this.player)) {
+                 LOGGER.warn("{} was kicked for floating too long!", this.player.getName().getString());
+-                this.disconnect(Component.translatable("multiplayer.disconnect.flying"));
++                this.disconnect(io.papermc.paper.configuration.GlobalConfiguration.get().messages.kick.flyingPlayer); // Paper - use configurable kick message
+                 return;
+             }
+         } else {
+@@ -283,7 +_,7 @@
+             if (this.clientVehicleIsFloating && this.lastVehicle.getControllingPassenger() == this.player) {
+                 if (++this.aboveGroundVehicleTickCount > this.getMaximumFlyingTicks(this.lastVehicle)) {
+                     LOGGER.warn("{} was kicked for floating a vehicle too long!", this.player.getName().getString());
+-                    this.disconnect(Component.translatable("multiplayer.disconnect.flying"));
++                    this.disconnect(io.papermc.paper.configuration.GlobalConfiguration.get().messages.kick.flyingVehicle); // Paper - use configurable kick message
+                     return;
+                 }
+             } else {
 @@ -297,10 +_,14 @@
          }
  
@@ -367,7 +385,40 @@
                                          LOGGER.warn("{} moved too quickly! {},{},{}", this.player.getName().getString(), d6, d7, d8);
                                          this.teleport(this.player.getX(), this.player.getY(), this.player.getZ(), this.player.getYRot(), this.player.getXRot());
                                          return;
-@@ -899,6 +_,7 @@
+@@ -894,11 +_,39 @@
+                             d8 = d2 - this.lastGoodZ;
+                             boolean flag4 = d7 > 0.0;
+                             if (this.player.onGround() && !p_9874_.isOnGround() && flag4) {
+-                                this.player.jumpFromGround();
++                                // Paper start - Add PlayerJumpEvent
++                                org.bukkit.entity.Player player = this.getCraftPlayer();
++                                org.bukkit.Location from = new org.bukkit.Location(player.getWorld(), lastPosX, lastPosY, lastPosZ, lastYaw, lastPitch); // Get the Players previous Event location.
++                                org.bukkit.Location to = player.getLocation().clone(); // Start off the To location as the Players current location.
++
++                                // If the packet contains movement information then we update the To location with the correct XYZ.
++                                if (p_9874_.hasPos) {
++                                    to.setX(p_9874_.x);
++                                    to.setY(p_9874_.y);
++                                    to.setZ(p_9874_.z);
++                                }
++
++                                // If the packet contains look information then we update the To location with the correct Yaw & Pitch.
++                                if (p_9874_.hasRot) {
++                                    to.setYaw(p_9874_.yRot);
++                                    to.setPitch(p_9874_.xRot);
++                                }
++
++                                com.destroystokyo.paper.event.player.PlayerJumpEvent event = new com.destroystokyo.paper.event.player.PlayerJumpEvent(player, from, to);
++
++                                if (event.callEvent()) {
++                                    this.player.jumpFromGround();
++                                } else {
++                                    from = event.getFrom();
++                                    this.internalTeleport(from.getX(), from.getY(), from.getZ(), from.getYaw(), from.getPitch(), Collections.emptySet());
++                                    return;
++                                }
++                                // Paper end - Add PlayerJumpEvent
+                             }
  
                              boolean flag1 = this.player.verticalCollisionBelow;
                              this.player.move(MoverType.PLAYER, new Vec3(d6, d7, d8));
@@ -610,18 +661,20 @@
                  return;
              default:
                  throw new IllegalArgumentException("Invalid player action");
-@@ -1076,10 +_,28 @@
+@@ -1076,10 +_,30 @@
          }
      }
  
 +    // Spigot start - limit place/interactions
 +    private int limitedPackets;
 +    private long lastLimitedPacket = -1;
++    private static int getSpamThreshold() { return io.papermc.paper.configuration.GlobalConfiguration.get().spamLimiter.incomingPacketThreshold; } // Paper - Configurable threshold
++
 +    private boolean checkLimit(long timestamp) {
-+        if (lastLimitedPacket != -1 && timestamp - lastLimitedPacket < 30 && limitedPackets++ >= 4) {
++        if (this.lastLimitedPacket != -1 && timestamp - this.lastLimitedPacket < getSpamThreshold() && this.limitedPackets++ >= 8) { // Paper - Configurable threshold; raise packet limit to 8
 +            return false;
 +        }
-+        if (lastLimitedPacket == -1 || timestamp - lastLimitedPacket >= 30) {
++        if (this.lastLimitedPacket == -1 || timestamp - this.lastLimitedPacket >= getSpamThreshold()) { // Paper - Configurable threshold
 +            lastLimitedPacket = timestamp;
 +            limitedPackets = 0;
 +            return true;
@@ -894,7 +947,7 @@
          }
      }
  
-@@ -1381,21 +_,171 @@
+@@ -1381,21 +_,172 @@
          return false;
      }
  
@@ -905,7 +958,7 @@
 +        }
 +        net.minecraft.network.chat.OutgoingChatMessage outgoing = net.minecraft.network.chat.OutgoingChatMessage.create(original);
 +
-+        if (!async && s.startsWith("/")) {
++        if (false && !async && s.startsWith("/")) { // Paper - Don't handle commands in chat logic
 +            this.handleCommand(s);
 +        } else if (this.player.getChatVisibility() == ChatVisiblity.SYSTEM) {
 +            // Do nothing, this is coming from a plugin
@@ -992,7 +1045,8 @@
 +        }
 +    }
 +
-+    private void handleCommand(String s) {
++    public void handleCommand(String s) { // Paper - private -> public
++        org.spigotmc.AsyncCatcher.catchOp("Command Dispatched Async: " + s); // Paper - Add async catcher
 +        co.aikar.timings.MinecraftTimings.playerCommandTimer.startTiming(); // Paper
 +        if ( org.spigotmc.SpigotConfig.logCommands ) // Spigot
 +        this.LOGGER.info(this.player.getScoreboardName() + " issued server command: " + s);
@@ -1073,7 +1127,7 @@
              this.disconnect(Component.translatable("disconnect.spam"));
          }
      }
-@@ -1413,13 +_,57 @@
+@@ -1413,17 +_,68 @@
      @Override
      public void handleAnimate(ServerboundSwingPacket p_9926_) {
          PacketUtils.ensureRunningOnSameThread(p_9926_, this, this.player.serverLevel());
@@ -1131,6 +1185,17 @@
          this.player.resetLastActionTime();
          switch (p_9891_.getAction()) {
              case PRESS_SHIFT_KEY:
+                 this.player.setShiftKeyDown(true);
++
++                // Paper start - Add option to make parrots stay
++                if (this.player.level().paperConfig().entities.behavior.parrotsAreUnaffectedByPlayerMovement) {
++                    this.player.removeEntitiesOnShoulder();
++                }
++                // Paper end - Add option to make parrots stay
++
+                 break;
+             case RELEASE_SHIFT_KEY:
+                 this.player.setShiftKeyDown(false);
 @@ -1485,6 +_,12 @@
      }
  
@@ -1260,6 +1325,31 @@
                                  return;
                              }
  
+@@ -1589,6 +_,24 @@
+                 );
+             }
+         }
++        // Paper start - PlayerUseUnknownEntityEvent
++        else {
++            p_9866_.dispatch(new net.minecraft.network.protocol.game.ServerboundInteractPacket.Handler() {
++                @Override
++                public void onInteraction(net.minecraft.world.InteractionHand hand) {
++                    org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerUseUnknownEntityEvent(ServerGamePacketListenerImpl.this.player, p_9866_, hand, null);
++                }
++                @Override
++                public void onInteraction(net.minecraft.world.InteractionHand hand, net.minecraft.world.phys.Vec3 pos) {
++                    org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerUseUnknownEntityEvent(ServerGamePacketListenerImpl.this.player, p_9866_, hand, pos);
++                }
++                @Override
++                public void onAttack() {
++                    org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerUseUnknownEntityEvent(ServerGamePacketListenerImpl.this.player, p_9866_, net.minecraft.world.InteractionHand.MAIN_HAND, null);
++                }
++            });
++        }
++        // Paper end - PlayerUseUnknownEntityEvent
+     }
+ 
+     @Override
 @@ -1600,17 +_,17 @@
              case PERFORM_RESPAWN:
                  if (this.player.wonGame) {

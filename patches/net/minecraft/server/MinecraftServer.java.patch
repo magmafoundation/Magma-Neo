@@ -1,13 +1,23 @@
 --- a/net/minecraft/server/MinecraftServer.java
 +++ b/net/minecraft/server/MinecraftServer.java
-@@ -169,6 +_,7 @@
+@@ -168,7 +_,9 @@
+ import org.slf4j.Logger;
  
  public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTask> implements ServerInfo, ChunkIOErrorReporter, CommandSource, AutoCloseable {
++    private static MinecraftServer SERVER; // Paper
      public static final Logger LOGGER = LogUtils.getLogger();
 +    public static final net.kyori.adventure.text.logger.slf4j.ComponentLogger COMPONENT_LOGGER = net.kyori.adventure.text.logger.slf4j.ComponentLogger.logger(LOGGER.getName()); // Paper
      public static final String VANILLA_BRAND = "vanilla";
      private static final float AVERAGE_TICK_TIME_SMOOTHING = 0.8F;
      private static final int TICK_STATS_SPAN = 100;
+@@ -214,6 +_,7 @@
+     public Map<ResourceKey<Level>, ServerLevel> levels = Maps.newLinkedHashMap();
+     private PlayerList playerList;
+     private volatile boolean running = true;
++    private volatile boolean isRestarting = false; // Paper - flag to signify we're attempting to restart
+     private boolean stopped;
+     private int tickCount;
+     private int ticksUntilAutosave = 6000;
 @@ -223,7 +_,7 @@
      private boolean pvp;
      private boolean allowFlight;
@@ -53,6 +63,14 @@
          thread.setUncaughtExceptionHandler((p_177909_, p_177910_) -> LOGGER.error("Uncaught exception in server thread", p_177910_));
          if (Runtime.getRuntime().availableProcessors() > 4) {
              thread.setPriority(8);
+@@ -287,6 +_,7 @@
+         ChunkProgressListenerFactory p_236730_
+     ) {
+         super("Server");
++        SERVER = this; // Paper - better singleton
+         this.registries = p_236726_.registries();
+         this.worldData = p_236726_.worldData();
+         if (!this.registries.compositeAccess().registryOrThrow(Registries.LEVEL_STEM).containsKey(LevelStem.OVERWORLD)) {
 @@ -300,7 +_,7 @@
                  p_236729_.profileCache().setExecutor(this);
              }
@@ -144,7 +162,7 @@
                  ServerLevel serverlevel1 = new ServerLevel(
                      this,
                      this.executor,
-@@ -421,17 +_,58 @@
+@@ -421,17 +_,71 @@
                  );
                  worldborder.addListener(new BorderChangeListener.DelegateBorderChangeListener(serverlevel1.getWorldBorder()));
                  this.levels.put(resourcekey1, serverlevel1);
@@ -154,6 +172,19 @@
  
          worldborder.applySettings(serverleveldata.getWorldBorder());
 -    }
++
++        // Paper start - Configurable player collision; Handle collideRule team for player collision toggle
++        final ServerScoreboard scoreboard = this.getScoreboard();
++        final java.util.Collection<String> toRemove = scoreboard.getPlayerTeams().stream().filter(team -> team.getName().startsWith("collideRule_")).map(net.minecraft.world.scores.PlayerTeam::getName).collect(java.util.stream.Collectors.toList());
++        for (String teamName : toRemove) {
++            scoreboard.removePlayerTeam(scoreboard.getPlayerTeam(teamName)); // Clean up after ourselves
++        }
++        if (!io.papermc.paper.configuration.GlobalConfiguration.get().collisions.enablePlayerCollisions) {
++            this.getPlayerList().collideRuleTeamName = org.apache.commons.lang3.StringUtils.left("collideRule_" + java.util.concurrent.ThreadLocalRandom.current().nextInt(), 16);
++            net.minecraft.world.scores.PlayerTeam collideTeam = scoreboard.addPlayerTeam(this.getPlayerList().collideRuleTeamName);
++            collideTeam.setSeeFriendlyInvisibles(false); // Because we want to mimic them not being on a team at all
++        }
++        // Paper end - Configurable player collision
 +
 +        this.server.enablePlugins(org.bukkit.plugin.PluginLoadOrder.POSTWORLD);
 +        if (io.papermc.paper.plugin.PluginInitializerManager.instance().pluginRemapper != null) io.papermc.paper.plugin.PluginInitializerManager.instance().pluginRemapper.pluginsEnabled(); // Paper - Remap plugins
@@ -338,7 +369,8 @@
          if (this.playerList != null) {
              LOGGER.info("Saving players");
              this.playerList.saveAll();
-             this.playerList.removeAll();
+-            this.playerList.removeAll();
++            this.playerList.removeAll(this.isRestarting); // Paper
 +            try { Thread.sleep(100); } catch (InterruptedException ex) {} // CraftBukkit - SPIGOT-625 - give server at least a chance to send packets
          }
  
@@ -361,7 +393,7 @@
 +        } catch (java.lang.InterruptedException ignored) {} // Paper
 +        if (org.spigotmc.SpigotConfig.saveUserCacheOnStopOnly) {
 +            LOGGER.info("Saving usercache.json");
-+            this.getProfileCache().save();
++            this.getProfileCache().save(false); // Paper - Perf: Async GameProfileCache saving
 +        }
 +        // Spigot end
 +
@@ -370,6 +402,20 @@
      }
  
      public String getLocalIp() {
+@@ -650,6 +_,13 @@
+     }
+ 
+     public void halt(boolean p_129884_) {
++        // Paper start - allow passing of the intent to restart
++        this.safeShutdown(p_129884_, false);
++    }
++
++    public void safeShutdown(boolean p_129884_, boolean isRestarting) {
++        this.isRestarting = isRestarting;
++        // Paper end
+         this.running = false;
+         if (p_129884_) {
+             try {
 @@ -660,16 +_,83 @@
          }
      }
@@ -655,7 +701,7 @@
          );
      }
  
-@@ -992,11 +_,36 @@
+@@ -992,11 +_,37 @@
  
      public void tickChildren(BooleanSupplier p_129954_) {
          this.getPlayerList().getPlayers().forEach(p_341570_ -> p_341570_.connection.suspendFlushing());
@@ -690,10 +736,11 @@
 +
 +        for(ServerLevel serverlevel : this.getWorldArray()) {
 +            long tickStart = Util.getNanos();
++            serverlevel.hasPhysicsEvent = org.bukkit.event.block.BlockPhysicsEvent.getHandlerList().getRegisteredListeners().length > 0; // Paper - BlockPhysicsEvent
              this.profiler.push(() -> serverlevel + " " + serverlevel.dimension().location());
              if (this.tickCount % 20 == 0) {
                  this.profiler.push("timeSync");
-@@ -1005,32 +_,43 @@
+@@ -1005,32 +_,44 @@
              }
  
              this.profiler.push("tick");
@@ -713,6 +760,7 @@
              this.profiler.pop();
              this.profiler.pop();
 +            perWorldTickTimes.computeIfAbsent(serverlevel.dimension(), k -> new long[100])[this.tickCount % 100] = Util.getNanos() - tickStart;
++            serverlevel.explosionDensityCache.clear(); // Paper - Optimize explosions
          }
  
          this.profiler.popPush("connection");
@@ -789,7 +837,7 @@
      @DontObfuscate
      public String getServerModName() {
 -        return "vanilla";
-+        return net.neoforged.neoforge.internal.BrandingControl.getServerBranding();
++        return io.papermc.paper.ServerBuildInfo.buildInfo().brandName(); // Paper
      }
  
      public SystemReport fillSystemReport(SystemReport p_177936_) {
@@ -922,7 +970,7 @@
 +
 +    @Deprecated
 +    public static MinecraftServer getServer() {
-+        return (org.bukkit.Bukkit.getServer() instanceof org.bukkit.craftbukkit.CraftServer) ? ((org.bukkit.craftbukkit.CraftServer) org.bukkit.Bukkit.getServer()).getServer() : null;
++        return SERVER; // Paper
 +    }
 +
 +    @Deprecated

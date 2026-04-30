@@ -10,11 +10,28 @@
          };
      }
  
-@@ -220,4 +_,51 @@
+@@ -173,7 +_,7 @@
+     @Nullable
+     @Override
+     public AbstractContainerMenu createMenu(int p_219910_, Inventory p_219911_, Player p_219912_) {
+-        if (this.lootTable != null && p_219912_.isSpectator()) {
++        if (this.lootTable != null && p_219912_.isSpectator()) { // Paper - LootTable API (TODO spectators can open chests that aren't ready to be re-generated but this doesn't support that)
+             return null;
+         } else {
+             this.unpackLootTable(p_219911_.player);
+@@ -220,4 +_,59 @@
      public void stopOpen(Player p_270286_) {
          this.level().gameEvent(GameEvent.CONTAINER_CLOSE, this.position(), GameEvent.Context.of(p_270286_));
      }
 +
++    // Paper start - LootTable API
++    final com.destroystokyo.paper.loottable.PaperLootableInventoryData lootableData = new com.destroystokyo.paper.loottable.PaperLootableInventoryData();
++
++    @Override
++    public com.destroystokyo.paper.loottable.PaperLootableInventoryData lootableData() {
++        return this.lootableData;
++    }
++    // Paper end - LootTable API
 +    // CraftBukkit start
 +    public java.util.List<org.bukkit.entity.HumanEntity> transaction = new java.util.ArrayList<org.bukkit.entity.HumanEntity>();
 +    private int maxStack = MAX_STACK;

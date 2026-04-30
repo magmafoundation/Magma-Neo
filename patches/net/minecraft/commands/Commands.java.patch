@@ -88,20 +88,27 @@
 +
          commandsourcestack.getServer().getProfiler().push(() -> "/" + p_242841_);
 -        ContextChain<CommandSourceStack> contextchain = finishParsing(p_242844_, p_242841_, commandsourcestack);
-+        ContextChain<CommandSourceStack> contextchain = finishParsing(p_242844_, p_242841_, commandsourcestack, label); // CraftBukkit
++        ContextChain contextchain = finishParsing(p_242844_, p_242841_, commandsourcestack, label); // CraftBukkit // Paper - Add UnknownCommandEvent
  
          try {
              if (contextchain != null) {
-@@ -307,7 +_,7 @@
+@@ -307,18 +_,21 @@
      }
  
      @Nullable
 -    private static ContextChain<CommandSourceStack> finishParsing(ParseResults<CommandSourceStack> p_307220_, String p_307311_, CommandSourceStack p_307676_) {
-+    private static ContextChain<CommandSourceStack> finishParsing(ParseResults<CommandSourceStack> p_307220_, String p_307311_, CommandSourceStack p_307676_, String label) { // CraftBukkit
++    private ContextChain<CommandSourceStack> finishParsing(ParseResults<CommandSourceStack> p_307220_, String p_307311_, CommandSourceStack p_307676_, String label) { // CraftBukkit // Paper - Add UnknownCommandEvent
          try {
              validateParseResults(p_307220_);
              return ContextChain.tryFlatten(p_307220_.getContext().build(p_307311_))
-@@ -318,7 +_,7 @@
+                 .orElseThrow(() -> CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherUnknownCommand().createWithContext(p_307220_.getReader()));
+         } catch (CommandSyntaxException commandsyntaxexception) {
+-            p_307676_.sendFailure(ComponentUtils.fromMessage(commandsyntaxexception.getRawMessage()));
++            // Paper start - Add UnknownCommandEvent
++            final net.kyori.adventure.text.TextComponent.Builder builder = net.kyori.adventure.text.Component.text();
++            builder.color(net.kyori.adventure.text.format.NamedTextColor.RED).append(io.papermc.paper.brigadier.PaperBrigadier.componentFromMessage(commandsyntaxexception.getRawMessage()));
++            // Paper end - Add UnknownCommandEvent
+             if (commandsyntaxexception.getInput() != null && commandsyntaxexception.getCursor() >= 0) {
                  int i = Math.min(commandsyntaxexception.getInput().length(), commandsyntaxexception.getCursor());
                  MutableComponent mutablecomponent = Component.empty()
                      .withStyle(ChatFormatting.GRAY)
@@ -110,6 +117,24 @@
                  if (i > 10) {
                      mutablecomponent.append(CommonComponents.ELLIPSIS);
                  }
+@@ -331,7 +_,16 @@
+                 }
+ 
+                 mutablecomponent.append(Component.translatable("command.context.here").withStyle(ChatFormatting.RED, ChatFormatting.ITALIC));
+-                p_307676_.sendFailure(mutablecomponent);
++                // Paper start - Add UnknownCommandEvent
++                builder
++                        .append(net.kyori.adventure.text.Component.newline())
++                        .append(io.papermc.paper.adventure.PaperAdventure.asAdventure(mutablecomponent));
++            }
++            org.bukkit.event.command.UnknownCommandEvent event = new org.bukkit.event.command.UnknownCommandEvent(p_307676_.getBukkitSender(), p_307311_, org.spigotmc.SpigotConfig.unknownCommandMessage.isEmpty() ? null : builder.build());
++            org.bukkit.Bukkit.getServer().getPluginManager().callEvent(event);
++            if (event.message() != null) {
++                p_307676_.sendFailure(io.papermc.paper.adventure.PaperAdventure.asVanilla(event.message()), false);
++                // Paper end - Add UnknownCommandEvent
+             }
+ 
+             return null;
 @@ -359,10 +_,37 @@
      }
  

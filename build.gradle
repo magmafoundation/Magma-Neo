@@ -87,7 +87,8 @@ immaculate {
                 // Nested custom-query payload helpers, not top-level interface rewrites.
                 'a/net/minecraft/network/protocol/login/ClientboundCustomQueryPacket.java',
                 'a/net/minecraft/network/protocol/login/ServerboundCustomQueryAnswerPacket.java',
-                'a/net/minecraft/network/chat/PlayerChatMessage.java'
+                'a/net/minecraft/network/chat/PlayerChatMessage.java',
+                'a/net/minecraft/world/entity/Entity.java',
             ]
             for (def skipFile : skipFiles) {
                 if (fileContents.contains(skipFile)) {

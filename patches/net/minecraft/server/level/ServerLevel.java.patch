@@ -1,6 +1,6 @@
 --- a/net/minecraft/server/level/ServerLevel.java
 +++ b/net/minecraft/server/level/ServerLevel.java
-@@ -199,12 +_,52 @@
+@@ -199,12 +_,53 @@
      private final List<CustomSpawner> customSpawners;
      @Nullable
      private EndDragonFight dragonFight;
@@ -15,6 +15,7 @@
 +    public net.minecraft.world.level.storage.PrimaryLevelData worldDataServer;
 +    public final LevelStorageSource.LevelStorageAccess convertable;
 +    public final UUID uuid;
++    public boolean hasPhysicsEvent = true; // Paper - BlockPhysicsEvent
 +    public ResourceKey<LevelStem> typeKey;
 +
 +    public LevelChunk getChunkIfLoaded(int x, int z) {
@@ -275,13 +276,14 @@
          ProfilerFiller profilerfiller = this.getProfiler();
          profilerfiller.push("thunder");
 -        if (flag && this.isThundering() && this.random.nextInt(100000) == 0) {
-+        if (flag && this.isThundering() && this.spigotConfig.thunderChance > 0 && this.random.nextInt(this.spigotConfig.thunderChance) == 0) { // Spigot
++        if (!this.paperConfig().environment.disableThunder && flag && this.isThundering() && this.spigotConfig.thunderChance > 0 && this.random.nextInt(this.spigotConfig.thunderChance) == 0) { // Spigot // Paper - Option to disable thunder
              BlockPos blockpos = this.findLightningTargetAround(this.getBlockRandomPos(i, 0, j, 15));
              if (this.isRainingAt(blockpos)) {
                  DifficultyInstance difficultyinstance = this.getCurrentDifficultyAt(blockpos);
                  boolean flag1 = this.getGameRules().getBoolean(GameRules.RULE_DOMOBSPAWNING)
-                     && this.random.nextDouble() < (double)difficultyinstance.getEffectiveDifficulty() * 0.01
+-                    && this.random.nextDouble() < (double)difficultyinstance.getEffectiveDifficulty() * 0.01
 -                    && !this.getBlockState(blockpos.below()).is(Blocks.LIGHTNING_ROD);
++                    && this.random.nextDouble() < (double)difficultyinstance.getEffectiveDifficulty() * this.paperConfig().entities.spawning.skeletonHorseThunderSpawnChance.or(0.01D) // Paper - Configurable spawn chances for skeleton horses
 +                        && !(this.getBlockState(blockpos.below()).getBlock() instanceof net.minecraft.world.level.block.LightningRodBlock); // Neo: support custom LightningRodBlocks
                  if (flag1) {
                      SkeletonHorse skeletonhorse = EntityType.SKELETON_HORSE.create(this);
@@ -294,7 +296,7 @@
                      }
                  }
  
-@@ -492,7 +_,7 @@
+@@ -492,20 +_,23 @@
                  if (lightningbolt != null) {
                      lightningbolt.moveTo(Vec3.atBottomCenterOf(blockpos));
                      lightningbolt.setVisualOnly(flag1);
@@ -303,8 +305,20 @@
                  }
              }
          }
-@@ -506,6 +_,7 @@
-         }
+ 
+         profilerfiller.popPush("iceandsnow");
+ 
+-        for (int i1 = 0; i1 < p_8716_; i1++) {
+-            if (this.random.nextInt(48) == 0) {
+-                this.tickPrecipitation(this.getBlockRandomPos(i, 0, j, 15));
++        if (!this.paperConfig().environment.disableIceAndSnow) { // Paper - Option to disable ice and snow
++            for (int i1 = 0; i1 < p_8716_; i1++) {
++                if (this.random.nextInt(48) == 0) {
++                    this.tickPrecipitation(this.getBlockRandomPos(i, 0, j, 15));
++                }
+             }
+-        }
++        } // Paper - Option to disable ice and snow
  
          profilerfiller.popPush("tickBlocks");
 +        timings.chunkTicksBlocks.startTiming(); // Paper
@@ -648,6 +662,15 @@
          this.server
              .getPlayerList()
              .broadcast(
+@@ -1007,7 +_,7 @@
+                 (double)p_8686_.getX(),
+                 (double)p_8686_.getY(),
+                 (double)p_8686_.getZ(),
+-                64.0,
++                64.0, // Paper - diff on change (the 64.0 distance is used as defaults for sound ranges in spigot config for ender dragon, end portal and wither)
+                 this.dimension(),
+                 new ClientboundLevelEventPacket(p_8685_, p_8686_, p_8687_, false)
+             );
 @@ -1019,6 +_,7 @@
  
      @Override
@@ -656,10 +679,11 @@
          this.gameEventDispatcher.post(p_316597_, p_215042_, p_215043_);
      }
  
-@@ -1057,11 +_,16 @@
+@@ -1057,11 +_,17 @@
  
      @Override
      public void updateNeighborsAt(BlockPos p_215045_, Block p_215046_) {
++        if (captureBlockStates) { return; } // Paper - Cancel all physics during placement
 +        net.neoforged.neoforge.event.EventHooks.onNeighborNotify(this, p_215045_, this.getBlockState(p_215045_), java.util.EnumSet.allOf(Direction.class), false).isCanceled();
          this.neighborUpdater.updateNeighborsAtExceptFromFacing(p_215045_, p_215046_, null);
      }
@@ -761,7 +785,7 @@
              ServerLevel.this.getChunkSource().addEntity(p_143371_);
              if (p_143371_ instanceof ServerPlayer serverplayer) {
                  ServerLevel.this.players.add(serverplayer);
-@@ -1713,16 +_,49 @@
+@@ -1713,16 +_,59 @@
                  ServerLevel.this.navigatingMobs.add(mob);
              }
  
@@ -776,6 +800,16 @@
              p_143371_.updateDynamicGameEventListener(DynamicGameEventListener::add);
 +            p_143371_.inWorld = true; // CraftBukkit - Mark entity as in world
 +            p_143371_.valid = true; // CraftBukkit
++            // Paper start - Entity origin API
++            if (p_143371_.getOriginVector() == null) {
++                p_143371_.setOrigin(p_143371_.getBukkitEntity().getLocation());
++            }
++            // Default to current world if unknown, gross assumption but entities rarely change world
++            if (p_143371_.getOriginWorld() == null) {
++                p_143371_.setOrigin(p_143371_.getOriginVector().toLocation(getWorld()));
++            }
++            // Paper end - Entity origin API
++            new com.destroystokyo.paper.event.entity.EntityAddToWorldEvent(p_143371_.getBukkitEntity(), ServerLevel.this.getWorld()).callEvent(); // Paper - fire while valid
          }
  
          public void onTrackingEnd(Entity p_143375_) {
@@ -813,7 +847,7 @@
              ServerLevel.this.getChunkSource().removeEntity(p_143375_);
              if (p_143375_ instanceof ServerPlayer serverplayer) {
                  ServerLevel.this.players.remove(serverplayer);
-@@ -1733,24 +_,120 @@
+@@ -1733,24 +_,121 @@
                  if (ServerLevel.this.isUpdatingNavigations) {
                      String s = "onTrackingStart called during navigation iteration";
                      Util.logAndPauseIfInIde(
@@ -846,6 +880,7 @@
 +
 +            p_143375_.onRemovedFromLevel();
 +            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent(p_143375_, ServerLevel.this));
++            new com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent(p_143375_.getBukkitEntity(), ServerLevel.this.getWorld()).callEvent(); // Paper - fire while valid
          }
  
          public void onSectionChange(Entity p_215086_) {
