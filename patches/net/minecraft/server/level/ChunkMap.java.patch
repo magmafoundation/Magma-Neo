@@ -124,7 +124,7 @@
          p_294215_.connection.chunkSender.dropChunk(p_294215_, p_294758_);
      }
  
-@@ -907,18 +_,35 @@
+@@ -907,18 +_,46 @@
      }
  
      private CompletableFuture<Optional<CompoundTag>> readChunk(ChunkPos p_214964_) {
@@ -152,13 +152,24 @@
 +        int chunkRange = level.spigotConfig.mobSpawnRange;
 +        chunkRange = (chunkRange > level.spigotConfig.viewDistance) ? (byte) level.spigotConfig.viewDistance : chunkRange;
 +        chunkRange = (chunkRange > 8) ? 8 : chunkRange;
-+        double blockRange = (reducedRange) ? Math.pow(chunkRange << 4, 2) : 16384.0D;
++        final int finalChunkRange = chunkRange; // Paper for lambda below
++        //double blockRange = (reducedRange) ? Math.pow(chunkRange << 4, 2) : 16384.0D; // Paper - use from event
++        double blockRange = 16384.0D; // Paper
 +        // Spigot end
          if (!this.distanceManager.hasPlayersNearby(p_183880_.toLong())) {
              return false;
          } else {
              for (ServerPlayer serverplayer : this.playerMap.getAllPlayers()) {
 +                magma$range.set(blockRange);
++                // Paper start - PlayerNaturallySpawnCreaturesEvent
++                com.destroystokyo.paper.event.entity.PlayerNaturallySpawnCreaturesEvent event;
++                blockRange = 16384.0D;
++                if (reducedRange) {
++                    event = serverplayer.playerNaturallySpawnedEvent;
++                    if (event == null || event.isCancelled()) return false;
++                    blockRange = (double) ((event.getSpawnRadius() << 4) * (event.getSpawnRadius() << 4));
++                }
++                // Paper end - PlayerNaturallySpawnCreaturesEvent
                  if (this.playerIsCloseEnoughForSpawning(serverplayer, p_183880_)) {
                      return true;
                  }

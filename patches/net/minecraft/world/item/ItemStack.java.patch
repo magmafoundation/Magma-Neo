@@ -42,7 +42,7 @@
      }
  
      public boolean is(HolderSet<Item> p_298683_) {
-@@ -351,18 +_,179 @@
+@@ -351,18 +_,180 @@
      }
  
      public InteractionResult useOn(UseOnContext p_41662_) {
@@ -139,6 +139,7 @@
 +                if (placeEvent != null && (placeEvent.isCancelled() || !placeEvent.canBuild())) {
 +                    enuminteractionresult = InteractionResult.FAIL;
 +                    placeEvent.getPlayer().updateInventory();
++                    world.capturedTileEntities.clear(); // Paper - Allow chests to be placed with NBT data; clear out block entities as chests and such will pop loot
 +                    world.preventPoiUpdated = true;
 +                    for (org.bukkit.block.BlockState blockstate : blocks) {
 +                        blockstate.update(true, false);

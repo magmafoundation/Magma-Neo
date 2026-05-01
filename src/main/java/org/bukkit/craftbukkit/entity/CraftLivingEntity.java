@@ -202,6 +202,33 @@ public class CraftLivingEntity extends CraftEntity implements LivingEntity {
         return blocks.get(0);
     }
 
+    // Paper start
+    @Override
+    public Block getTargetBlock(int maxDistance, com.destroystokyo.paper.block.TargetBlockInfo.FluidMode fluidMode) {
+        return this.getTargetBlockExact(maxDistance, fluidMode.bukkit);
+    }
+
+    @Override
+    public org.bukkit.block.BlockFace getTargetBlockFace(int maxDistance, com.destroystokyo.paper.block.TargetBlockInfo.FluidMode fluidMode) {
+        return this.getTargetBlockFace(maxDistance, fluidMode.bukkit);
+    }
+
+    @Override
+    public org.bukkit.block.BlockFace getTargetBlockFace(int maxDistance, org.bukkit.FluidCollisionMode fluidMode) {
+        RayTraceResult result = this.rayTraceBlocks(maxDistance, fluidMode);
+        return result != null ? result.getHitBlockFace() : null;
+    }
+
+    @Override
+    public com.destroystokyo.paper.block.TargetBlockInfo getTargetBlockInfo(int maxDistance, com.destroystokyo.paper.block.TargetBlockInfo.FluidMode fluidMode) {
+        RayTraceResult result = this.rayTraceBlocks(maxDistance, fluidMode.bukkit);
+        if (result != null && result.getHitBlock() != null && result.getHitBlockFace() != null) {
+            return new com.destroystokyo.paper.block.TargetBlockInfo(result.getHitBlock(), result.getHitBlockFace());
+        }
+        return null;
+    }
+    // Paper end
+
     @Override
     public List<Block> getLastTwoTargetBlocks(Set<Material> transparent, int maxDistance) {
         return getLineOfSight(transparent, maxDistance, 2);
@@ -853,5 +880,64 @@ public class CraftLivingEntity extends CraftEntity implements LivingEntity {
     public void setArrowsStuck(final int arrows) {
         this.getHandle().setArrowCount(arrows);
     }
+
+    @Override
+    public int getShieldBlockingDelay() {
+        return getHandle().getShieldBlockingDelay();
+    }
+
+    @Override
+    public void setShieldBlockingDelay(int delay) {
+        getHandle().setShieldBlockingDelay(delay);
+    }
     // Paper end
+
+    // Paper start - active item API
+    @Override
+    public void startUsingItem(org.bukkit.inventory.EquipmentSlot hand) {
+        Preconditions.checkArgument(hand != null, "hand must not be null");
+        switch (hand) {
+            case HAND -> getHandle().startUsingItem(InteractionHand.MAIN_HAND);
+            case OFF_HAND -> getHandle().startUsingItem(InteractionHand.OFF_HAND);
+            default -> throw new IllegalArgumentException("hand may only be HAND or OFF_HAND");
+        }
+    }
+
+    @Override
+    public void completeUsingActiveItem() {
+        getHandle().completeUsingItem();
+    }
+
+    @Override
+    public ItemStack getActiveItem() {
+        return this.getHandle().getUseItem().asBukkitMirror();
+    }
+
+    @Override
+    public int getActiveItemRemainingTime() {
+        return this.getHandle().getUseItemRemainingTicks();
+    }
+
+    @Override
+    public void setActiveItemRemainingTime(final int ticks) {
+        Preconditions.checkArgument(ticks >= 0, "ticks must be >= 0");
+        Preconditions.checkArgument(ticks <= this.getHandle().getUseItem().getUseDuration(this.getHandle()), "ticks must be <= item use duration");
+        this.getHandle().useItemRemaining = ticks;
+    }
+
+    @Override
+    public int getActiveItemUsedTime() {
+        return this.getHandle().getTicksUsingItem();
+    }
+
+    @Override
+    public boolean hasActiveItem() {
+        return this.getHandle().isUsingItem();
+    }
+
+    @Override
+    public org.bukkit.inventory.EquipmentSlot getActiveItemHand() {
+        return org.bukkit.craftbukkit.CraftEquipmentSlot.getHand(this.getHandle().getUsedItemHand());
+    }
+    // Paper end - active item API
 }

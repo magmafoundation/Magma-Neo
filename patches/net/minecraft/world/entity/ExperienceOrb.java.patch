@@ -5,9 +5,9 @@
      private Player followingPlayer;
  
 +    // Paper start
-+    @javax.annotation.Nullable
++    @org.jetbrains.annotations.Nullable
 +    public java.util.UUID sourceEntityId;
-+    @javax.annotation.Nullable
++    @org.jetbrains.annotations.Nullable
 +    public java.util.UUID triggerEntityId;
 +    public org.bukkit.entity.ExperienceOrb.SpawnReason spawnReason = org.bukkit.entity.ExperienceOrb.SpawnReason.UNKNOWN;
 +
@@ -52,11 +52,11 @@
 +        this(p_20776_, p_20777_, p_20778_, p_20779_, p_20780_, null, null);
 +    }
 +
-+    public ExperienceOrb(Level world, double x, double y, double z, int amount, @javax.annotation.Nullable org.bukkit.entity.ExperienceOrb.SpawnReason reason, @javax.annotation.Nullable Entity triggerId) {
++    public ExperienceOrb(Level world, double x, double y, double z, int amount, @org.jetbrains.annotations.Nullable org.bukkit.entity.ExperienceOrb.SpawnReason reason, @org.jetbrains.annotations.Nullable Entity triggerId) {
 +        this(world, x, y, z, amount, reason, triggerId, null);
 +    }
 +
-+    public ExperienceOrb(Level p_20776_, double p_20777_, double p_20778_, double p_20779_, int p_20780_, @javax.annotation.Nullable org.bukkit.entity.ExperienceOrb.SpawnReason reason, @javax.annotation.Nullable Entity triggerId, @javax.annotation.Nullable Entity sourceId) {
++    public ExperienceOrb(Level p_20776_, double p_20777_, double p_20778_, double p_20779_, int p_20780_, @org.jetbrains.annotations.Nullable org.bukkit.entity.ExperienceOrb.SpawnReason reason, @org.jetbrains.annotations.Nullable Entity triggerId, @org.jetbrains.annotations.Nullable Entity sourceId) {
          this(EntityType.EXPERIENCE_ORB, p_20776_);
 +        this.sourceEntityId = sourceId != null ? sourceId.getUUID() : null;
 +        this.triggerEntityId = triggerId != null ? triggerId.getUUID() : null;
@@ -163,17 +163,22 @@
                  this.discard();
              }
  
-@@ -214,6 +_,7 @@
+@@ -212,31 +_,36 @@
+     public void addAdditionalSaveData(CompoundTag p_20796_) {
+         p_20796_.putShort("Health", (short)this.health);
          p_20796_.putShort("Age", (short)this.age);
-         p_20796_.putShort("Value", (short)this.value);
+-        p_20796_.putShort("Value", (short)this.value);
++        p_20796_.putInt("Value", this.value); // Paper - save as Integer
          p_20796_.putInt("Count", this.count);
 +        this.savePaperNBT(p_20796_); // Paper
      }
  
      @Override
-@@ -222,21 +_,25 @@
+     public void readAdditionalSaveData(CompoundTag p_20788_) {
+         this.health = p_20788_.getShort("Health");
          this.age = p_20788_.getShort("Age");
-         this.value = p_20788_.getShort("Value");
+-        this.value = p_20788_.getShort("Value");
++        this.value = p_20788_.getInt("Value"); // Paper - load as Integer
          this.count = Math.max(p_20788_.getInt("Count"), 1);
 +        this.loadPaperNBT(p_20788_); // Paper
      }
@@ -181,8 +186,9 @@
      @Override
      public void playerTouch(Player p_20792_) {
          if (p_20792_ instanceof ServerPlayer serverplayer) {
-             if (p_20792_.takeXpDelay == 0) {
+-            if (p_20792_.takeXpDelay == 0) {
 -                p_20792_.takeXpDelay = 2;
++            if (p_20792_.takeXpDelay == 0 && new com.destroystokyo.paper.event.player.PlayerPickupExperienceEvent(serverplayer.getBukkitEntity(), (org.bukkit.entity.ExperienceOrb) this.getBukkitEntity()).callEvent()) { // Paper - PlayerPickupExperienceEvent
 +                if (net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(new net.neoforged.neoforge.event.entity.player.PlayerXpEvent.PickupXp(p_20792_, this)).isCanceled()) return;
 +                p_20792_.takeXpDelay = org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerXpCooldownEvent(p_20792_, 2, org.bukkit.event.player.PlayerExpCooldownChangeEvent.ChangeReason.PICKUP_ORB).getNewCooldown(); // CraftBukkit - p_20792_.takeXpDelay = 2;
                  p_20792_.take(this, 1);

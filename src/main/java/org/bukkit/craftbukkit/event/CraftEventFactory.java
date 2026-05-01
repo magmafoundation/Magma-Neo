@@ -1291,7 +1291,7 @@ public class CraftEventFactory {
 
     public static AbstractContainerMenu callInventoryOpenEvent(ServerPlayer player, AbstractContainerMenu container, boolean cancelled) {
         if (player.containerMenu != player.inventoryMenu) { // fire INVENTORY_CLOSE if one already open
-            player.connection.handleContainerClose(new ServerboundContainerClosePacket(player.containerMenu.containerId));
+            player.connection.handleContainerClose(new ServerboundContainerClosePacket(player.containerMenu.containerId), InventoryCloseEvent.Reason.OPEN_NEW); // Paper - Inventory close reason
         }
 
         CraftServer server = player.level().getCraftServer();
@@ -1338,6 +1338,14 @@ public class CraftEventFactory {
         Projectile projectile = (Projectile) entity.getBukkitEntity();
         org.bukkit.entity.Entity collided = position.getEntity().getBukkitEntity();
         com.destroystokyo.paper.event.entity.ProjectileCollideEvent event = new com.destroystokyo.paper.event.entity.ProjectileCollideEvent(projectile, collided);
+
+        if (projectile.getShooter() instanceof Player && collided instanceof Player) {
+            if (!((Player) projectile.getShooter()).canSee((Player) collided)) {
+                event.setCancelled(true);
+                return event;
+            }
+        }
+
         Bukkit.getPluginManager().callEvent(event);
         return event;
     }
@@ -1488,8 +1496,20 @@ public class CraftEventFactory {
         return event;
     }
 
+    // Paper start
+    /**
+     * Incase plugins hooked into this or Spigot adds a new inventory close event. Prefer to pass a reason
+     * 
+     * @param human
+     */
+    @Deprecated
     public static void handleInventoryCloseEvent(net.minecraft.world.entity.player.Player human) {
-        InventoryCloseEvent event = new InventoryCloseEvent(human.containerMenu.getBukkitView());
+        handleInventoryCloseEvent(human, org.bukkit.event.inventory.InventoryCloseEvent.Reason.UNKNOWN);
+    }
+
+    public static void handleInventoryCloseEvent(net.minecraft.world.entity.player.Player human, org.bukkit.event.inventory.InventoryCloseEvent.Reason reason) {
+        // Paper end
+        InventoryCloseEvent event = new InventoryCloseEvent(human.containerMenu.getBukkitView(), reason); // Paper
         human.level().getCraftServer().getPluginManager().callEvent(event);
         human.containerMenu.transferTo(human.inventoryMenu, human.getBukkitEntity());
     }
@@ -1947,19 +1967,33 @@ public class CraftEventFactory {
         return event;
     }
 
-    public static EntityKnockbackEvent callEntityKnockbackEvent(CraftLivingEntity entity, Entity attacker, EntityKnockbackEvent.KnockbackCause cause, double force, Vec3 raw, double x, double y, double z) {
-        Vector bukkitRaw = new Vector(-raw.x, raw.y, -raw.z); // Due to how the knockback calculation works, we need to invert x and z.
-
-        EntityKnockbackEvent event;
-        if (attacker != null) {
-            event = new EntityKnockbackByEntityEvent(entity, attacker.getBukkitEntity(), cause, force, new Vector(-raw.x, raw.y, -raw.z), new Vector(x, y, z));
+    // Paper start - replace knockback events
+    public static io.papermc.paper.event.entity.EntityKnockbackEvent callEntityKnockbackEvent(CraftLivingEntity entity, Entity pusher, Entity attacker, io.papermc.paper.event.entity.EntityKnockbackEvent.Cause cause, double force, Vec3 knockback) {
+        Vector apiKnockback = CraftVector.toBukkit(knockback);
+        final Vector currentVelocity = entity.getVelocity();
+        final Vector legacyFinalKnockback = currentVelocity.clone().add(apiKnockback);
+        final org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause legacyCause = org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause.valueOf(cause.name());
+        EntityKnockbackEvent legacyEvent;
+        if (pusher != null) {
+            legacyEvent = new EntityKnockbackByEntityEvent(entity, pusher.getBukkitEntity(), legacyCause, force, apiKnockback, legacyFinalKnockback);
         } else {
-            event = new EntityKnockbackEvent(entity, cause, force, new Vector(-raw.x, raw.y, -raw.z), new Vector(x, y, z));
+            legacyEvent = new EntityKnockbackEvent(entity, legacyCause, force, apiKnockback, legacyFinalKnockback);
+        }
+        legacyEvent.callEvent();
+
+        final io.papermc.paper.event.entity.EntityKnockbackEvent event;
+        apiKnockback = legacyEvent.getFinalKnockback().subtract(currentVelocity);
+        if (attacker != null) {
+            event = new com.destroystokyo.paper.event.entity.EntityKnockbackByEntityEvent(entity, attacker.getBukkitEntity(), cause, (float) force, apiKnockback);
+        } else {
+            event = new io.papermc.paper.event.entity.EntityKnockbackEvent(entity, cause, apiKnockback);
         }
 
-        Bukkit.getPluginManager().callEvent(event);
+        event.setCancelled(legacyEvent.isCancelled());
+        event.callEvent();
         return event;
     }
+    // Paper end - replace knockback events
 
     public static void callEntityRemoveEvent(Entity entity, EntityRemoveEvent.Cause cause) {
         if (entity instanceof ServerPlayer) {
@@ -1985,4 +2019,14 @@ public class CraftEventFactory {
                 vector != null ? CraftVector.toBukkit(vector) : null).callEvent();
     }
     // Paper end - PlayerUseUnknownEntityEvent
+
+    // Paper start - WitchReadyPotionEvent
+    public static ItemStack handleWitchReadyPotionEvent(net.minecraft.world.entity.monster.Witch witch, @Nullable ItemStack potion) {
+        com.destroystokyo.paper.event.entity.WitchReadyPotionEvent event = new com.destroystokyo.paper.event.entity.WitchReadyPotionEvent((org.bukkit.entity.Witch) witch.getBukkitEntity(), CraftItemStack.asCraftMirror(potion));
+        if (!event.callEvent() || event.getPotion() == null) {
+            return ItemStack.EMPTY;
+        }
+        return org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(event.getPotion());
+    }
+    // Paper end - WitchReadyPotionEvent
 }

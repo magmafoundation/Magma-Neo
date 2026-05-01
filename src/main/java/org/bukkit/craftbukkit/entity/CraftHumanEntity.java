@@ -386,7 +386,7 @@ public class CraftHumanEntity extends CraftLivingEntity implements HumanEntity {
         if (((ServerPlayer) getHandle()).connection == null) return;
         if (getHandle().containerMenu != getHandle().inventoryMenu) {
             // fire INVENTORY_CLOSE if one already open
-            ((ServerPlayer) getHandle()).connection.handleContainerClose(new ServerboundContainerClosePacket(getHandle().containerMenu.containerId));
+            ((ServerPlayer) getHandle()).connection.handleContainerClose(new ServerboundContainerClosePacket(getHandle().containerMenu.containerId), org.bukkit.event.inventory.InventoryCloseEvent.Reason.OPEN_NEW); // Paper - Inventory close reason
         }
         ServerPlayer player = (ServerPlayer) getHandle();
         AbstractContainerMenu container;
@@ -454,8 +454,15 @@ public class CraftHumanEntity extends CraftLivingEntity implements HumanEntity {
 
     @Override
     public void closeInventory() {
-        getHandle().closeContainer();
+        // Paper start - Inventory close reason
+        getHandle().closeContainer(org.bukkit.event.inventory.InventoryCloseEvent.Reason.PLUGIN);
     }
+
+    @Override
+    public void closeInventory(org.bukkit.event.inventory.InventoryCloseEvent.Reason reason) {
+        getHandle().closeContainer(reason);
+    }
+    // Paper end - Inventory close reason
 
     @Override
     public boolean isBlocking() {
@@ -625,6 +632,13 @@ public class CraftHumanEntity extends CraftLivingEntity implements HumanEntity {
             entity.remove();
         }
     }
+
+    // Paper start - move open sign method to HumanEntity
+    @Override
+    public void openSign(final org.bukkit.block.Sign sign, final org.bukkit.block.sign.Side side) {
+        org.bukkit.craftbukkit.block.CraftSign.openSign(sign, (CraftPlayer) this, side);
+    }
+    // Paper end
 
     @Override
     public boolean dropItem(boolean dropAll) {

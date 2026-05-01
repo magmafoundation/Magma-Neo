@@ -411,7 +411,7 @@ public class CraftWorld extends CraftRegionAccessor implements World {
     @Override
     public boolean loadChunk(int x, int z, boolean generate) {
         org.spigotmc.AsyncCatcher.catchOp("chunk load"); // Spigot
-        ChunkAccess chunk = world.getChunkSource().getChunk(x, z, generate ? ChunkStatus.FULL : ChunkStatus.EMPTY, true);
+        ChunkAccess chunk = this.world.getChunkSource().getChunk(x, z, generate || isChunkGenerated(x, z) ? ChunkStatus.FULL : ChunkStatus.EMPTY, true); // Paper
 
         // If generate = false, but the chunk already exists, we will get this back.
         if (chunk instanceof ImposterProtoChunk) {
@@ -769,6 +769,15 @@ public class CraftWorld extends CraftRegionAccessor implements World {
         return !world.explode(source == null ? null : ((CraftEntity) source).getHandle(), x, y, z, power, setFire, explosionType).wasCanceled;
     }
 
+    // Paper start
+    @Override
+    public boolean createExplosion(Entity source, Location loc, float power, boolean setFire, boolean breakBlocks, boolean excludeSourceFromDamage) {
+        return !world.explode(source != null ? ((org.bukkit.craftbukkit.entity.CraftEntity) source).getHandle() : null, loc.getX(), loc.getY(), loc.getZ(), power, setFire, breakBlocks ? net.minecraft.world.level.Level.ExplosionInteraction.MOB : net.minecraft.world.level.Level.ExplosionInteraction.NONE, explosion -> {
+            explosion.excludeSourceFromDamage = excludeSourceFromDamage;
+        }).wasCanceled;
+    }
+    // Paper end
+
     @Override
     public boolean createExplosion(Location loc, float power) {
         return createExplosion(loc, power, false);
@@ -1097,6 +1106,15 @@ public class CraftWorld extends CraftRegionAccessor implements World {
 
         return list;
     }
+
+    // Paper start - getEntity by UUID API
+    @Override
+    public Entity getEntity(UUID uuid) {
+        Preconditions.checkArgument(uuid != null, "UUID cannot be null");
+        net.minecraft.world.entity.Entity entity = world.getEntity(uuid);
+        return entity == null ? null : entity.getBukkitEntity();
+    }
+    // Paper end
 
     @Override
     public void save() {
@@ -1965,15 +1983,26 @@ public class CraftWorld extends CraftRegionAccessor implements World {
 
     @Override
     public <T> void spawnParticle(Particle particle, double x, double y, double z, int count, double offsetX, double offsetY, double offsetZ, double extra, T data, boolean force) {
-//        getHandle().sendParticles(
-//                null, // Sender
-//                CraftParticle.createParticleParam(particle, data), // Particle
-//                x, y, z, // Position
-//                count,  // Count
-//                offsetX, offsetY, offsetZ, // Random offset
-//                extra, // Speed?
-//                force);
-        // Magma - todo
+        // Paper start - Particle API
+        this.spawnParticle(particle, null, null, x, y, z, count, offsetX, offsetY, offsetZ, extra, data, force);
+    }
+
+    @Override
+    public <T> void spawnParticle(Particle particle, List<Player> receivers, Player sender, double x, double y, double z, int count, double offsetX, double offsetY, double offsetZ, double extra, T data, boolean force) {
+        // Paper end - Particle API
+        data = CraftParticle.convertLegacy(data);
+        if (data != null) {
+            Preconditions.checkArgument(particle.getDataType().isInstance(data), "data (%s) should be %s", data.getClass(), particle.getDataType());
+        }
+        getHandle().sendParticles(
+                receivers == null ? this.getHandle().players() : receivers.stream().map(player -> ((CraftPlayer) player).getHandle()).collect(java.util.stream.Collectors.toList()), // Paper -  Particle API
+                sender != null ? ((CraftPlayer) sender).getHandle() : null, // Sender // Paper - Particle API
+                CraftParticle.createParticleParam(particle, data), // Particle
+                x, y, z, // Position
+                count,  // Count
+                offsetX, offsetY, offsetZ, // Random offset
+                extra, // Speed?
+                force);
     }
 
     @Deprecated

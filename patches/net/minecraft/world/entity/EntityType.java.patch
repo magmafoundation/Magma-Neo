@@ -104,8 +104,20 @@
      }
  
      @Nullable
-@@ -927,7 +_,9 @@
+@@ -925,9 +_,21 @@
+ 
+     @Nullable
      public T spawn(ServerLevel p_262704_, @Nullable Consumer<T> p_262621_, BlockPos p_262672_, MobSpawnType p_262644_, boolean p_262690_, boolean p_262590_) {
++        // Paper start - PreCreatureSpawnEvent
++        com.destroystokyo.paper.event.entity.PreCreatureSpawnEvent event = new com.destroystokyo.paper.event.entity.PreCreatureSpawnEvent(
++                io.papermc.paper.util.MCUtil.toLocation(p_262704_, p_262672_),
++                org.bukkit.craftbukkit.entity.CraftEntityType.minecraftToBukkit(this),
++                magma$spawnReason
++        );
++        if (!event.callEvent()) {
++            return null;
++        }
++        // Paper end - PreCreatureSpawnEvent
          T t = this.create(p_262704_, p_262621_, p_262672_, p_262644_, p_262690_, p_262590_);
          if (t != null) {
 -            p_262704_.addFreshEntityWithPassengers(t);

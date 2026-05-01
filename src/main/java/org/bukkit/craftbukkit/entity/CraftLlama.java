@@ -7,7 +7,7 @@ import org.bukkit.entity.Horse;
 import org.bukkit.entity.Llama;
 import org.bukkit.inventory.LlamaInventory;
 
-public class CraftLlama extends CraftChestedHorse implements Llama {
+public class CraftLlama extends CraftChestedHorse implements Llama, com.destroystokyo.paper.entity.CraftRangedEntity<net.minecraft.world.entity.animal.horse.Llama> { // Paper
     public CraftLlama(CraftServer server, net.minecraft.world.entity.animal.horse.Llama entity) {
         super(server, entity);
     }

@@ -1,5 +1,48 @@
 --- a/net/minecraft/world/entity/monster/Phantom.java
 +++ b/net/minecraft/world/entity/monster/Phantom.java
+@@ -167,6 +_,11 @@
+         }
+ 
+         this.setPhantomSize(p_33132_.getInt("Size"));
++        // Paper start
++        if (p_33132_.hasUUID("Paper.SpawningEntity")) {
++            this.spawningEntity = p_33132_.getUUID("Paper.SpawningEntity");
++        }
++        // Paper end
+     }
+ 
+     @Override
+@@ -176,6 +_,11 @@
+         p_33141_.putInt("AY", this.anchorPoint.getY());
+         p_33141_.putInt("AZ", this.anchorPoint.getZ());
+         p_33141_.putInt("Size", this.getPhantomSize());
++        // Paper start
++        if (this.spawningEntity != null) {
++            p_33141_.putUUID("Paper.SpawningEntity", this.spawningEntity);
++        }
++        // Paper end
+     }
+ 
+     @Override
+@@ -220,6 +_,18 @@
+         return entitydimensions.scale(1.0F + 0.15F * (float)i);
+     }
+ 
++    // Paper start
++    @Nullable
++    java.util.UUID spawningEntity;
++
++    @Nullable
++    public java.util.UUID getSpawningEntity() {
++        return this.spawningEntity;
++    }
++
++    public void setSpawningEntity(java.util.UUID entity) { this.spawningEntity = entity; }
++    // Paper end
++
+     static enum AttackPhase {
+         CIRCLE,
+         SWOOP;
 @@ -243,7 +_,7 @@
  
                      for (Player player : list) {

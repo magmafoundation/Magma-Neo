@@ -97,7 +97,22 @@ public class CraftSkull extends CraftBlockEntityState<SkullBlockEntity> implemen
         }
     }
 
+    // Paper start
     @Override
+    public void setPlayerProfile(com.destroystokyo.paper.profile.PlayerProfile profile) {
+        Preconditions.checkNotNull(profile, "profile");
+        this.profile = com.destroystokyo.paper.profile.CraftPlayerProfile.asResolvableProfileCopy(profile);
+    }
+
+    @org.jetbrains.annotations.Nullable
+    @Override
+    public com.destroystokyo.paper.profile.PlayerProfile getPlayerProfile() {
+        return profile != null ? new com.destroystokyo.paper.profile.CraftPlayerProfile(profile) : null;
+    }
+
+    // Paper end
+    @Override
+    @Deprecated // Paper
     public PlayerProfile getOwnerProfile() {
         if (!hasOwner()) {
             return null;
@@ -107,11 +122,12 @@ public class CraftSkull extends CraftBlockEntityState<SkullBlockEntity> implemen
     }
 
     @Override
+    @Deprecated // Paper
     public void setOwnerProfile(PlayerProfile profile) {
         if (profile == null) {
             this.profile = null;
         } else {
-            this.profile = new ResolvableProfile(CraftPlayerProfile.validateSkullProfile(((CraftPlayerProfile) profile).buildGameProfile()));
+            this.profile = CraftPlayerProfile.validateSkullProfile(((com.destroystokyo.paper.profile.SharedPlayerProfile) profile).buildResolvableProfile()); // Paper
         }
     }
 

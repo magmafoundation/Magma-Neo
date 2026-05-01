@@ -634,7 +634,7 @@
                          d1 = p_21016_.getSourcePosition().z() - this.getZ();
                      }
  
-+                    this.setKnockbackCauseAndAttacker(entity == null ? org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause.DAMAGE : org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause.ENTITY_ATTACK, entity);
++                    this.setKnockbackCauseAndAttacker(entity == null ? io.papermc.paper.event.entity.EntityKnockbackEvent.Cause.DAMAGE : io.papermc.paper.event.entity.EntityKnockbackEvent.Cause.ENTITY_ATTACK); // CraftBukkit // Paper - knockback events
                      this.knockback(0.4F, d0, d1);
 +                    this.setKnockbackCause(org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause.UNKNOWN);
                      if (!flag) {
@@ -661,9 +661,9 @@
      }
  
      protected void blockedByShield(LivingEntity p_21246_) {
-+        p_21246_.setKnockbackCause(org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause.SHIELD_BLOCK);
++        p_21246_.setKnockbackCause(io.papermc.paper.event.entity.EntityKnockbackEvent.Cause.SHIELD_BLOCK); // CraftBukkit // Paper - fix attacker & knockback events
          p_21246_.knockback(0.5, p_21246_.getX() - this.getX(), p_21246_.getZ() - this.getZ());
-+        p_21246_.setKnockbackCause(org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause.UNKNOWN);
++        p_21246_.setKnockbackCause(io.papermc.paper.event.entity.EntityKnockbackEvent.Cause.UNKNOWN);
      }
  
      private boolean checkTotemDeathProtection(DamageSource p_21263_) {
@@ -832,15 +832,15 @@
      }
  
 +    // Magma
-+    private org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause magma$knockbackCause = org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause.UNKNOWN;
++    private io.papermc.paper.event.entity.EntityKnockbackEvent.Cause magma$knockbackCause = io.papermc.paper.event.entity.EntityKnockbackEvent.Cause.UNKNOWN;
 +    private Entity magma$knockbackAttacker = null;
 +
-+    public void setKnockbackCause(org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause cause) {
++    public void setKnockbackCause(io.papermc.paper.event.entity.EntityKnockbackEvent.Cause cause) {
 +        this.magma$knockbackCause = cause;
 +        this.magma$knockbackAttacker = null;
 +    }
 +
-+    public void setKnockbackCauseAndAttacker(org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause cause, Entity attacker) {
++    public void setKnockbackCauseAndAttacker(io.papermc.paper.event.entity.EntityKnockbackEvent.Cause cause, Entity attacker) {
 +        this.magma$knockbackCause = cause;
 +        this.magma$knockbackAttacker = attacker;
 +    }
@@ -854,17 +854,21 @@
          p_147241_ *= 1.0 - this.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE);
          if (!(p_147241_ <= 0.0)) {
              this.hasImpulse = true;
-@@ -1451,7 +_,13 @@
+@@ -1451,7 +_,17 @@
              }
  
              Vec3 vec31 = new Vec3(p_147242_, 0.0, p_147243_).normalize().scale(p_147241_);
 -            this.setDeltaMovement(vec3.x / 2.0 - vec31.x, this.onGround() ? Math.min(0.4, vec3.y / 2.0 + p_147241_) : vec3.y, vec3.z / 2.0 - vec31.z);
-+            org.bukkit.event.entity.EntityKnockbackEvent eventCB = org.bukkit.craftbukkit.event.CraftEventFactory.callEntityKnockbackEvent((org.bukkit.craftbukkit.entity.CraftLivingEntity) this.getBukkitEntity(), magma$knockbackAttacker, magma$knockbackCause, p_147241_, vec31, vec3.x / 2.0D - vec31.x, this.onGround() ? Math.min(0.4D, vec3.y / 2.0D + p_147241_) : vec3.y, vec3.z / 2.0D - vec31.z);
++            // Paper start - knockback events
++            Vec3 finalVelocity = new Vec3(vec3.x / 2.0D - vec31.x, this.onGround() ? Math.min(0.4D, vec3.y / 2.0D + p_147241_) : vec3.y, vec3.z / 2.0D - vec31.z);
++            Vec3 diff = finalVelocity.subtract(vec3);
++            io.papermc.paper.event.entity.EntityKnockbackEvent eventCB = org.bukkit.craftbukkit.event.CraftEventFactory.callEntityKnockbackEvent((org.bukkit.craftbukkit.entity.CraftLivingEntity) this.getBukkitEntity(), magma$knockbackAttacker, magma$knockbackAttacker, magma$knockbackCause, p_147241_, diff);
++            // Paper end - knockback events
 +            if (eventCB.isCancelled()) {
 +                return;
 +            }
 +            this.hasImpulse = true;
-+            this.setDeltaMovement(eventCB.getFinalKnockback().getX(), eventCB.getFinalKnockback().getY(), eventCB.getFinalKnockback().getZ());
++            this.setDeltaMovement(vec3.add(eventCB.getKnockback().getX(), eventCB.getKnockback().getY(), eventCB.getKnockback().getZ())); // Paper - knockback events
 +            // CraftBukkit end
          }
      }
@@ -1366,6 +1370,17 @@
                  d2 = 0.0;
              }
  
+@@ -2444,6 +_,10 @@
+         }
+     }
+ 
++    public void detectEquipmentUpdatesPublic() { // CraftBukkit
++        this.detectEquipmentUpdates();
++    }
++
+     public void detectEquipmentUpdates() {
+         Map<EquipmentSlot, ItemStack> map = this.collectEquipmentChanges();
+         if (map != null) {
 @@ -2466,6 +_,14 @@
              };
              ItemStack itemstack1 = this.getItemBySlot(equipmentslot);
@@ -1589,15 +1604,42 @@
          if (!this.level().isClientSide) {
              boolean flag = this.isUsingItem();
              this.setLivingEntityFlag(1, false);
-@@ -3161,7 +_,7 @@
+@@ -3161,11 +_,34 @@
      public boolean isBlocking() {
          if (this.isUsingItem() && !this.useItem.isEmpty()) {
              Item item = this.useItem.getItem();
 -            return item.getUseAnimation(this.useItem) != UseAnim.BLOCK ? false : item.getUseDuration(this.useItem, this) - this.useItemRemaining >= 5;
-+            return !this.useItem.canPerformAction(net.neoforged.neoforge.common.ItemAbilities.SHIELD_BLOCK) ? false : item.getUseDuration(this.useItem, this) - this.useItemRemaining >= 5;
++            return !this.useItem.canPerformAction(net.neoforged.neoforge.common.ItemAbilities.SHIELD_BLOCK) ? false : item.getUseDuration(this.useItem, this) - this.useItemRemaining >= getShieldBlockingDelay(); // Paper - Make shield blocking delay configurable
          } else {
              return false;
          }
+     }
++
++    // Paper start - Make shield blocking delay configurable
++    public HitResult getRayTrace(int maxDistance, ClipContext.Fluid fluidCollisionOption) {
++        if (maxDistance < 1 || maxDistance > 120) {
++            throw new IllegalArgumentException("maxDistance must be between 1-120");
++        }
++        Vec3 start = new Vec3(getX(), getY() + getEyeHeight(), getZ());
++        org.bukkit.util.Vector dir = getBukkitEntity().getLocation().getDirection().multiply(maxDistance);
++        Vec3 end = new Vec3(start.x + dir.getX(), start.y + dir.getY(), start.z + dir.getZ());
++        ClipContext raytrace = new ClipContext(start, end, ClipContext.Block.OUTLINE, fluidCollisionOption, this);
++        return this.level().clip(raytrace);
++    }
++
++    public int shieldBlockingDelay = this.level().paperConfig().misc.shieldBlockingDelay;
++
++    public int getShieldBlockingDelay() {
++        return shieldBlockingDelay;
++    }
++
++    public void setShieldBlockingDelay(int shieldBlockingDelay) {
++        this.shieldBlockingDelay = shieldBlockingDelay;
++    }
++    // Paper end - Make shield blocking delay configurable
+ 
+     public boolean isSuppressingSlidingDownLadder() {
+         return this.isShiftKeyDown();
 @@ -3185,6 +_,12 @@
      }
  

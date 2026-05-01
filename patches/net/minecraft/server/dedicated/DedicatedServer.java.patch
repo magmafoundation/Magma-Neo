@@ -1,7 +1,11 @@
 --- a/net/minecraft/server/dedicated/DedicatedServer.java
 +++ b/net/minecraft/server/dedicated/DedicatedServer.java
-@@ -67,7 +_,7 @@
-     private final List<ConsoleInput> consoleInput = Collections.synchronizedList(Lists.newArrayList());
+@@ -64,10 +_,10 @@
+     static final Logger LOGGER = LogUtils.getLogger();
+     private static final int CONVERSION_RETRY_DELAY_MS = 5000;
+     private static final int CONVERSION_RETRIES = 2;
+-    private final List<ConsoleInput> consoleInput = Collections.synchronizedList(Lists.newArrayList());
++    private final java.util.Queue<ConsoleInput> serverCommandQueue = new java.util.concurrent.ConcurrentLinkedQueue<>(); // Paper - Perf: use a proper queue
      @Nullable
      private QueryThreadGs4 queryThreadGs4;
 -    private final RconConsoleSource rconConsoleSource;
@@ -235,14 +239,23 @@
      }
  
      @Override
-@@ -313,10 +_,19 @@
+@@ -309,14 +_,25 @@
+     }
+ 
+     public void handleConsoleInput(String p_139646_, CommandSourceStack p_139647_) {
+-        this.consoleInput.add(new ConsoleInput(p_139646_, p_139647_));
++        this.serverCommandQueue.add(new ConsoleInput(p_139646_, p_139647_)); // Paper - Perf: use proper queue
      }
  
      public void handleConsoleInputs() {
-+        co.aikar.timings.MinecraftTimings.serverCommandTimer.startTiming(); // Spigot
-         while (!this.consoleInput.isEmpty()) {
-             ConsoleInput consoleinput = this.consoleInput.remove(0);
+-        while (!this.consoleInput.isEmpty()) {
+-            ConsoleInput consoleinput = this.consoleInput.remove(0);
 -            this.getCommands().performPrefixedCommand(consoleinput.source, consoleinput.msg);
++        co.aikar.timings.MinecraftTimings.serverCommandTimer.startTiming(); // Spigot
++        // Paper start - Perf: use proper queue
++        ConsoleInput consoleinput;
++        while ((consoleinput = this.serverCommandQueue.poll()) != null) {
++            // Paper end - Perf: use proper queue
 +            // CraftBukkit start - ServerCommand for preprocessing
 +            org.bukkit.event.server.ServerCommandEvent event = new org.bukkit.event.server.ServerCommandEvent(console, consoleinput.msg);
 +            server.getPluginManager().callEvent(event);

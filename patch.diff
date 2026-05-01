@@ -1,55 +1,154 @@
-diff --git a/src/main/java/com/destroystokyo/paper/network/PaperNetworkClient.java b/src/main/java/com/destroystokyo/paper/network/PaperNetworkClient.java
+diff --git a/src/main/java/com/destroystokyo/paper/entity/PaperPathfinder.java b/src/main/java/com/destroystokyo/paper/entity/PaperPathfinder.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..a5a7624f1f372a26b982836cd31cff15e2589e9b
+index 0000000000000000000000000000000000000000..946cbc955683e81933e0f3c0db5f8cc4ec437a76
 --- /dev/null
-+++ b/src/main/java/com/destroystokyo/paper/network/PaperNetworkClient.java
-@@ -0,0 +1,49 @@
-+package com.destroystokyo.paper.network;
++++ b/src/main/java/com/destroystokyo/paper/entity/PaperPathfinder.java
+@@ -0,0 +1,148 @@
++package com.destroystokyo.paper.entity;
 +
-+import java.net.InetSocketAddress;
-+
++import org.apache.commons.lang.Validate;
++import org.bukkit.Location;
++import org.bukkit.craftbukkit.entity.CraftLivingEntity;
++import org.bukkit.entity.LivingEntity;
++import org.bukkit.entity.Mob;
++import javax.annotation.Nonnull;
 +import javax.annotation.Nullable;
-+import net.minecraft.network.Connection;
++import net.minecraft.world.level.pathfinder.Node;
++import net.minecraft.world.level.pathfinder.Path;
++import java.util.ArrayList;
++import java.util.List;
 +
-+public class PaperNetworkClient implements NetworkClient {
++public class PaperPathfinder implements com.destroystokyo.paper.entity.Pathfinder {
 +
-+    private final Connection networkManager;
++    private net.minecraft.world.entity.Mob entity;
 +
-+    PaperNetworkClient(Connection networkManager) {
-+        this.networkManager = networkManager;
++    public PaperPathfinder(net.minecraft.world.entity.Mob entity) {
++        this.entity = entity;
 +    }
 +
 +    @Override
-+    public InetSocketAddress getAddress() {
-+        return (InetSocketAddress) this.networkManager.getRemoteAddress();
++    public Mob getEntity() {
++        return (Mob) entity.getBukkitEntity();
++    }
++
++    public void setHandle(net.minecraft.world.entity.Mob entity) {
++        this.entity = entity;
 +    }
 +
 +    @Override
-+    public int getProtocolVersion() {
-+        return this.networkManager.protocolVersion;
++    public void stopPathfinding() {
++        entity.getNavigation().stop();
++    }
++
++    @Override
++    public boolean hasPath() {
++        return entity.getNavigation().getPath() != null && !entity.getNavigation().getPath().isDone();
 +    }
 +
 +    @Nullable
 +    @Override
-+    public InetSocketAddress getVirtualHost() {
-+        return this.networkManager.virtualHost;
++    public PathResult getCurrentPath() {
++        Path path = entity.getNavigation().getPath();
++        return path != null && !path.isDone() ? new PaperPathResult(path) : null;
 +    }
 +
-+    public static InetSocketAddress prepareVirtualHost(String host, int port) {
-+        int len = host.length();
-+
-+        // FML appends a marker to the host to recognize FML clients (\0FML\0)
-+        int pos = host.indexOf('\0');
-+        if (pos >= 0) {
-+            len = pos;
-+        }
-+
-+        // When clients connect with a SRV record, their host contains a trailing '.'
-+        if (len > 0 && host.charAt(len -  1) == '.') {
-+            len--;
-+        }
-+
-+        return InetSocketAddress.createUnresolved(host.substring(0, len), port);
++    @Nullable
++    @Override
++    public PathResult findPath(Location loc) {
++        Validate.notNull(loc, "Location can not be null");
++        Path path = entity.getNavigation().createPath(loc.getX(), loc.getY(), loc.getZ(), 0);
++        return path != null ? new PaperPathResult(path) : null;
 +    }
 +
++    @Nullable
++    @Override
++    public PathResult findPath(LivingEntity target) {
++        Validate.notNull(target, "Target can not be null");
++        Path path = entity.getNavigation().createPath(((CraftLivingEntity) target).getHandle(), 0);
++        return path != null ? new PaperPathResult(path) : null;
++    }
++
++    @Override
++    public boolean moveTo(@Nonnull PathResult path, double speed) {
++        Validate.notNull(path, "PathResult can not be null");
++        Path pathEntity = ((PaperPathResult) path).path;
++        return entity.getNavigation().moveTo(pathEntity, speed);
++    }
++
++    @Override
++    public boolean canOpenDoors() {
++        return entity.getNavigation().pathFinder.nodeEvaluator.canOpenDoors();
++    }
++
++    @Override
++    public void setCanOpenDoors(boolean canOpenDoors) {
++        entity.getNavigation().pathFinder.nodeEvaluator.setCanOpenDoors(canOpenDoors);
++    }
++
++    @Override
++    public boolean canPassDoors() {
++        return entity.getNavigation().pathFinder.nodeEvaluator.canPassDoors();
++    }
++
++    @Override
++    public void setCanPassDoors(boolean canPassDoors) {
++        entity.getNavigation().pathFinder.nodeEvaluator.setCanPassDoors(canPassDoors);
++    }
++
++    @Override
++    public boolean canFloat() {
++        return entity.getNavigation().pathFinder.nodeEvaluator.canFloat();
++    }
++
++    @Override
++    public void setCanFloat(boolean canFloat) {
++        entity.getNavigation().pathFinder.nodeEvaluator.setCanFloat(canFloat);
++    }
++
++    public class PaperPathResult implements com.destroystokyo.paper.entity.PaperPathfinder.PathResult {
++
++        private final Path path;
++        PaperPathResult(Path path) {
++            this.path = path;
++        }
++
++        @Nullable
++        @Override
++        public Location getFinalPoint() {
++            Node point = path.getEndNode();
++            return point != null ? toLoc(point) : null;
++        }
++
++        @Override
++        public boolean canReachFinalPoint() {
++            return path.canReach();
++        }
++
++        @Override
++        public List<Location> getPoints() {
++            List<Location> points = new ArrayList<>();
++            for (Node point : path.nodes) {
++                points.add(toLoc(point));
++            }
++            return points;
++        }
++
++        @Override
++        public int getNextPointIndex() {
++            return path.getNextNodeIndex();
++        }
++
++        @Nullable
++        @Override
++        public Location getNextPoint() {
++            if (!path.hasNext()) {
++                return null;
++            }
++            return toLoc(path.nodes.get(path.getNextNodeIndex()));
++        }
++    }
++
++    private Location toLoc(Node point) {
++        return new Location(entity.level().getWorld(), point.x, point.y, point.z);
++    }
 +}

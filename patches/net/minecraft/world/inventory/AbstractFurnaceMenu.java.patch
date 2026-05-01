@@ -1,7 +1,7 @@
 --- a/net/minecraft/world/inventory/AbstractFurnaceMenu.java
 +++ b/net/minecraft/world/inventory/AbstractFurnaceMenu.java
 @@ -30,6 +_,21 @@
-     private final RecipeType<? extends AbstractCookingRecipe> recipeType;
+     public final RecipeType<? extends AbstractCookingRecipe> recipeType;
      private final RecipeBookType recipeBookType;
  
 +    // CraftBukkit start

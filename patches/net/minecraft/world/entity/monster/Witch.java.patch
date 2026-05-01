@@ -1,14 +1,35 @@
 --- a/net/minecraft/world/entity/monster/Witch.java
 +++ b/net/minecraft/world/entity/monster/Witch.java
-@@ -122,7 +_,7 @@
+@@ -121,8 +_,15 @@
+                     ItemStack itemstack = this.getMainHandItem();
                      this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
                      PotionContents potioncontents = itemstack.get(DataComponents.POTION_CONTENTS);
++                    // Paper start - WitchConsumePotionEvent
++                    if (itemstack.is(Items.POTION)) {
++                        com.destroystokyo.paper.event.entity.WitchConsumePotionEvent event = new com.destroystokyo.paper.event.entity.WitchConsumePotionEvent((org.bukkit.entity.Witch) this.getBukkitEntity(), org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(itemstack));
++                        potioncontents = event.callEvent() ? org.bukkit.craftbukkit.inventory.CraftItemStack.unwrap(event.getPotion()).get(DataComponents.POTION_CONTENTS) : null;
++                    }
++                    // Paper end - WitchConsumePotionEvent
++
                      if (itemstack.is(Items.POTION) && potioncontents != null) {
 -                        potioncontents.forEachEffect(this::addEffect);
 +                        potioncontents.forEachEffect((effect) -> this.addEffect(effect, org.bukkit.event.entity.EntityPotionEffectEvent.Cause.ATTACK)); // CraftBukkit
                      }
  
                      this.gameEvent(GameEvent.DRINK);
+@@ -146,7 +_,11 @@
+                 }
+ 
+                 if (holder != null) {
+-                    this.setItemSlot(EquipmentSlot.MAINHAND, PotionContents.createItemStack(Items.POTION, holder));
++                    // Paper start
++                    ItemStack potion = PotionContents.createItemStack(Items.POTION, holder);
++                    potion = org.bukkit.craftbukkit.event.CraftEventFactory.handleWitchReadyPotionEvent(this, potion);
++                    this.setItemSlot(EquipmentSlot.MAINHAND, potion);
++                    // Paper end
+                     this.usingTime = this.getMainHandItem().getUseDuration(this);
+                     this.setUsingItem(true);
+                     if (!this.isSilent()) {
 @@ -206,10 +_,13 @@
      protected float getDamageAfterMagicAbsorb(DamageSource p_34149_, float p_34150_) {
          p_34150_ = super.getDamageAfterMagicAbsorb(p_34149_, p_34150_);
@@ -23,3 +44,21 @@
              p_34150_ *= 0.15F;
          }
  
+@@ -241,8 +_,16 @@
+                 holder = Potions.WEAKNESS;
+             }
+ 
++            // Paper start - WitchThrowPotionEvent
++            ItemStack potion = PotionContents.createItemStack(Items.SPLASH_POTION, holder);
++            com.destroystokyo.paper.event.entity.WitchThrowPotionEvent event = new com.destroystokyo.paper.event.entity.WitchThrowPotionEvent((org.bukkit.entity.Witch) this.getBukkitEntity(), (org.bukkit.entity.LivingEntity) target.getBukkitEntity(), org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(potion));
++            if (!event.callEvent()) {
++                return;
++            }
++            potion = org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(event.getPotion());
+             ThrownPotion thrownpotion = new ThrownPotion(this.level(), this);
+-            thrownpotion.setItem(PotionContents.createItemStack(Items.SPLASH_POTION, holder));
++            thrownpotion.setItem(potion);
++            // Paper end - WitchThrowPotionEvent
+             thrownpotion.setXRot(thrownpotion.getXRot() - -20.0F);
+             thrownpotion.shoot(d0, d1 + d3 * 0.2, d2, 0.75F, 8.0F);
+             if (!this.isSilent()) {

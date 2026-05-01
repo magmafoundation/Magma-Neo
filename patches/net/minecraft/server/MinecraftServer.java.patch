@@ -416,7 +416,7 @@
          this.running = false;
          if (p_129884_) {
              try {
-@@ -660,16 +_,83 @@
+@@ -660,16 +_,84 @@
          }
      }
  
@@ -492,6 +492,7 @@
 +            resetStatusCache(status);
  
 +            // Spigot start
++            org.spigotmc.WatchdogThread.hasStarted = true; // Paper
 +            Arrays.fill( recentTps, 20 );
 +            // Paper start - further improve server tick loop
 +            long tickSection = Util.getNanos();
@@ -700,6 +701,15 @@
 +            true //TODO Neo: Possible build a system which indicates what the status of the modded server is.
          );
      }
+ 
+@@ -976,7 +_,7 @@
+         if (this.hidesOnlinePlayers()) {
+             return new ServerStatus.Players(i, list.size(), List.of());
+         } else {
+-            int j = Math.min(list.size(), 12);
++            int j = Math.min(list.size(), org.spigotmc.SpigotConfig.playerSample); // Paper - PaperServerListPingEvent
+             ObjectArrayList<GameProfile> objectarraylist = new ObjectArrayList<>(j);
+             int k = Mth.nextInt(this.random, 0, list.size() - j);
  
 @@ -992,11 +_,37 @@
  

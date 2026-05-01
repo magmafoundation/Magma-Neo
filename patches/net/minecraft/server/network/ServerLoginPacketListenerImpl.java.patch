@@ -93,7 +93,7 @@
 +                    public void run() {
 +                        try {
 +                            GameProfile gameprofile = createOfflineProfile(ServerLoginPacketListenerImpl.this.requestedUsername); // Spigot
-+                            ServerLoginPacketListenerImpl.this.callPlayerPreLoginEvents(gameprofile);
++                            gameprofile = ServerLoginPacketListenerImpl.this.callPlayerPreLoginEvents(gameprofile); // Paper - Add more fields to AsyncPlayerPreLoginEvent
 +                            ServerLoginPacketListenerImpl.LOGGER.info("UUID of player {} is {}", gameprofile.getName(), gameprofile.getId());
 +                            ServerLoginPacketListenerImpl.this.startClientVerification(gameprofile);
 +                        } catch (Exception ex) {
@@ -173,7 +173,7 @@
 +                        if (!connection.isConnected()) {
 +                            return;
 +                        }
-+                        ServerLoginPacketListenerImpl.this.callPlayerPreLoginEvents(gameprofile);
++                        gameprofile = ServerLoginPacketListenerImpl.this.callPlayerPreLoginEvents(gameprofile); // Paper - Add more fields to AsyncPlayerPreLoginEvent
 +                        // CraftBukkit end
 +
                          ServerLoginPacketListenerImpl.LOGGER.info("UUID of player {} is {}", gameprofile.getName(), gameprofile.getId());
@@ -204,7 +204,7 @@
                  }
              }
  
-@@ -220,10 +_,43 @@
+@@ -220,10 +_,51 @@
                      ? ((InetSocketAddress)socketaddress).getAddress()
                      : null;
              }
@@ -217,13 +217,22 @@
 +    }
 +
 +    // CraftBukkit start
-+    private void callPlayerPreLoginEvents(GameProfile gameprofile) throws Exception {
++    private GameProfile callPlayerPreLoginEvents(GameProfile gameprofile) throws Exception { // Paper - Add more fields to AsyncPlayerPreLoginEvent
 +        String playerName = gameprofile.getName();
 +        java.net.InetAddress address = ((java.net.InetSocketAddress) connection.getRemoteAddress()).getAddress();
 +        java.util.UUID uniqueId = gameprofile.getId();
 +        final org.bukkit.craftbukkit.CraftServer server = ServerLoginPacketListenerImpl.this.server.server;
-+        org.bukkit.event.player.AsyncPlayerPreLoginEvent asyncEvent = new org.bukkit.event.player.AsyncPlayerPreLoginEvent(playerName, address, uniqueId, this.transferred);
++        // Paper start - Add more fields to AsyncPlayerPreLoginEvent
++        final InetAddress rawAddress = ((InetSocketAddress) this.connection.channel.remoteAddress()).getAddress();
++        com.destroystokyo.paper.profile.PlayerProfile profile = com.destroystokyo.paper.profile.CraftPlayerProfile.asBukkitMirror(gameprofile); // Paper - setPlayerProfileAPI
++        org.bukkit.event.player.AsyncPlayerPreLoginEvent asyncEvent = new org.bukkit.event.player.AsyncPlayerPreLoginEvent(playerName, address, rawAddress, uniqueId, this.transferred, profile, this.connection.hostname);
 +        server.getPluginManager().callEvent(asyncEvent);
++        profile = asyncEvent.getPlayerProfile();
++        profile.complete(true); // Paper - setPlayerProfileAPI
++        gameprofile = com.destroystokyo.paper.profile.CraftPlayerProfile.asAuthlibCopy(profile);
++        playerName = gameprofile.getName();
++        uniqueId = gameprofile.getId();
++        // Paper end - Add more fields to AsyncPlayerPreLoginEvent
 +        if (org.bukkit.event.player.PlayerPreLoginEvent.getHandlerList().getRegisteredListeners().length != 0) {
 +            final org.bukkit.event.player.PlayerPreLoginEvent event = new org.bukkit.event.player.PlayerPreLoginEvent(playerName, address, uniqueId);
 +            if (asyncEvent.getResult() != org.bukkit.event.player.PlayerPreLoginEvent.Result.ALLOWED) {
@@ -239,14 +248,13 @@
 +            ServerLoginPacketListenerImpl.this.server.processQueue.add(waitable);
 +            if (waitable.get() != org.bukkit.event.player.PlayerPreLoginEvent.Result.ALLOWED) {
 +                disconnect(io.papermc.paper.adventure.PaperAdventure.asVanilla(event.kickMessage())); // Paper - Adventure
-+                return;
 +            }
 +        } else {
 +            if (asyncEvent.getLoginResult() != org.bukkit.event.player.AsyncPlayerPreLoginEvent.Result.ALLOWED) {
 +                disconnect(io.papermc.paper.adventure.PaperAdventure.asVanilla(asyncEvent.kickMessage())); // Paper - Adventure
-+                return;
 +            }
 +        }
++        return gameprofile; // Paper - Add more fields to AsyncPlayerPreLoginEvent
 +    }
 +    // CraftBukkit end
  

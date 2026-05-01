@@ -18,6 +18,11 @@ public class CraftEnderman extends CraftMonster implements Enderman {
     }
 
     @Override
+    public boolean teleportRandomly() {
+        return getHandle().teleport();
+    } // Paper
+
+    @Override
     public MaterialData getCarriedMaterial() {
         BlockState blockData = getHandle().getCarriedBlock();
         return (blockData == null) ? Material.AIR.getNewData((byte) 0) : CraftMagicNumbers.getMaterial(blockData);

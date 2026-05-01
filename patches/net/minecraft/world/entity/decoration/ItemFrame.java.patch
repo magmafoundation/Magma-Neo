@@ -13,6 +13,18 @@
          float f = 0.46875F;
          Vec3 vec3 = Vec3.atCenterOf(p_345363_).relative(p_344892_, -0.46875);
          Direction.Axis direction$axis = p_344892_.getAxis();
+@@ -118,9 +_,9 @@
+     }
+ 
+     @Override
+-    public void push(double p_31817_, double p_31818_, double p_31819_) {
++    public void push(double p_31817_, double p_31818_, double p_31819_, @org.jetbrains.annotations.Nullable Entity pushingEntity) { // Paper - add push source entity param
+         if (!this.fixed) {
+-            super.push(p_31817_, p_31818_, p_31819_);
++            super.push(p_31817_, p_31818_, p_31819_, pushingEntity); // Paper - add push source entity param
+         }
+     }
+ 
 @@ -138,6 +_,11 @@
              return false;
          } else if (!p_31776_.is(DamageTypeTags.IS_EXPLOSION) && !this.getItem().isEmpty()) {

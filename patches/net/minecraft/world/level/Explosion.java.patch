@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/level/Explosion.java
 +++ b/net/minecraft/world/level/Explosion.java
-@@ -59,6 +_,10 @@
+@@ -59,6 +_,11 @@
      private final Holder<SoundEvent> explosionSound;
      private final ObjectArrayList<BlockPos> toBlow = new ObjectArrayList<>();
      private final Map<Player, Vec3> hitPlayers = Maps.newHashMap();
@@ -8,6 +8,7 @@
 +    public boolean wasCanceled = false;
 +    public float yield;
 +    // CraftBukkit end
++    public boolean excludeSourceFromDamage = true; // Paper - Allow explosions to damage source
  
      public static DamageSource getDefaultDamageSource(Level p_312716_, @Nullable Entity p_312608_) {
          return p_312716_.damageSources().explosion(p_312608_, getIndirectSourceEntityInternal(p_312608_));
@@ -45,7 +46,7 @@
          int j2 = Mth.floor(this.z - (double)f2 - 1.0);
          int j1 = Mth.floor(this.z + (double)f2 + 1.0);
 -        List<Entity> list = this.level.getEntities(this.source, new AABB((double)k1, (double)i2, (double)j2, (double)l1, (double)i1, (double)j1));
-+        List<Entity> list = this.level.getEntities(this.source, new AABB((double)k1, (double)i2, (double)j2, (double)l1, (double)i1, (double)j1), (com.google.common.base.Predicate<Entity>) entity -> entity.isAlive() && !entity.isSpectator()); // Paper - Fix lag from explosions processing dead entities
++        List<Entity> list = this.level.getEntities(excludeSourceFromDamage ? this.source : null, new AABB((double)k1, (double)i2, (double)j2, (double)l1, (double)i1, (double)j1), (com.google.common.base.Predicate<Entity>) entity -> entity.isAlive() && !entity.isSpectator()); // Paper - Fix lag from explosions processing dead entities, Allow explosions to damage source
 +        net.neoforged.neoforge.event.EventHooks.onExplosionDetonate(this.level, this, list, f2);
          Vec3 vec3 = new Vec3(this.x, this.y, this.z);
  
@@ -94,20 +95,17 @@
                          } else {
                              d10 = d13;
                          }
-@@ -299,10 +_,24 @@
+@@ -299,10 +_,21 @@
                          d7 *= d10;
                          d9 *= d10;
                          Vec3 vec31 = new Vec3(d5, d7, d9);
 +
 +                        // CraftBukkit start - Call EntityKnockbackEvent
 +                        if (entity instanceof LivingEntity) {
-+                            Vec3 result = entity.getDeltaMovement().add(vec31);
-+                            org.bukkit.event.entity.EntityKnockbackEvent event = org.bukkit.craftbukkit.event.CraftEventFactory.callEntityKnockbackEvent((org.bukkit.craftbukkit.entity.CraftLivingEntity) entity.getBukkitEntity(), source, org.bukkit.event.entity.EntityKnockbackEvent.KnockbackCause.EXPLOSION, d10, vec31, result.x, result.y, result.z);
-+
-+                            // SPIGOT-7640: Need to subtract entity movement from the event result,
-+                            // since the code below (the setDeltaMovement call as well as the hitPlayers map)
-+                            // want the vector to be the relative velocity will the event provides the absolute velocity
-+                            vec31 = (event.isCancelled()) ? Vec3.ZERO : new Vec3(event.getFinalKnockback().getX(), event.getFinalKnockback().getY(), event.getFinalKnockback().getZ()).subtract(entity.getDeltaMovement());
++                            // Paper start - knockback events
++                            io.papermc.paper.event.entity.EntityKnockbackEvent event = org.bukkit.craftbukkit.event.CraftEventFactory.callEntityKnockbackEvent((org.bukkit.craftbukkit.entity.CraftLivingEntity) entity.getBukkitEntity(), this.source, this.damageSource.getEntity() != null ? this.damageSource.getEntity() : this.source, io.papermc.paper.event.entity.EntityKnockbackEvent.Cause.EXPLOSION, d13, vec31);
++                            vec31 = event.isCancelled() ? Vec3.ZERO : org.bukkit.craftbukkit.util.CraftVector.toNMS(event.getKnockback());
++                            // Paper end - knockback events
 +                        }
 +                        // CraftBukkit end
 +

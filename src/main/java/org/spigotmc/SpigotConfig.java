@@ -181,7 +181,7 @@ public class SpigotConfig {
         restartScript = getString("settings.restart-script", restartScript);
         restartMessage = transform(getString("messages.restart", "Server is restarting"));
         commands.put("restart", new RestartCommand("restart"));
-        WatchdogThread.doStart(timeoutTime, restartOnCrash);
+        // WatchdogThread.doStart(timeoutTime, restartOnCrash); // Paper - moved to after paper config initialization
     }
 
     public static boolean bungee;
@@ -232,7 +232,7 @@ public class SpigotConfig {
     public static int playerSample;
 
     private static void playerSample() {
-        playerSample = getInt("settings.sample-count", 12);
+        SpigotConfig.playerSample = Math.max(SpigotConfig.getInt("settings.sample-count", 12), 0); // Paper - Avoid negative counts
         Bukkit.getLogger().log(Level.INFO, "Server Ping Player Sample Count: {0}", playerSample); // Paper - Use logger
     }
 

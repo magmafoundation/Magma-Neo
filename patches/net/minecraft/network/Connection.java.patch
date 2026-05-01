@@ -12,7 +12,7 @@
      @Nullable
      private volatile PacketListener disconnectListener;
      @Nullable
-@@ -107,6 +_,25 @@
+@@ -107,6 +_,26 @@
      private volatile DisconnectionDetails delayedDisconnect;
      @Nullable
      BandwidthDebugMonitor bandwidthDebugMonitor;
@@ -22,6 +22,7 @@
 +    // Paper start - NetworkClient implementation
 +    public int protocolVersion;
 +    public java.net.InetSocketAddress virtualHost;
++    private static boolean enableExplicitFlush = Boolean.getBoolean("paper.explicit-flush"); // Paper - Disable explicit network manager flushing
 +    // Paper end
 +
 +    // Paper start - add utility methods
@@ -102,6 +103,15 @@
                  );
              }
  
+@@ -400,7 +_,7 @@
+         }
+ 
+         if (this.channel != null) {
+-            this.channel.flush();
++            if (enableExplicitFlush) this.channel.eventLoop().execute(() -> this.channel.flush()); // Paper - Disable explicit network manager flushing; we don't need to explicit flush here, but allow opt in incase issues are found to a better version
+         }
+ 
+         if (this.tickCount++ % 20 == 0) {
 @@ -427,7 +_,7 @@
          if (this.address == null) {
              return "local";

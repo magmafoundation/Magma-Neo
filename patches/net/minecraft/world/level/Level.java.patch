@@ -109,10 +109,11 @@
                  }
              };
          } else {
-@@ -154,6 +_,40 @@
+@@ -154,7 +_,75 @@
          this.neighborUpdater = new CollectingNeighborUpdater(this, p_270466_);
          this.registryAccess = p_270200_;
          this.damageSources = new DamageSources(p_270200_);
+-    }
 +        if (environment == null) {
 +            environment = org.magmafoundation.magma.neoforge.NeoInject.environments.get(getTypeKey());
 +        }
@@ -147,9 +148,44 @@
 +        });
 +        // CraftBukkit end
 +
-     }
++    }
++
++    // Paper start - Cancel hit for vanished players
++    // ret true if no collision
++    public final boolean checkEntityCollision(BlockState data, Entity source, net.minecraft.world.phys.shapes.CollisionContext voxelshapedcollision,
++            BlockPos position, boolean checkCanSee) {
++        // Copied from IWorldReader#a(IBlockData, BlockPosition, VoxelShapeCollision) & EntityAccess#a(Entity, VoxelShape)
++        net.minecraft.world.phys.shapes.VoxelShape voxelshape = data.getCollisionShape(this, position, voxelshapedcollision);
++        if (voxelshape.isEmpty()) {
++            return true;
++        }
++        voxelshape = voxelshape.move((double) position.getX(), (double) position.getY(), (double) position.getZ());
++        if (voxelshape.isEmpty()) {
++            return true;
++        }
++        List<Entity> entities = this.getEntities(null, voxelshape.bounds());
++        for (int i = 0, len = entities.size(); i < len; ++i) {
++            Entity entity = entities.get(i);
++            if (checkCanSee && source instanceof net.minecraft.server.level.ServerPlayer && entity instanceof net.minecraft.server.level.ServerPlayer
++                    && !((net.minecraft.server.level.ServerPlayer) source).getBukkitEntity().canSee(((net.minecraft.server.level.ServerPlayer) entity).getBukkitEntity())) {
++                continue;
++            }
++            // !entity1.dead && entity1.i && (entity == null || !entity1.x(entity));
++            // elide the last check since vanilla calls with entity = null
++            // only we care about the source for the canSee check
++            if (entity.isRemoved() || !entity.blocksBuilding) {
++                continue;
++            }
++            if (net.minecraft.world.phys.shapes.Shapes.joinIsNotEmpty(voxelshape, net.minecraft.world.phys.shapes.Shapes.create(entity.getBoundingBox()), net.minecraft.world.phys.shapes.BooleanOp.AND)) {
++                return false;
++            }
++        }
++        return true;
++    }
++    // Paper end - Cancel hit for vanished players
  
      @Override
+     public boolean isClientSide() {
 @@ -167,6 +_,13 @@
          return null;
      }
@@ -419,7 +455,7 @@
          if (this.isOutsideBuildHeight(p_46732_)) {
              return Blocks.VOID_AIR.defaultBlockState();
          } else {
-@@ -489,39 +_,82 @@
+@@ -489,41 +_,92 @@
          (this.tickingBlockEntities ? this.pendingBlockEntityTickers : this.blockEntityTickers).add(p_151526_);
      }
  
@@ -509,8 +545,86 @@
 +            net.neoforged.neoforge.server.timings.TimeTracker.ENTITY_UPDATE.trackEnd(p_46655_);
          }
      }
++
++    // Paper start - Option to prevent armor stands from doing entity lookups
++    @Override
++    public boolean noCollision(@Nullable Entity entity, AABB box) {
++        if (entity instanceof net.minecraft.world.entity.decoration.ArmorStand && !entity.level().paperConfig().entities.armorStands.doCollisionEntityLookups) return false;
++        return LevelAccessor.super.noCollision(entity, box);
++    }
++    // Paper end - Option to prevent armor stands from doing entity lookups
  
-@@ -670,11 +_,12 @@
+     public boolean shouldTickDeath(Entity p_186458_) {
+         return true;
+@@ -565,20 +_,12 @@
+         boolean p_256634_,
+         Level.ExplosionInteraction p_256111_
+     ) {
+-        return this.explode(
+-            p_255682_,
+-            Explosion.getDefaultDamageSource(this, p_255682_),
+-            null,
+-            p_255803_,
+-            p_256403_,
+-            p_256538_,
+-            p_255674_,
+-            p_256634_,
+-            p_256111_,
+-            ParticleTypes.EXPLOSION,
+-            ParticleTypes.EXPLOSION_EMITTER,
+-            SoundEvents.GENERIC_EXPLODE
+-        );
++        // Paper start - Allow explosions to damage source
++        return this.explode(p_255682_, p_255803_, p_256403_, p_256538_, p_255674_, p_256634_, p_256111_, null);
++    }
++    public Explosion explode(@Nullable Entity entity, double x, double y, double z, float power, boolean createFire, Level.ExplosionInteraction explosionSourceType, @Nullable Consumer<Explosion> configurator) {
++        return this.explode(entity, Explosion.getDefaultDamageSource(this, entity), (ExplosionDamageCalculator) null, x, y, z, power, createFire, explosionSourceType, ParticleTypes.EXPLOSION, ParticleTypes.EXPLOSION_EMITTER, SoundEvents.GENERIC_EXPLODE, configurator);
++        // Paper end - Allow explosions to damage source
+     }
+ 
+     public Explosion explode(
+@@ -647,9 +_,13 @@
+         ParticleOptions p_311887_,
+         Holder<SoundEvent> p_320084_
+     ) {
+-        return this.explode(
+-            p_256233_, p_255861_, p_255867_, p_256447_, p_255732_, p_255717_, p_256013_, p_256228_, p_255784_, true, p_311886_, p_311887_, p_320084_
+-        );
++        // Paper start - Allow explosions to damage source
++        return this.explode(p_256233_, p_255861_, p_255867_, p_256447_, p_255732_, p_255717_, p_256013_, p_256228_, p_255784_, p_311886_, p_311887_, p_320084_, null);
++    }
++
++    public Explosion explode(@Nullable Entity entity, @Nullable DamageSource damageSource, @Nullable ExplosionDamageCalculator behavior, double x, double y, double z, float power, boolean createFire, Level.ExplosionInteraction explosionSourceType, ParticleOptions particle, ParticleOptions emitterParticle, Holder<SoundEvent> soundEvent, @Nullable Consumer<Explosion> configurator) {
++        return this.explode(entity, damageSource, behavior, x, y, z, power, createFire, explosionSourceType, true, particle, emitterParticle, soundEvent, configurator);
++        // Paper end - Allow explosions to damage source
+     }
+ 
+     public Explosion explode(
+@@ -667,14 +_,36 @@
+         ParticleOptions p_312060_,
+         Holder<SoundEvent> p_320283_
+     ) {
++        // Paper start - Allow explosions to damage source
++        return this.explode(p_311934_, p_312790_, p_311975_, p_312493_, p_312456_, p_312719_, p_312292_, p_312144_, p_312265_, p_312145_, p_312842_, p_312060_, null);
++    }
++
++    public Explosion explode(
++            @Nullable Entity p_311934_,
++            @Nullable DamageSource p_312790_,
++            @Nullable ExplosionDamageCalculator p_311975_,
++            double p_312493_,
++            double p_312456_,
++            double p_312719_,
++            float p_312292_,
++            boolean p_312144_,
++            Level.ExplosionInteraction p_312265_,
++            boolean p_312145_,
++            ParticleOptions p_312842_,
++            ParticleOptions p_312060_,
++            Holder<SoundEvent> p_320283_,
++            @Nullable Consumer<Explosion> configurator
++    ) {
++        // Paper end - Allow explosions to damage source
          Explosion.BlockInteraction explosion$blockinteraction = switch (p_312265_) {
              case NONE -> Explosion.BlockInteraction.KEEP;
              case BLOCK -> this.getDestroyType(GameRules.RULE_BLOCK_EXPLOSION_DROP_DECAY);
@@ -524,10 +638,11 @@
          };
          Explosion explosion = new Explosion(
              this,
-@@ -691,6 +_,7 @@
+@@ -691,6 +_,8 @@
              p_312060_,
              p_320283_
          );
++        if (configurator != null) configurator.accept(explosion); // Paper - Allow explosions to damage source
 +        if (net.neoforged.neoforge.event.EventHooks.onExplosionStart(this, explosion)) return explosion;
          explosion.explode();
          explosion.finalizeExplosion(p_312145_);

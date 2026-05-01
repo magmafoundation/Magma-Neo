@@ -18,11 +18,13 @@
      }
  
      @Override
-@@ -36,7 +_,104 @@
+@@ -36,7 +_,109 @@
              this.connection.disconnect(DISCONNECT_REASON);
          } else {
              this.hasRequestedStatus = true;
 -            this.connection.send(new ClientboundStatusResponsePacket(this.status));
++            // Paper start - Replace everything
++            /*
 +            // CraftBukkit start
 +            net.minecraft.server.MinecraftServer server = net.minecraft.server.MinecraftServer.getServer();
 +            final Object[] players = server.getPlayerList().players.toArray();
@@ -121,6 +123,9 @@
 +
 +            this.connection.send(new ClientboundStatusResponsePacket(ping));
 +            // CraftBukkit end
++             */
++            com.destroystokyo.paper.network.StandardPaperServerListPingEventImpl.processRequest(net.minecraft.server.MinecraftServer.getServer(), this.connection);
++            // Paper end
          }
      }
  

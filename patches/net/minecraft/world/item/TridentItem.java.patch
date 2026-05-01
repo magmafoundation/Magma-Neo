@@ -8,27 +8,37 @@
                              if (f == 0.0F) {
                                  ThrownTrident throwntrident = new ThrownTrident(p_43395_, player, p_43394_);
                                  throwntrident.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, 2.5F, 1.0F);
-@@ -88,11 +_,22 @@
+@@ -88,11 +_,31 @@
                                      throwntrident.pickup = AbstractArrow.Pickup.CREATIVE_ONLY;
                                  }
  
 -                                p_43395_.addFreshEntity(throwntrident);
-+                                if (!p_43395_.addFreshEntity(throwntrident)) {
++                                // CraftBukkit start
++                                // Paper start - PlayerLaunchProjectileEvent
++                                com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent event = new com.destroystokyo.paper.event.player.PlayerLaunchProjectileEvent((org.bukkit.entity.Player) player.getBukkitEntity(), org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(p_43394_), (org.bukkit.entity.Projectile) throwntrident.getBukkitEntity());
++                                if (!event.callEvent() || !p_43395_.addFreshEntity(throwntrident)) {
++                                    // Paper end - PlayerLaunchProjectileEvent
 +                                    if (player instanceof net.minecraft.server.level.ServerPlayer) {
 +                                        ((net.minecraft.server.level.ServerPlayer) player).getBukkitEntity().updateInventory();
 +                                    }
 +                                    return;
 +                                }
 +
-+                                p_43394_.hurtAndBreak(1, player, LivingEntity.getSlotForHand(p_43396_.getUsedItemHand()));
-+                                throwntrident.pickupItemStack = p_43394_.copy();
++                                if (event.shouldConsume()) { // Paper - PlayerLaunchProjectileEvent
++                                    p_43394_.hurtAndBreak(1, player, LivingEntity.getSlotForHand(player.getUsedItemHand()));
++                                } // Paper - PlayerLaunchProjectileEvent
++                                throwntrident.pickupItemStack = p_43394_.copy(); // SPIGOT-4511 update since damage call moved
++                                // CraftBukkit end
 +
                                  p_43395_.playSound(null, throwntrident, holder.value(), SoundSource.PLAYERS, 1.0F, 1.0F);
-                                 if (!player.hasInfiniteMaterials()) {
+-                                if (!player.hasInfiniteMaterials()) {
++                                if (event.shouldConsume() && !player.hasInfiniteMaterials()) { // Paper - PlayerLaunchProjectileEvent
                                      player.getInventory().removeItem(p_43394_);
                                  }
++                                // CraftBukkit start - SPIGOT-5458 also need in this branch :(
 +                            } else {
 +                                p_43394_.hurtAndBreak(1, player, LivingEntity.getSlotForHand(p_43396_.getUsedItemHand()));
++                                // CraftBukkkit end
                              }
                          }
  

@@ -7,7 +7,7 @@
 +    @Nullable public net.minecraft.world.entity.ai.goal.FloatGoal goalFloat; // Paper - Allow nerfed mobs to jump and float
      public final GoalSelector targetSelector;
      @Nullable
-     private LivingEntity target;
+     public LivingEntity target;
 @@ -131,6 +_,11 @@
      private Leashable.LeashData leashData;
      private BlockPos restrictCenter = BlockPos.ZERO;
@@ -342,6 +342,14 @@
              this.dropLeash(true, true);
          }
  
+@@ -1434,6 +_,7 @@
+         if (flag) {
+             float f1 = this.getKnockback(p_21372_, damagesource);
+             if (f1 > 0.0F && p_21372_ instanceof LivingEntity livingentity) {
++                livingentity.setKnockbackCauseAndAttacker(io.papermc.paper.event.entity.EntityKnockbackEvent.Cause.ENTITY_ATTACK, this); // Magma
+                 livingentity.knockback(
+                     (double)(f1 * 0.5F),
+                     (double)Mth.sin(this.getYRot() * (float) (Math.PI / 180.0)),
 @@ -1470,14 +_,24 @@
      }
  

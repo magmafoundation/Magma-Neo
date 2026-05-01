@@ -28,7 +28,6 @@ import org.bukkit.ban.ProfileBanList;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.configuration.serialization.SerializableAs;
 import org.bukkit.craftbukkit.entity.memory.CraftMemoryMapper;
-import org.bukkit.craftbukkit.profile.CraftPlayerProfile;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.metadata.MetadataValue;
@@ -81,8 +80,8 @@ public class CraftOfflinePlayer implements OfflinePlayer, ConfigurationSerializa
     }
 
     @Override
-    public PlayerProfile getPlayerProfile() {
-        return new CraftPlayerProfile(profile);
+    public com.destroystokyo.paper.profile.PlayerProfile getPlayerProfile() { // Paper
+        return com.destroystokyo.paper.profile.CraftPlayerProfile.asBukkitCopy(this.profile); // Paper
     }
 
     public Server getServer() {

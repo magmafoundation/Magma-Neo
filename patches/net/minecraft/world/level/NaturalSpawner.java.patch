@@ -53,6 +53,24 @@
          p_47030_.getProfiler().pop();
      }
  
+@@ -181,10 +_,13 @@
+                                     + p_47040_.random.nextInt(1 + mobspawnsettings$spawnerdata.maxCount - mobspawnsettings$spawnerdata.minCount);
+                             }
+ 
+-                            if (isValidSpawnPostitionForType(
+-                                    p_47040_, p_47039_, structuremanager, chunkgenerator, mobspawnsettings$spawnerdata, blockpos$mutableblockpos, d2
+-                                )
+-                                && p_47043_.test(mobspawnsettings$spawnerdata.type, blockpos$mutableblockpos, p_47041_)) {
++                            // Paper start - PreCreatureSpawnEvent
++                            isValidSpawnPostitionForType(p_47040_, p_47039_, structuremanager, chunkgenerator, mobspawnsettings$spawnerdata, blockpos$mutableblockpos, d2);
++                            PreSpawnStatus doSpawning = magma$preSpawnStatus.getAndSet(PreSpawnStatus.FAIL);
++                            if (doSpawning == PreSpawnStatus.ABORT) {
++                                return;
++                            }
++                            if (doSpawning == PreSpawnStatus.SUCCESS && p_47043_.test(mobspawnsettings$spawnerdata.type, blockpos$mutableblockpos, p_47041_)) {
+                                 Mob mob = getMobForSpawn(p_47040_, mobspawnsettings$spawnerdata.type);
+                                 if (mob == null) {
+                                     return;
 @@ -197,9 +_,15 @@
                                      );
                                      j++;
@@ -70,6 +88,72 @@
 +                                    if (j >= net.neoforged.neoforge.event.EventHooks.getMaxSpawnClusterSize(mob)) {
                                          return;
                                      }
+ 
+@@ -226,6 +_,14 @@
+         }
+     }
+ 
++    // Paper start - PreCreatureSpawnEvent
++    private static final java.util.concurrent.atomic.AtomicReference<net.minecraft.world.level.NaturalSpawner.PreSpawnStatus> magma$preSpawnStatus = new java.util.concurrent.atomic.AtomicReference<>(PreSpawnStatus.FAIL);
++    private enum PreSpawnStatus {
++        FAIL,
++        SUCCESS,
++        CANCELLED,
++        ABORT
++    }
+     private static boolean isValidSpawnPostitionForType(
+         ServerLevel p_220422_,
+         MobCategory p_220423_,
+@@ -236,19 +_,47 @@
+         double p_220428_
+     ) {
+         EntityType<?> entitytype = p_220426_.type;
++
++        // Paper start - PreCreatureSpawnEvent
++        com.destroystokyo.paper.event.entity.PreCreatureSpawnEvent event = new com.destroystokyo.paper.event.entity.PreCreatureSpawnEvent(
++                io.papermc.paper.util.MCUtil.toLocation(p_220422_, p_220427_),
++                org.bukkit.craftbukkit.entity.CraftEntityType.minecraftToBukkit(entitytype), org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.NATURAL
++        );
++        if (!event.callEvent()) {
++            if (event.shouldAbortSpawn()) {
++                magma$preSpawnStatus.set(net.minecraft.world.level.NaturalSpawner.PreSpawnStatus.ABORT); // Magma
++                return false;
++            }
++            return false;
++        }
++        // Paper end - PreCreatureSpawnEvent
++
+         if (entitytype.getCategory() == MobCategory.MISC) {
++            magma$preSpawnStatus.set(net.minecraft.world.level.NaturalSpawner.PreSpawnStatus.FAIL); // Magma
+             return false;
+         } else if (!entitytype.canSpawnFarFromPlayer()
+             && p_220428_ > (double)(entitytype.getCategory().getDespawnDistance() * entitytype.getCategory().getDespawnDistance())) {
++            magma$preSpawnStatus.set(net.minecraft.world.level.NaturalSpawner.PreSpawnStatus.FAIL); // Magma
+             return false;
+         } else if (!entitytype.canSummon() || !canSpawnMobAt(p_220422_, p_220424_, p_220425_, p_220423_, p_220426_, p_220427_)) {
++            magma$preSpawnStatus.set(net.minecraft.world.level.NaturalSpawner.PreSpawnStatus.FAIL); // Magma
+             return false;
+         } else if (!SpawnPlacements.isSpawnPositionOk(entitytype, p_220422_, p_220427_)) {
++            magma$preSpawnStatus.set(net.minecraft.world.level.NaturalSpawner.PreSpawnStatus.FAIL); // Magma
+             return false;
+         } else {
+-            return !SpawnPlacements.checkSpawnRules(entitytype, p_220422_, MobSpawnType.NATURAL, p_220427_, p_220422_.random)
+-                ? false
+-                : p_220422_.noCollision(entitytype.getSpawnAABB((double)p_220427_.getX() + 0.5, (double)p_220427_.getY(), (double)p_220427_.getZ() + 0.5));
++            if (!SpawnPlacements.checkSpawnRules(entitytype, p_220422_, MobSpawnType.NATURAL, p_220427_, p_220422_.random)) {
++                magma$preSpawnStatus.set(PreSpawnStatus.FAIL);
++                return false;
++            } else {
++                if (p_220422_.noCollision(entitytype.getSpawnAABB((double) p_220427_.getX() + 0.5, (double) p_220427_.getY(), (double) p_220427_.getZ() + 0.5))) {
++                    magma$preSpawnStatus.set(PreSpawnStatus.SUCCESS);
++                    return true;
++                } else {
++                    magma$preSpawnStatus.set(PreSpawnStatus.FAIL);
++                    return false;
++                }
++            }
+         }
+     }
  
 @@ -272,7 +_,7 @@
          return p_46994_ > (double)(p_46993_.getType().getCategory().getDespawnDistance() * p_46993_.getType().getCategory().getDespawnDistance())

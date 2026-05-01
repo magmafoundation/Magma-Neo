@@ -1,5 +1,18 @@
 --- a/net/minecraft/world/level/dimension/end/EndDragonFight.java
 +++ b/net/minecraft/world/level/dimension/end/EndDragonFight.java
+@@ -115,6 +_,12 @@
+         if (p_289768_.isRespawning) {
+             this.respawnStage = DragonRespawnAnimation.START;
+         }
++        // Paper start - Add config to disable ender dragon legacy check
++        if (p_289768_ == EndDragonFight.Data.DEFAULT && !p_289771_.paperConfig().entities.spawning.scanForLegacyEnderDragon) {
++            this.needsStateScanning = false;
++            this.dragonKilled = true;
++        }
++        // Paper end - Add config to disable ender dragon legacy check
+ 
+         this.portalLocation = p_289768_.exitPortalLocation.orElse(null);
+         this.gateways.addAll(p_289768_.gateways.orElseGet(() -> {
 @@ -214,6 +_,7 @@
              this.dragonKilled = false;
              if (!flag) {

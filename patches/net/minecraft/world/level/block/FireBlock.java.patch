@@ -123,7 +123,7 @@
                                      }
                                  }
                              }
-@@ -240,33 +_,71 @@
+@@ -240,32 +_,70 @@
              || p_53429_.isRainingAt(p_53430_.south());
      }
  
@@ -192,16 +192,16 @@
                  int j = Math.min(p_221155_ + p_221154_.nextInt(5) / 4, 15);
                  p_221151_.setBlock(p_221152_, this.getStateWithAge(p_221151_, p_221152_, j), 3);
              } else {
-                 p_221151_.removeBlock(p_221152_, false);
-             }
+-                p_221151_.removeBlock(p_221152_, false);
+-            }
 -
 -            Block block = blockstate.getBlock();
 -            if (block instanceof TntBlock) {
 -                TntBlock.explode(p_221151_, p_221152_);
--            }
++                if(blockstate.getBlock() != Blocks.TNT) p_221151_.removeBlock(p_221152_, false); // Paper - TNTPrimeEvent; We might be cancelling it below, move the setAir down
+             }
          }
      }
- 
 @@ -277,7 +_,7 @@
  
      private boolean isValidFireLocation(BlockGetter p_53486_, BlockPos p_53487_) {

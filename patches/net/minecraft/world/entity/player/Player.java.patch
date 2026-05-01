@@ -111,6 +111,20 @@
          if (this.canPlayerFitWithinBlocksAndEntitiesWhen(Pose.SWIMMING)) {
              Pose pose;
              if (this.isFallFlying()) {
+@@ -481,6 +_,13 @@
+         }
+     }
+ 
++    // Paper start - Inventory close reason; unused code, but to keep signatures aligned
++    public void closeContainer(org.bukkit.event.inventory.InventoryCloseEvent.Reason reason) {
++        closeContainer();
++        this.containerMenu = this.inventoryMenu;
++    }
++    // Paper end - Inventory close reason
++
+     public void closeContainer() {
+         this.containerMenu = this.inventoryMenu;
+     }
 @@ -492,8 +_,14 @@
      public void rideTick() {
          if (!this.level().isClientSide && this.wantsToStopRiding() && this.isPassenger()) {
@@ -440,7 +454,7 @@
                  if (p_36347_.getType().is(EntityTypeTags.REDIRECTABLE_PROJECTILE)
                      && p_36347_ instanceof Projectile projectile
                      && projectile.deflect(ProjectileDeflection.AIM_DEFLECT, this, this, true)) {
-@@ -1170,19 +_,28 @@
+@@ -1170,19 +_,29 @@
                          && !this.isPassenger()
                          && p_36347_ instanceof LivingEntity
                          && !this.isSprinting();
@@ -448,6 +462,7 @@
 +                    // The boolean local above (flag1) is the vanilla critical hit result.
 +                    var critEvent = net.neoforged.neoforge.common.CommonHooks.fireCriticalHit(this, p_36347_, flag1, flag1 ? 1.5F : 1.0F);
 +                    flag1 = critEvent.isCriticalHit();
++                    flag1 = flag1 && !this.level().paperConfig().entities.behavior.disablePlayerCrits; // Paper - Toggleable player crits
                      if (flag1) {
 -                        f *= 1.5F;
 +                        f *= critEvent.getDamageMultiplier();
@@ -474,7 +489,34 @@
  
                      float f6 = 0.0F;
                      if (p_36347_ instanceof LivingEntity livingentity) {
-@@ -1216,12 +_,13 @@
+@@ -1195,6 +_,7 @@
+                         float f4 = this.getKnockback(p_36347_, damagesource) + (flag ? 1.0F : 0.0F);
+                         if (f4 > 0.0F) {
+                             if (p_36347_ instanceof LivingEntity livingentity1) {
++                                livingentity1.setKnockbackCauseAndAttacker(io.papermc.paper.event.entity.EntityKnockbackEvent.Cause.ENTITY_ATTACK, this);
+                                 livingentity1.knockback(
+                                     (double)(f4 * 0.5F),
+                                     (double)Mth.sin(this.getYRot() * (float) (Math.PI / 180.0)),
+@@ -1204,25 +_,32 @@
+                                 p_36347_.push(
+                                     (double)(-Mth.sin(this.getYRot() * (float) (Math.PI / 180.0)) * f4 * 0.5F),
+                                     0.1,
+-                                    (double)(Mth.cos(this.getYRot() * (float) (Math.PI / 180.0)) * f4 * 0.5F)
++                                    (double)(Mth.cos(this.getYRot() * (float) (Math.PI / 180.0)) * f4 * 0.5F),
++                                    this // Paper - Add EntityKnockbackByEntityEvent and EntityPushedByEntityAttackEvent
+                                 );
+                             }
+ 
+                             this.setDeltaMovement(this.getDeltaMovement().multiply(0.6, 1.0, 0.6));
+-                            this.setSprinting(false);
++                            // Paper start - Configurable sprint interruption on attack
++                            if (!this.level().paperConfig().misc.disableSprintInterruptionOnAttack) {
++                                this.setSprinting(false);
++                            }
++                            // Paper end - Configurable sprint interruption on attack
+                         }
+ 
+                         if (flag2) {
                              float f7 = 1.0F + (float)this.getAttributeValue(Attributes.SWEEPING_DAMAGE_RATIO) * f;
  
                              for (LivingEntity livingentity2 : this.level()
@@ -488,8 +530,10 @@
 -                                    && this.distanceToSqr(livingentity2) < 9.0) {
 +                                    && this.distanceToSqr(livingentity2) < entityReachSq) {
                                      float f5 = this.getEnchantedDamage(livingentity2, f7, damagesource) * f2;
++                                    livingentity2.setKnockbackCauseAndAttacker(io.papermc.paper.event.entity.EntityKnockbackEvent.Cause.SWEEP_ATTACK, this);
                                      livingentity2.knockback(
                                          0.4F,
+                                         (double)Mth.sin(this.getYRot() * (float) (Math.PI / 180.0)),
 @@ -1241,9 +_,26 @@
                          }
  
@@ -573,7 +617,7 @@
          this.stopUsingItem();
          this.level().broadcastEntityEvent(this, (byte)30);
      }
-@@ -1347,7 +_,6 @@
+@@ -1347,12 +_,11 @@
      public void respawn() {
      }
  
@@ -581,6 +625,12 @@
      public void remove(Entity.RemovalReason p_150097_) {
          super.remove(p_150097_);
          this.inventoryMenu.removed(this);
+         if (this.containerMenu != null && this.hasContainerOpen()) {
+-            this.doCloseContainer();
++            this.doCloseContainer(org.bukkit.event.inventory.InventoryCloseEvent.Reason.CANT_USE); // Paper - Inventory close reason
+         }
+     }
+ 
 @@ -1384,6 +_,11 @@
          return this.containerMenu != this.inventoryMenu;
      }
@@ -858,19 +908,35 @@
          return this.decorateDisplayNameComponent(mutablecomponent);
      }
  
-@@ -2009,28 +_,28 @@
+@@ -2004,33 +_,44 @@
+         return ImmutableList.of(Pose.STANDING, Pose.CROUCHING, Pose.SWIMMING);
+     }
+ 
++    // Paper start - PlayerReadyArrowEvent
++    protected boolean tryReadyArrow(ItemStack bow, ItemStack itemstack) {
++        return !(this instanceof ServerPlayer) ||
++                new com.destroystokyo.paper.event.player.PlayerReadyArrowEvent(
++                        ((ServerPlayer) this).getBukkitEntity(),
++                        org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(bow),
++                        org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(itemstack)
++                ).callEvent();
++    }
++    // Paper end - PlayerReadyArrowEvent
++
+     @Override
+     public ItemStack getProjectile(ItemStack p_36349_) {
          if (!(p_36349_.getItem() instanceof ProjectileWeaponItem)) {
              return ItemStack.EMPTY;
          } else {
 -            Predicate<ItemStack> predicate = ((ProjectileWeaponItem)p_36349_.getItem()).getSupportedHeldProjectiles();
-+            Predicate<ItemStack> predicate = ((ProjectileWeaponItem)p_36349_.getItem()).getSupportedHeldProjectiles(p_36349_);
++            Predicate<ItemStack> predicate = ((ProjectileWeaponItem) p_36349_.getItem()).getSupportedHeldProjectiles().and(item -> tryReadyArrow(p_36349_, item)); // Paper - PlayerReadyArrowEvent
              ItemStack itemstack = ProjectileWeaponItem.getHeldProjectile(this, predicate);
              if (!itemstack.isEmpty()) {
 -                return itemstack;
 +                return net.neoforged.neoforge.common.CommonHooks.getProjectile(this, p_36349_, itemstack);
              } else {
 -                predicate = ((ProjectileWeaponItem)p_36349_.getItem()).getAllSupportedProjectiles();
-+                predicate = ((ProjectileWeaponItem)p_36349_.getItem()).getAllSupportedProjectiles(p_36349_);
++                predicate = ((ProjectileWeaponItem) p_36349_.getItem()).getAllSupportedProjectiles().and(item -> tryReadyArrow(p_36349_, item)); // Paper - PlayerReadyArrowEvent
  
                  for (int i = 0; i < this.inventory.getContainerSize(); i++) {
                      ItemStack itemstack1 = this.inventory.getItem(i);

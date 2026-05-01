@@ -142,7 +142,7 @@
              for (ChunkHolder chunkholder : this.chunkMap.getChunks()) {
                  LevelChunk levelchunk = chunkholder.getTickingChunk();
                  if (levelchunk != null) {
-@@ -342,10 +_,12 @@
+@@ -342,23 +_,34 @@
  
              if (this.level.tickRateManager().runsNormally()) {
                  profilerfiller.popPush("naturalSpawnCount");
@@ -155,7 +155,19 @@
                  this.lastSpawnState = naturalspawner$spawnstate;
                  profilerfiller.popPush("spawnAndTick");
                  boolean flag1 = this.level.getGameRules().getBoolean(GameRules.RULE_DOMOBSPAWNING);
-@@ -356,9 +_,9 @@
+                 Util.shuffle(list, this.level.random);
++                // Paper start - PlayerNaturallySpawnCreaturesEvent
++                int chunkRange = level.spigotConfig.mobSpawnRange;
++                chunkRange = (chunkRange > level.spigotConfig.viewDistance) ? (byte) level.spigotConfig.viewDistance : chunkRange;
++                chunkRange = Math.min(chunkRange, 8);
++                for (ServerPlayer entityPlayer : this.level.players()) {
++                    entityPlayer.playerNaturallySpawnedEvent = new com.destroystokyo.paper.event.entity.PlayerNaturallySpawnCreaturesEvent(entityPlayer.getBukkitEntity(), (byte) chunkRange);
++                    entityPlayer.playerNaturallySpawnedEvent.callEvent();
++                }
++                // Paper end - PlayerNaturallySpawnCreaturesEvent
+                 int k = this.level.getGameRules().getInt(GameRules.RULE_RANDOMTICKING);
+                 boolean flag = this.level.getLevelData().getGameTime() % 400L == 0L;
+ 
                  for (ServerChunkCache.ChunkAndHolder serverchunkcache$chunkandholder : list) {
                      LevelChunk levelchunk1 = serverchunkcache$chunkandholder.chunk;
                      ChunkPos chunkpos = levelchunk1.getPos();

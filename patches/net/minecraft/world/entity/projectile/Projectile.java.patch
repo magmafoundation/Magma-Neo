@@ -19,6 +19,14 @@
      }
  
      @Nullable
+@@ -88,6 +_,7 @@
+         if (p_37262_.hasUUID("Owner")) {
+             this.ownerUUID = p_37262_.getUUID("Owner");
+             this.cachedOwner = null;
++            if (this instanceof ThrownEnderpearl && this.level() != null && this.level().paperConfig().fixes.disableUnloadedChunkEnderpearlExploit) { this.ownerUUID = null; } // Paper - Reset pearls when they stop being ticked; Don't store shooter name for pearls to block enderpearl travel exploit
+         }
+ 
+         this.leftOwner = p_37262_.getBoolean("LeftOwner");
 @@ -165,6 +_,17 @@
          this.setDeltaMovement(this.getDeltaMovement().add(vec3.x, p_37252_.onGround() ? 0.0 : vec3.y, vec3.z));
      }
@@ -48,6 +56,23 @@
 +        // CraftBukkit end
          BlockState blockstate = this.level().getBlockState(p_37258_.getBlockPos());
          blockstate.onProjectileHit(this.level(), blockstate, p_37258_, this);
+     }
+@@ -241,6 +_,16 @@
+             return false;
+         } else {
+             Entity entity = this.getOwner();
++
++            // Paper start - Cancel hit for vanished players
++            if (entity instanceof net.minecraft.server.level.ServerPlayer && p_37250_ instanceof net.minecraft.server.level.ServerPlayer) {
++                org.bukkit.entity.Player collided = (org.bukkit.entity.Player) p_37250_.getBukkitEntity();
++                org.bukkit.entity.Player shooter = (org.bukkit.entity.Player) entity.getBukkitEntity();
++                if (!shooter.canSee(collided)) {
++                    return false;
++                }
++            }
++            // Paper end - Cancel hit for vanished players
+             return entity == null || this.leftOwner || !entity.isPassengerOfSameVehicle(p_37250_);
+         }
      }
 @@ -284,7 +_,7 @@
          Entity entity = this.getOwner();

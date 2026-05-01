@@ -1,10 +1,66 @@
 --- a/net/minecraft/server/players/StoredUserList.java
 +++ b/net/minecraft/server/players/StoredUserList.java
-@@ -79,6 +_,7 @@
+@@ -26,7 +_,7 @@
+     private static final Logger LOGGER = LogUtils.getLogger();
+     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+     private final File file;
+-    private final Map<String, V> map = Maps.newHashMap();
++    private final Map<String, V> map = Maps.newConcurrentMap(); // Paper - Use ConcurrentHashMap in JsonList
+ 
+     public StoredUserList(File p_11380_) {
+         this.file = p_11380_;
+@@ -48,8 +_,11 @@
+ 
+     @Nullable
+     public V get(K p_11389_) {
+-        this.removeExpired();
+-        return this.map.get(this.getKeyForUser(p_11389_));
++        // Paper start - Use ConcurrentHashMap in JsonList
++        return (V) this.map.computeIfPresent(this.getKeyForUser(p_11389_), (k, v) -> {
++            return v.hasExpired() ? null : v;
++        });
++        // Paper end - Use ConcurrentHashMap in JsonList
+     }
+ 
+     public void remove(K p_11394_) {
+@@ -71,7 +_,7 @@
+     }
+ 
+     public boolean isEmpty() {
+-        return this.map.size() < 1;
++        return this.map.isEmpty(); // Paper - Use ConcurrentHashMap in JsonList
+     }
+ 
+     protected String getKeyForUser(K p_11384_) {
+@@ -79,21 +_,12 @@
      }
  
      protected boolean contains(K p_11397_) {
 +        this.removeExpired(); // CraftBukkit - SPIGOT-7589: Consistently remove expired entries to mirror .get(...)
          return this.map.containsKey(this.getKeyForUser(p_11397_));
      }
+ 
+     private void removeExpired() {
+-        List<K> list = Lists.newArrayList();
+-
+-        for (V v : this.map.values()) {
+-            if (v.hasExpired()) {
+-                list.add(v.getUser());
+-            }
+-        }
+-
+-        for (K k : list) {
+-            this.map.remove(this.getKeyForUser(k));
+-        }
++        this.map.values().removeIf(StoredUserEntry::hasExpired); // Paper - Use ConcurrentHashMap in JsonList
+     }
+ 
+     protected abstract StoredUserEntry<K> createEntry(JsonObject p_11383_);
+@@ -103,6 +_,7 @@
+     }
+ 
+     public void save() throws IOException {
++        this.removeExpired(); // Paper - remove expired values before saving
+         JsonArray jsonarray = new JsonArray();
+         this.map.values().stream().map(p_11392_ -> Util.make(new JsonObject(), p_11392_::serialize)).forEach(jsonarray::add);
  

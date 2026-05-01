@@ -619,6 +619,29 @@
      }
  
      public void moveRelative(float p_19921_, Vec3 p_19922_) {
+@@ -1511,7 +_,21 @@
+     }
+ 
+     public void push(double p_20286_, double p_20287_, double p_20288_) {
+-        this.setDeltaMovement(this.getDeltaMovement().add(p_20286_, p_20287_, p_20288_));
++        // Paper start - Add EntityKnockbackByEntityEvent and EntityPushedByEntityAttackEvent
++        this.push(p_20286_, p_20287_, p_20288_, null);
++    }
++
++    public void push(double deltaX, double deltaY, double deltaZ, @org.jetbrains.annotations.Nullable Entity pushingEntity) {
++        org.bukkit.util.Vector delta = new org.bukkit.util.Vector(deltaX, deltaY, deltaZ);
++        if (pushingEntity != null) {
++            io.papermc.paper.event.entity.EntityPushedByEntityAttackEvent event = new io.papermc.paper.event.entity.EntityPushedByEntityAttackEvent(this.getBukkitEntity(), io.papermc.paper.event.entity.EntityKnockbackEvent.Cause.PUSH, pushingEntity.getBukkitEntity(), delta);
++            if (!event.callEvent()) {
++                return;
++            }
++            delta = event.getKnockback();
++        }
++        this.setDeltaMovement(this.getDeltaMovement().add(delta.getX(), delta.getY(), delta.getZ()));
++        // Paper end - Add EntityKnockbackByEntityEvent and EntityPushedByEntityAttackEvent
+         this.hasImpulse = true;
+     }
+ 
 @@ -1603,6 +_,12 @@
          return false;
      }
@@ -1052,7 +1075,46 @@
      }
  
      public boolean is(Entity p_20356_) {
-@@ -2516,10 +_,11 @@
+@@ -2490,36 +_,43 @@
+     public String toString() {
+         String s = this.level() == null ? "~NULL~" : this.level().toString();
+         return this.removalReason != null
+-            ? String.format(
++                ? String.format(
+                 Locale.ROOT,
+-                "%s['%s'/%d, l='%s', x=%.2f, y=%.2f, z=%.2f, removed=%s]",
++                "%s['%s'/%d, uuid='%s', l='%s', x=%.2f, y=%.2f, z=%.2f, cpos=%s, tl=%d, v=%b, removed=%s]",
+                 this.getClass().getSimpleName(),
+                 this.getName().getString(),
+                 this.id,
++                this.uuid,
+                 s,
+                 this.getX(),
+                 this.getY(),
+                 this.getZ(),
++                this.chunkPosition(),
++                this.tickCount,
++                this.valid,
+                 this.removalReason
+-            )
+-            : String.format(
++        ) : String.format(
+                 Locale.ROOT,
+-                "%s['%s'/%d, l='%s', x=%.2f, y=%.2f, z=%.2f]",
++                "%s['%s'/%d, uuid='%s', l='%s', x=%.2f, y=%.2f, z=%.2f, cpos=%s, tl=%d, v=%b]",
+                 this.getClass().getSimpleName(),
+                 this.getName().getString(),
+                 this.id,
++                this.uuid,
+                 s,
+                 this.getX(),
+                 this.getY(),
+-                this.getZ()
+-            );
++                this.getZ(),
++                this.chunkPosition(),
++                this.tickCount,
++                this.valid); // Paper - add more info
      }
  
      public boolean isInvulnerableTo(DamageSource p_20122_) {

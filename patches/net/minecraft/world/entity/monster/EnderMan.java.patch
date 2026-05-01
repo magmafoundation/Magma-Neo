@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/entity/monster/EnderMan.java
 +++ b/net/minecraft/world/entity/monster/EnderMan.java
-@@ -118,7 +_,14 @@
+@@ -118,7 +_,20 @@
  
      @Override
      public void setTarget(@Nullable LivingEntity p_32537_) {
@@ -8,6 +8,12 @@
 +        // CraftBukkit start - fire event
 +        setTarget(p_32537_, org.bukkit.event.entity.EntityTargetEvent.TargetReason.UNKNOWN, true);
 +    }
++
++    // Paper start - EndermanEscapeEvent
++    private boolean tryEscape(com.destroystokyo.paper.event.entity.EndermanEscapeEvent.Reason reason) {
++        return new com.destroystokyo.paper.event.entity.EndermanEscapeEvent((org.bukkit.craftbukkit.entity.CraftEnderman) this.getBukkitEntity(), reason).callEvent();
++    }
++    // Paper end - EndermanEscapeEvent
 +
 +    @Override
 +    public boolean setTarget(LivingEntity p_32537_, org.bukkit.event.entity.EntityTargetEvent.TargetReason reason, boolean fireEvent) {
@@ -27,15 +33,36 @@
      }
  
      @Override
-@@ -214,7 +_,7 @@
+@@ -212,9 +_,18 @@
+         this.readPersistentAngerSaveData(this.level(), p_32511_);
+     }
  
-     boolean isLookingAtMe(Player p_32535_) {
+-    boolean isLookingAtMe(Player p_32535_) {
++    // Paper start - EndermanAttackPlayerEvent
++    private boolean isLookingAtMe(Player player) {
++        boolean shouldAttack = isLookingAtMe_check(player);
++        com.destroystokyo.paper.event.entity.EndermanAttackPlayerEvent event = new com.destroystokyo.paper.event.entity.EndermanAttackPlayerEvent((org.bukkit.entity.Enderman) getBukkitEntity(), (org.bukkit.entity.Player) player.getBukkitEntity());
++        event.setCancelled(!shouldAttack);
++        return event.callEvent();
++    }
++
++    private boolean isLookingAtMe_check(Player p_32535_) {
++        // Paper end - EndermanAttackPlayerEvent
          ItemStack itemstack = p_32535_.getInventory().armor.get(3);
 -        if (itemstack.is(Blocks.CARVED_PUMPKIN.asItem())) {
 +        if (net.neoforged.neoforge.common.CommonHooks.shouldSuppressEnderManAnger(this, p_32535_, itemstack)) {
              return false;
          } else {
              Vec3 vec3 = p_32535_.getViewVector(1.0F).normalize();
+@@ -260,7 +_,7 @@
+     protected void customServerAiStep() {
+         if (this.level().isDay() && this.tickCount >= this.targetChangeTime + 600) {
+             float f = this.getLightLevelDependentMagicValue();
+-            if (f > 0.5F && this.level().canSeeSky(this.blockPosition()) && this.random.nextFloat() * 30.0F < (f - 0.4F) * 2.0F) {
++            if (f > 0.5F && this.level().canSeeSky(this.blockPosition()) && this.random.nextFloat() * 30.0F < (f - 0.4F) * 2.0F && this.tryEscape(com.destroystokyo.paper.event.entity.EndermanEscapeEvent.Reason.RUNAWAY)) { // Paper - EndermanEscapeEvent
+                 this.setTarget(null);
+                 this.teleport();
+             }
 @@ -301,8 +_,10 @@
          boolean flag = blockstate.blocksMotion();
          boolean flag1 = blockstate.getFluidState().is(FluidTags.WATER);
@@ -48,6 +75,24 @@
              if (flag2) {
                  this.level().gameEvent(GameEvent.TELEPORT, vec3, GameEvent.Context.of(this));
                  if (!this.isSilent()) {
+@@ -381,11 +_,13 @@
+             } else {
+                 boolean flag1 = flag && this.hurtWithCleanWater(p_32494_, (ThrownPotion)p_32494_.getDirectEntity(), p_32495_);
+ 
+-                for (int i = 0; i < 64; i++) {
+-                    if (this.teleport()) {
+-                        return true;
++                if (this.tryEscape(com.destroystokyo.paper.event.entity.EndermanEscapeEvent.Reason.INDIRECT)) { // Paper - EndermanEscapeEvent
++                    for (int i = 0; i < 64; i++) {
++                        if (this.teleport()) {
++                            return true;
++                        }
+                     }
+-                }
++                } // Paper - EndermanEscapeEvent
+ 
+                 return flag1;
+             }
 @@ -459,7 +_,7 @@
              if (this.enderman.getCarriedBlock() == null) {
                  return false;
@@ -82,6 +127,15 @@
                  && p_32563_.isCollisionShapeFullBlock(p_32559_, p_32564_)
                  && p_32561_.canSurvive(p_32559_, p_32560_)
                  && p_32559_.getEntities(this.enderman, AABB.unitCubeFromLowerCorner(Vec3.atLowerCornerOf(p_32560_))).isEmpty();
+@@ -573,7 +_,7 @@
+             } else {
+                 if (this.target != null && !this.enderman.isPassenger()) {
+                     if (this.enderman.isLookingAtMe((Player)this.target)) {
+-                        if (this.target.distanceToSqr(this.enderman) < 16.0) {
++                        if (this.target.distanceToSqr((Entity) this.enderman) < 16.0D && this.enderman.tryEscape(com.destroystokyo.paper.event.entity.EndermanEscapeEvent.Reason.STARE)) { // Paper - EndermanEscapeEvent
+                             this.enderman.teleport();
+                         }
+ 
 @@ -602,7 +_,7 @@
              if (this.enderman.getCarriedBlock() != null) {
                  return false;

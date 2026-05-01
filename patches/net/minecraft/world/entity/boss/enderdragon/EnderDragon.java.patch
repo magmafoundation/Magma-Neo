@@ -62,6 +62,15 @@
              }
          }
  
+@@ -433,7 +_,7 @@
+                 double d2 = entity.getX() - d0;
+                 double d3 = entity.getZ() - d1;
+                 double d4 = Math.max(d2 * d2 + d3 * d3, 0.1);
+-                entity.push(d2 / d4 * 4.0, 0.2F, d3 / d4 * 4.0);
++                entity.push(d2 / d4 * 4.0, 0.2F, d3 / d4 * 4.0, this); // Paper - Add EntityKnockbackByEntityEvent and EntityPushedByEntityAttackEvent
+                 if (!this.phaseManager.getCurrentPhase().isSitting() && livingentity.getLastHurtByMobTimestamp() < entity.tickCount - 2) {
+                     DamageSource damagesource = this.damageSources().mobAttack(this);
+                     entity.hurt(damagesource, 5.0F);
 @@ -468,6 +_,9 @@
          int j1 = Mth.floor(p_31140_.maxZ);
          boolean flag = false;
@@ -86,7 +95,7 @@
                          } else {
                              flag = true;
                          }
-@@ -485,6 +_,49 @@
+@@ -485,6 +_,54 @@
              }
          }
  
@@ -126,6 +135,11 @@
 +                    });
 +                    craftBlock.getNMS().spawnAfterBreak((ServerLevel) this.level(), blockposition, net.minecraft.world.item.ItemStack.EMPTY, false);
 +                }
++                // Paper start - TNTPrimeEvent
++                org.bukkit.block.Block tntBlock = org.bukkit.craftbukkit.block.CraftBlock.at(this.level(), blockposition);
++                if (!new com.destroystokyo.paper.event.block.TNTPrimeEvent(tntBlock, com.destroystokyo.paper.event.block.TNTPrimeEvent.PrimeReason.EXPLOSION, explosionSource.getIndirectSourceEntity().getBukkitEntity()).callEvent())
++                    continue;
++                // Paper end - TNTPrimeEvent
 +                nmsBlock.wasExploded(this.level(), blockposition, explosionSource);
 +
 +                this.level().removeBlock(blockposition, false);

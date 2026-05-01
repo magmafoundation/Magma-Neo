@@ -21,7 +21,7 @@
              ServerPlayer.this.connection.send(new ClientboundContainerSetDataPacket(p_143455_.containerId, p_143456_, p_143457_));
          }
      };
-@@ -276,6 +_,24 @@
+@@ -276,6 +_,25 @@
      public final Object object;
      private int containerCounter;
      public boolean wonGame;
@@ -43,6 +43,7 @@
 +    public String kickLeaveMessage = null; // SPIGOT-3034: Forward leave message to PlayerQuitEvent
 +    // CraftBukkit end
 +    public boolean isRealPlayer; // Paper
++    public com.destroystokyo.paper.event.entity.PlayerNaturallySpawnCreaturesEvent playerNaturallySpawnedEvent; // Paper - PlayerNaturallySpawnCreaturesEvent
  
      public ServerPlayer(MinecraftServer p_254143_, ServerLevel p_254435_, GameProfile p_253651_, ClientInformation p_301997_) {
          super(p_254435_, p_254435_.getSharedSpawnPos(), p_254435_.getSharedSpawnAngle(), p_253651_);
@@ -152,7 +153,7 @@
          this.gameMode.tick();
          this.wardenSpawnTracker.tick();
          this.spawnInvulnerableTime--;
-@@ -496,7 +_,12 @@
+@@ -496,9 +_,14 @@
              this.invulnerableTime--;
          }
  
@@ -164,8 +165,11 @@
 +        }
 +        // Paper end - Configurable container update tick rate
          if (!this.level().isClientSide && !this.containerMenu.stillValid(this)) {
-             this.closeContainer();
+-            this.closeContainer();
++            this.closeContainer(org.bukkit.event.inventory.InventoryCloseEvent.Reason.CANT_USE); // Paper - Inventory close reason
              this.containerMenu = this.inventoryMenu;
+         }
+ 
 @@ -565,7 +_,7 @@
              if (this.getHealth() != this.lastSentHealth
                  || this.lastSentFood != this.foodData.getFoodLevel()
@@ -253,7 +257,7 @@
 +        org.bukkit.event.entity.PlayerDeathEvent event = org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerDeathEvent(this, p_9035_, loot, io.papermc.paper.adventure.PaperAdventure.asAdventure(defaultMessage), keepInventory); // Paper - Adventure
 +        // SPIGOT-943 - only call if they have an inventory open
 +        if (this.containerMenu != this.inventoryMenu) {
-+            this.closeContainer();
++            this.closeContainer(org.bukkit.event.inventory.InventoryCloseEvent.Reason.DEATH); // Paper - Inventory close reason
 +        }
 +        net.kyori.adventure.text.Component deathMessage = event.deathMessage() != null ? event.deathMessage() : net.kyori.adventure.text.Component.empty(); // Paper - Adventure
 +        if (deathMessage != null && deathMessage != net.kyori.adventure.text.Component.empty() && flag) { // Paper - Adventure // TODO: allow plugins to override?
@@ -603,7 +607,8 @@
 +        }
 +        // CraftBukkit end
          if (this.containerMenu != this.inventoryMenu) {
-             this.closeContainer();
+-            this.closeContainer();
++            this.closeContainer(org.bukkit.event.inventory.InventoryCloseEvent.Reason.OPEN_NEW); // Paper - Inventory close reason
          }
  
 -        this.nextContainerCounter();
@@ -617,16 +622,23 @@
      }
  
      @Override
-@@ -1135,6 +_,16 @@
+@@ -1135,6 +_,23 @@
  
      @Override
      public void closeContainer() {
++        // Paper start - Inventory close reason
++        this.closeContainer(org.bukkit.event.inventory.InventoryCloseEvent.Reason.UNKNOWN);
++    }
++
++    @Override
++    public void closeContainer(org.bukkit.event.inventory.InventoryCloseEvent.Reason reason) {
++        // Paper end - Inventory close reason
 +
 +        // Magma start - capture container owner
 +        if (this.containerMenu != this.inventoryMenu) {
 +            Player old = org.magmafoundation.magma.util.InventoryViewHelper.getContainerOwner();
 +            org.magmafoundation.magma.util.InventoryViewHelper.captureContainerOwner(this);
-+            org.bukkit.craftbukkit.event.CraftEventFactory.handleInventoryCloseEvent(this); // CraftBukkit
++            org.bukkit.craftbukkit.event.CraftEventFactory.handleInventoryCloseEvent(this, reason); // CraftBukkit
 +            org.magmafoundation.magma.util.InventoryViewHelper.captureContainerOwner(old);
 +        }
 +        // Magma end
