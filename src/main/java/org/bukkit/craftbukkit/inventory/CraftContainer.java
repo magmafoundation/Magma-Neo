@@ -47,7 +47,7 @@ public class CraftContainer extends AbstractContainerMenu {
 
     public CraftContainer(final Inventory inventory, final Player player, int id) {
         this(new CraftAbstractInventoryView() {
-            private final String originalTitle = (inventory instanceof CraftInventoryCustom) ? ((CraftInventoryCustom.MinecraftInventory) ((CraftInventory) inventory).getInventory()).getTitle() : inventory.getType().getDefaultTitle();
+            private final String originalTitle = inventory instanceof CraftInventoryCustom ? ((CraftInventoryCustom) inventory).getTitle() : inventory.getType().getDefaultTitle(); // Paper
             private String title = originalTitle;
 
             @Override
@@ -73,7 +73,7 @@ public class CraftContainer extends AbstractContainerMenu {
             // Paper start
             @Override
             public net.kyori.adventure.text.Component title() {
-                return inventory instanceof CraftInventoryCustom ? ((CraftInventoryCustom.MinecraftInventory) ((CraftInventory) inventory).getInventory()).title() : net.kyori.adventure.text.Component.text(inventory.getType().getDefaultTitle());
+                return inventory instanceof CraftInventoryCustom custom ? custom.title() : inventory.getType().defaultTitle(); // Paper
             }
             // Paper end
 
@@ -211,6 +211,10 @@ public class CraftContainer extends AbstractContainerMenu {
             this.lastSlots = delegate.lastSlots;
             this.slots = delegate.slots;
             this.remoteSlots = delegate.remoteSlots;
+            // Paper start - copy data slots for InventoryView#set/getProperty
+            this.dataSlots = this.delegate.dataSlots;
+            this.remoteDataSlots = this.delegate.remoteDataSlots;
+            // Paper end
         }
 
         // SPIGOT-4598 - we should still delegate the shift click handler

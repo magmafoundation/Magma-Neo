@@ -18,16 +18,25 @@
          this.server = p_203842_;
          this.registries = p_251844_;
          this.maxPlayers = p_203845_;
-@@ -137,6 +_,7 @@
+@@ -137,6 +_,8 @@
      }
  
      public void placeNewPlayer(Connection p_11262_, ServerPlayer p_11263_, CommonListenerCookie p_301988_) {
 +        p_11263_.isRealPlayer = true; // Paper
++        p_11263_.loginTime = System.currentTimeMillis(); // Paper - Replace OfflinePlayer#getLastPlayed
          GameProfile gameprofile = p_11263_.getGameProfile();
          GameProfileCache gameprofilecache = this.server.getProfileCache();
          String s;
-@@ -164,6 +_,21 @@
+@@ -162,8 +_,29 @@
+             serverlevel1 = serverlevel;
+         }
  
++        // Paper start - Entity#getEntitySpawnReason
++        if (optional1.isEmpty()) {
++            p_11263_.spawnReason = org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT; // set Player SpawnReason to DEFAULT on first login
++            p_11263_.moveTo(p_11263_.adjustSpawnLocation(serverlevel1, serverlevel1.getSharedSpawnPos()).getBottomCenter(), 0.0F, 0.0F);
++        }
++        // Paper end - Entity#getEntitySpawnReason
          p_11263_.setServerLevel(serverlevel1);
          String s1 = p_11262_.getLoggableAddress(this.server.logIPs());
 +
@@ -85,7 +94,7 @@
          servergamepacketlistenerimpl.send(new ClientboundUpdateRecipesPacket(this.server.getRecipeManager().getOrderedRecipes()));
          this.sendPlayerPermissionLevel(p_11263_);
          p_11263_.getStats().markAllDirty();
-@@ -214,25 +_,69 @@
+@@ -214,25 +_,83 @@
              mutablecomponent = Component.translatable("multiplayer.player.joined.renamed", p_11263_.getDisplayName(), s);
          }
  
@@ -108,6 +117,12 @@
 -        this.broadcastAll(ClientboundPlayerInfoUpdatePacket.createPlayerInitializing(List.of(p_11263_)));
 +        // this.broadcastAll(ClientboundPlayerInfoUpdatePacket.createPlayerInitializing(List.of(p_11263_)));
 +
++        // Paper start - Fire PlayerJoinEvent when Player is actually ready; correctly register player BEFORE PlayerJoinEvent, so the entity is valid and doesn't require tick delay hacks
++        p_11263_.supressTrackerForLogin = true;
++        serverlevel.addNewPlayer(p_11263_);
++        this.server.getCustomBossEvents().onPlayerConnect(p_11263_); // see commented out section below worldserver.addPlayerJoin(entityplayer);
++        this.mountSavedVehicle(p_11263_, serverlevel, optional1);
++        // Paper end - Fire PlayerJoinEvent when Player is actually ready
 +        // CraftBukkit start
 +        org.bukkit.craftbukkit.entity.CraftPlayer bukkitPlayer = p_11263_.getBukkitEntity();
 +        // Ensure that player inventory is populated with its viewer
@@ -136,6 +151,8 @@
 +            p_11263_.connection.send(ClientboundPlayerInfoUpdatePacket.createPlayerInitializing(List.of(entityplayer1)));
 +        }
 +        p_11263_.sentListPacket = true;
++        p_11263_.supressTrackerForLogin = false; // Paper - Fire PlayerJoinEvent when Player is actually ready
++        ((ServerLevel)p_11263_.level()).getChunkSource().chunkMap.addEntity(p_11263_); // Paper - Fire PlayerJoinEvent when Player is actually ready; track entity now
 +        // CraftBukkit end
 +        p_11263_.refreshEntityData(p_11263_); // CraftBukkit - BungeeCord#2321, send complete data to self on spawn
 +
@@ -152,6 +169,12 @@
 +        // CraftBukkit end
 +
          this.sendActivePlayerEffects(p_11263_);
++        // Paper start - Fire PlayerJoinEvent when Player is actually ready; move vehicle into method so it can be called above - short circuit around that code
++        this.onPlayerJoinFinish(p_11263_, serverlevel1, s1);
++    }
++
++    private void mountSavedVehicle(ServerPlayer p_11263_, ServerLevel serverlevel1, Optional<CompoundTag> optional1) {
++        // Paper end - Fire PlayerJoinEvent when Player is actually ready
          if (optional1.isPresent() && optional1.get().contains("RootVehicle", 10)) {
              CompoundTag compoundtag = optional1.get().getCompound("RootVehicle");
 +            net.minecraft.server.level.ServerLevel finalServerlevel = serverlevel1;
@@ -161,7 +184,7 @@
              );
              if (entity != null) {
                  UUID uuid;
-@@ -255,9 +_,11 @@
+@@ -255,16 +_,35 @@
  
                  if (!p_11263_.isPassenger()) {
                      LOGGER.warn("Couldn't reattach entity to player");
@@ -173,9 +196,15 @@
                          entity2.discard();
                      }
                  }
-@@ -265,6 +_,17 @@
+             }
          }
  
++        // Paper start - Fire PlayerJoinEvent when Player is actually ready
++    }
++
++    public void onPlayerJoinFinish(ServerPlayer p_11263_, ServerLevel serverlevel1, String s1) {
++        // Paper end - Fire PlayerJoinEvent when Player is actually ready
++
          p_11263_.initInventoryMenu();
 +
 +        // Paper start - Configurable player collision; Add to collideRule team if needed
@@ -679,6 +708,14 @@
      }
  
      public int getPlayerCount() {
+@@ -714,6 +_,7 @@
+     }
+ 
+     public void setUsingWhiteList(boolean p_11276_) {
++        new com.destroystokyo.paper.event.server.WhitelistToggleEvent(p_11276_).callEvent(); // Paper - WhitelistToggleEvent
+         this.doWhiteList = p_11276_;
+     }
+ 
 @@ -751,10 +_,34 @@
      }
  

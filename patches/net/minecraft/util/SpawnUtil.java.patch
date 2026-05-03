@@ -8,7 +8,7 @@
 +        return trySpawnMob(p_216404_, p_216405_, p_216406_, p_216407_, p_216408_, p_216409_, p_216410_, p_216411_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT, null); // Paper
 +    }
 +
-+    public static <T extends Mob> Optional<T> trySpawnMob(EntityType<T> p_216404_, MobSpawnType p_216405_, ServerLevel p_216406_, BlockPos p_216407_, int p_216408_, int p_216409_, int p_216410_, SpawnUtil.Strategy p_216411_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason reason, @javax.annotation.Nullable Runnable onAbort) { // Paper
++    public static <T extends Mob> Optional<T> trySpawnMob(EntityType<T> p_216404_, MobSpawnType p_216405_, ServerLevel p_216406_, BlockPos p_216407_, int p_216408_, int p_216409_, int p_216410_, SpawnUtil.Strategy p_216411_, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason reason, @org.jetbrains.annotations.Nullable Runnable onAbort) { // Paper
 +        // CraftBukkit end
          BlockPos.MutableBlockPos blockpos$mutableblockpos = p_216407_.mutable();
  

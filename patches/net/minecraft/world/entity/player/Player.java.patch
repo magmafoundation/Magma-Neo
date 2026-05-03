@@ -422,6 +422,15 @@
                              this.setItemInHand(p_36159_, ItemStack.EMPTY);
                          }
  
+@@ -1053,7 +_,7 @@
+ 
+     @Override
+     protected boolean isImmobile() {
+-        return super.isImmobile() || this.isSleeping();
++        return super.isImmobile() || this.isSleeping() || this.isRemoved() || !valid; // Paper - player's who are dead or not in a world shouldn't move...
+     }
+ 
+     @Override
 @@ -1062,6 +_,7 @@
      }
  

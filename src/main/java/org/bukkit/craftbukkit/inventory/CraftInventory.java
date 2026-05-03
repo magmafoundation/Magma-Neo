@@ -497,6 +497,10 @@ public class CraftInventory implements Inventory {
             return InventoryType.BREWING;
         } else if (inventory instanceof CraftInventoryCustom.MinecraftInventory) {
             return ((CraftInventoryCustom.MinecraftInventory) inventory).getType();
+            // Paper start
+        } else if (this.inventory instanceof io.papermc.paper.inventory.PaperInventoryCustomHolderContainer holderContainer) {
+            return holderContainer.getType();
+            // Paper end
         } else if (inventory instanceof PlayerEnderChestContainer) {
             return InventoryType.ENDER_CHEST;
         } else if (inventory instanceof MerchantContainer) {

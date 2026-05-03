@@ -124,7 +124,7 @@
          }
  
          if (this.level() instanceof ServerLevel) {
-@@ -145,11 +_,21 @@
+@@ -145,16 +_,27 @@
      }
  
      public static void award(ServerLevel p_147083_, Vec3 p_147084_, int p_147085_) {
@@ -147,8 +147,21 @@
              }
          }
      }
-@@ -179,6 +_,7 @@
+ 
+     private static boolean tryMergeToExisting(ServerLevel p_147097_, Vec3 p_147098_, int p_147099_) {
++        // Paper - TODO some other event for this kind of merge
+         AABB aabb = AABB.ofSize(p_147098_, 1.0, 1.0, 1.0);
+         int i = p_147097_.getRandom().nextInt(40);
+         List<ExperienceOrb> list = p_147097_.getEntities(EntityTypeTest.forClass(ExperienceOrb.class), aabb, p_147081_ -> canMerge(p_147081_, i, p_147099_));
+@@ -177,8 +_,14 @@
+     }
+ 
      private void merge(ExperienceOrb p_147101_) {
++        // Paper start - call orb merge event
++        if (!new com.destroystokyo.paper.event.entity.ExperienceOrbMergeEvent((org.bukkit.entity.ExperienceOrb) this.getBukkitEntity(), (org.bukkit.entity.ExperienceOrb) p_147101_.getBukkitEntity()).callEvent()) {
++            return;
++        }
++        // Paper end - call orb merge event
          this.count = this.count + p_147101_.count;
          this.age = Math.min(this.age, p_147101_.age);
 +        p_147101_.setRemovedReason(org.bukkit.event.entity.EntityRemoveEvent.Cause.MERGE); // CraftBukkit - add Bukkit remove cause
@@ -224,7 +237,7 @@
              if (j > 0) {
                  int k = p_147094_ - j * p_147094_ / i;
                  if (k > 0) {
-+                    this.value = k; // CraftBukkit - update exp value of orb for PlayerItemMendEvent calls
++                    // this.value = k; // CraftBukkit - update exp value of orb for PlayerItemMendEvent calls // Paper - the value field should not be mutated here because it doesn't take "count" into account
                      return this.repairPlayerItems(p_344821_, k);
                  }
              }

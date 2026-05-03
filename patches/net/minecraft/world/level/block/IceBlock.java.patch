@@ -1,5 +1,18 @@
 --- a/net/minecraft/world/level/block/IceBlock.java
 +++ b/net/minecraft/world/level/block/IceBlock.java
+@@ -34,6 +_,12 @@
+     @Override
+     public void playerDestroy(Level p_54157_, Player p_54158_, BlockPos p_54159_, BlockState p_54160_, @Nullable BlockEntity p_54161_, ItemStack p_54162_) {
+         super.playerDestroy(p_54157_, p_54158_, p_54159_, p_54160_, p_54161_, p_54162_);
++        // Paper start - Improve Block#breakNaturally API
++        this.afterDestroy(p_54157_, p_54159_, p_54162_);
++    }
++
++    public void afterDestroy(Level p_54157_, BlockPos p_54159_, ItemStack p_54162_) {
++        // Paper end - Improve Block#breakNaturally API
+         if (!EnchantmentHelper.hasTag(p_54162_, EnchantmentTags.PREVENTS_ICE_MELTING)) {
+             if (p_54157_.dimensionType().ultraWarm()) {
+                 p_54157_.removeBlock(p_54159_, false);
 @@ -55,6 +_,11 @@
      }
  

@@ -9,7 +9,7 @@
      private static final Logger LOGGER = LogUtils.getLogger();
      private static final int MAX_TEXT_LINE_WIDTH = 90;
      private static final int TEXT_LINE_HEIGHT = 10;
-@@ -146,7 +_,7 @@
+@@ -146,11 +_,13 @@
  
      public void updateSignText(Player p_278048_, boolean p_278103_, List<FilteredText> p_277990_) {
          if (!this.isWaxed() && p_278048_.getUUID().equals(this.getPlayerWhoMayEdit()) && this.level != null) {
@@ -18,6 +18,12 @@
              this.setAllowedPlayerEditor(null);
              this.level.sendBlockUpdated(this.getBlockPos(), this.getBlockState(), this.getBlockState(), 3);
          } else {
+             LOGGER.warn("Player {} just tried to change non-editable sign", p_278048_.getName().getString());
++            if (p_278048_.distanceToSqr(this.getBlockPos().getX(), this.getBlockPos().getY(), this.getBlockPos().getZ()) < 32 * 32) // Paper - Dont send far away sign update
++            ((net.minecraft.server.level.ServerPlayer) p_278048_).connection.send(this.getUpdatePacket()); // CraftBukkit
+         }
+     }
+ 
 @@ -159,18 +_,40 @@
          return this.setText(p_277877_.apply(signtext), p_277426_);
      }

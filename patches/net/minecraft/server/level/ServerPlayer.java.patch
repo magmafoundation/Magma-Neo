@@ -21,12 +21,13 @@
              ServerPlayer.this.connection.send(new ClientboundContainerSetDataPacket(p_143455_.containerId, p_143456_, p_143457_));
          }
      };
-@@ -276,6 +_,25 @@
+@@ -276,6 +_,27 @@
      public final Object object;
      private int containerCounter;
      public boolean wonGame;
 +    private int containerUpdateDelay; // Paper - Configurable container update tick rate
-+
++    public long loginTime; // Paper - Replace OfflinePlayer#getLastPlayed
++    public int patrolSpawnDelay; // Paper - Pillager patrol spawn settings and per player options
 +    // CraftBukkit start
 +    public org.bukkit.craftbukkit.entity.CraftPlayer.TransferCookieConnection transferCookieConnection;
 +    public String displayName;
@@ -40,6 +41,7 @@
 +    public double maxHealthCache;
 +    public boolean joining = true;
 +    public boolean sentListPacket = false;
++    public boolean supressTrackerForLogin = false; // Paper - Fire PlayerJoinEvent when Player is actually ready
 +    public String kickLeaveMessage = null; // SPIGOT-3034: Forward leave message to PlayerQuitEvent
 +    // CraftBukkit end
 +    public boolean isRealPlayer; // Paper
@@ -47,9 +49,14 @@
  
      public ServerPlayer(MinecraftServer p_254143_, ServerLevel p_254435_, GameProfile p_253651_, ClientInformation p_301997_) {
          super(p_254435_, p_254435_.getSharedSpawnPos(), p_254435_.getSharedSpawnAngle(), p_253651_);
-@@ -287,6 +_,12 @@
-         this.moveTo(this.adjustSpawnLocation(p_254435_, p_254435_.getSharedSpawnPos()).getBottomCenter(), 0.0F, 0.0F);
-         this.updateOptions(p_301997_);
+@@ -284,9 +_,15 @@
+         this.server = p_254143_;
+         this.stats = p_254143_.getPlayerList().getPlayerStats(this);
+         this.advancements = p_254143_.getPlayerList().getPlayerAdvancements(this);
+-        this.moveTo(this.adjustSpawnLocation(p_254435_, p_254435_.getSharedSpawnPos()).getBottomCenter(), 0.0F, 0.0F);
+-        this.updateOptions(p_301997_);
++        // this.moveTo(this.adjustSpawnLocation(p_254435_, p_254435_.getSharedSpawnPos()).getBottomCenter(), 0.0F, 0.0F); // Paper - Don't move existing players to world spawn
++        this.updateOptionsNoEvents(p_301997_); // Paper - don't call options events on login
          this.object = null;
 +
 +        // CraftBukkit start
@@ -132,7 +139,7 @@
 +                position = Vec3.atCenterOf(world.getSharedSpawnPos());
 +            }
 +            this.setLevel(world);
-+            this.setPos(position);
++            this.setPosRaw(position.x(), position.y(), position.z()); // Paper - don't register to chunks yet
 +        }
 +        this.gameMode.setLevel((net.minecraft.server.level.ServerLevel) world);
 +    }
@@ -158,17 +165,27 @@
          }
  
 -        this.containerMenu.broadcastChanges();
+-        if (!this.level().isClientSide && !this.containerMenu.stillValid(this)) {
+-            this.closeContainer();
 +        // Paper start - Configurable container update tick rate
 +        if (--containerUpdateDelay <= 0) {
 +            this.containerMenu.broadcastChanges();
 +            containerUpdateDelay = this.level().paperConfig().tickRates.containerUpdate;
 +        }
 +        // Paper end - Configurable container update tick rate
-         if (!this.level().isClientSide && !this.containerMenu.stillValid(this)) {
--            this.closeContainer();
++        if (!this.level().isClientSide && this.containerMenu != this.inventoryMenu && (this.isImmobile() || !this.containerMenu.stillValid(this))) { // Paper - Prevent opening inventories when frozen
 +            this.closeContainer(org.bukkit.event.inventory.InventoryCloseEvent.Reason.CANT_USE); // Paper - Inventory close reason
              this.containerMenu = this.inventoryMenu;
          }
+ 
+@@ -548,7 +_,7 @@
+ 
+     public void doTick() {
+         try {
+-            if (!this.isSpectator() || !this.touchingUnloadedChunk()) {
++            if (valid && !this.isSpectator() || !this.touchingUnloadedChunk()) { // Paper - don't tick dead players that are not in the world currently (pending respawn)
+                 super.tick();
+             }
  
 @@ -565,7 +_,7 @@
              if (this.getHealth() != this.lastSentHealth
@@ -223,7 +240,49 @@
          } catch (Throwable throwable) {
              CrashReport crashreport = CrashReport.forThrowable(throwable, "Ticking player");
              CrashReportCategory crashreportcategory = crashreport.addCategory("Player being ticked");
-@@ -657,9 +_,45 @@
+@@ -654,12 +_,87 @@
+         this.getScoreboard().forAllObjectives(p_9105_, this, p_313589_ -> p_313589_.set(p_9106_));
+     }
+ 
++    // Paper start - PlayerDeathEvent#getItemsToKeep
++    private static void processKeep(org.bukkit.event.entity.PlayerDeathEvent event, NonNullList<ItemStack> inv) {
++        List<org.bukkit.inventory.ItemStack> itemsToKeep = event.getItemsToKeep();
++        if (inv == null) {
++            // remainder of items left in toKeep - plugin added stuff on death that wasn't in the initial loot?
++            if (!itemsToKeep.isEmpty()) {
++                for (org.bukkit.inventory.ItemStack itemStack : itemsToKeep) {
++                    event.getEntity().getInventory().addItem(itemStack);
++                }
++            }
++
++            return;
++        }
++
++        for (int i = 0; i < inv.size(); ++i) {
++            ItemStack item = inv.get(i);
++            if (EnchantmentHelper.has(item, net.minecraft.world.item.enchantment.EnchantmentEffectComponents.PREVENT_EQUIPMENT_DROP) || itemsToKeep.isEmpty() || item.isEmpty()) {
++                inv.set(i, ItemStack.EMPTY);
++                continue;
++            }
++
++            final org.bukkit.inventory.ItemStack bukkitStack = item.getBukkitStack();
++            boolean keep = false;
++            final java.util.Iterator<org.bukkit.inventory.ItemStack> iterator = itemsToKeep.iterator();
++            while (iterator.hasNext()) {
++                final org.bukkit.inventory.ItemStack itemStack = iterator.next();
++                if (bukkitStack.equals(itemStack)) {
++                    iterator.remove();
++                    keep = true;
++                    break;
++                }
++            }
++            if (!keep) {
++                inv.set(i, ItemStack.EMPTY);
++            }
++        }
++    }
++    // Paper end - PlayerDeathEvent#getItemsToKeep
++
      @Override
      public void die(DamageSource p_9035_) {
          this.gameEvent(GameEvent.ENTITY_DIE);
@@ -271,16 +330,21 @@
              this.connection
                  .send(
                      new ClientboundPlayerCombatKillPacket(this.getId(), component),
-@@ -693,9 +_,15 @@
+@@ -693,9 +_,20 @@
              this.tellNeutralMobsThatIDied();
          }
  
 -        if (!this.isSpectator()) {
 +        // SPIGOT-5478 must be called manually now
-+        this.dropExperience(p_9035_.getEntity());
++        if (event.shouldDropExperience()) this.dropExperience(p_9035_.getEntity()); // Paper - tie to event
 +        // we clean the player's inventory after the EntityDeathEvent is called so plugins can get the exact state of the inventory.
 +        if (!event.getKeepInventory()) {
-+            this.getInventory().clearContent();
++            // Paper start - PlayerDeathEvent#getItemsToKeep
++            for (NonNullList<ItemStack> inv : this.getInventory().compartments) {
++                processKeep(event, inv);
++            }
++            processKeep(event, null);
++            // Paper end - PlayerDeathEvent#getItemsToKeep
              this.dropAllDeathLoot(this.serverLevel(), p_9035_);
          }
 +        this.setCamera(this); // Remove spectated target
@@ -716,6 +780,20 @@
                      }
                  }
              } else if (this.isFallFlying()) {
+@@ -1295,6 +_,13 @@
+     public void disconnect() {
+         this.disconnected = true;
+         this.ejectPassengers();
++
++        // Paper start - Workaround vehicle not tracking the passenger disconnection dismount
++        if (this.isPassenger() && this.getVehicle() instanceof ServerPlayer) {
++            this.stopRiding();
++        }
++        // Paper end - Workaround vehicle not tracking the passenger disconnection dismount
++
+         if (this.isSleeping()) {
+             this.stopSleepInBed(true, false);
+         }
 @@ -1306,6 +_,7 @@
  
      public void resetSentInfo() {
@@ -765,10 +843,27 @@
          }
      }
  
-@@ -1541,7 +_,18 @@
+@@ -1540,8 +_,41 @@
+             : "<unknown>";
      }
  
++    // Paper start - Client option API
++    private java.util.Map<com.destroystokyo.paper.ClientOption<?>, ?> getClientOptionMap(String locale, int viewDistance, com.destroystokyo.paper.ClientOption.ChatVisibility chatVisibility, boolean chatColors, com.destroystokyo.paper.PaperSkinParts skinParts, org.bukkit.inventory.MainHand mainHand, boolean allowsServerListing, boolean textFilteringEnabled) {
++        java.util.Map<com.destroystokyo.paper.ClientOption<?>, Object> map = new java.util.HashMap<>();
++        map.put(com.destroystokyo.paper.ClientOption.LOCALE, locale);
++        map.put(com.destroystokyo.paper.ClientOption.VIEW_DISTANCE, viewDistance);
++        map.put(com.destroystokyo.paper.ClientOption.CHAT_VISIBILITY, chatVisibility);
++        map.put(com.destroystokyo.paper.ClientOption.CHAT_COLORS_ENABLED, chatColors);
++        map.put(com.destroystokyo.paper.ClientOption.SKIN_PARTS, skinParts);
++        map.put(com.destroystokyo.paper.ClientOption.MAIN_HAND, mainHand);
++        map.put(com.destroystokyo.paper.ClientOption.ALLOW_SERVER_LISTINGS, allowsServerListing);
++        map.put(com.destroystokyo.paper.ClientOption.TEXT_FILTERING_ENABLED, textFilteringEnabled);
++        return map;
++    }
++    // Paper end
++
      public void updateOptions(ClientInformation p_301998_) {
++        new com.destroystokyo.paper.event.player.PlayerClientOptionsChangeEvent(getBukkitEntity(), getClientOptionMap(p_301998_.language(), p_301998_.viewDistance(), com.destroystokyo.paper.ClientOption.ChatVisibility.valueOf(p_301998_.chatVisibility().name()), p_301998_.chatColors(), new com.destroystokyo.paper.PaperSkinParts(p_301998_.modelCustomisation()), p_301998_.mainHand() == HumanoidArm.LEFT ? org.bukkit.inventory.MainHand.LEFT : org.bukkit.inventory.MainHand.RIGHT, p_301998_.allowsListing(), p_301998_.textFilteringEnabled())).callEvent(); // Paper - settings event
 +        // CraftBukkit start
 +        if (getMainArm() != p_301998_.mainHand()) {
 +            org.bukkit.event.player.PlayerChangedMainHandEvent event = new org.bukkit.event.player.PlayerChangedMainHandEvent(getBukkitEntity(), getMainArm() == HumanoidArm.LEFT ? org.bukkit.inventory.MainHand.LEFT : org.bukkit.inventory.MainHand.RIGHT);
@@ -779,19 +874,41 @@
 +            this.server.server.getPluginManager().callEvent(event);
 +        }
 +        // CraftBukkit end
++        // Paper start - don't call options events on login
++        this.updateOptionsNoEvents(p_301998_);
++    }
++
++    public void updateOptionsNoEvents(ClientInformation p_301998_) {
++        // Paper end
          this.language = p_301998_.language();
 +        this.adventure$locale = java.util.Objects.requireNonNullElse(net.kyori.adventure.translation.Translator.parseLocale(this.language), java.util.Locale.US); // Paper
          this.requestedViewDistance = p_301998_.viewDistance();
          this.chatVisibility = p_301998_.chatVisibility();
          this.canChatColor = p_301998_.chatColors();
-@@ -1617,6 +_,7 @@
+@@ -1617,7 +_,23 @@
      public void setCamera(@Nullable Entity p_9214_) {
          Entity entity = this.getCamera();
          this.camera = (Entity)(p_9214_ == null ? this : p_9214_);
 +        while (this.camera instanceof net.neoforged.neoforge.entity.PartEntity<?> partEntity) this.camera = partEntity.getParent(); // Neo: fix MC-46486
          if (entity != this.camera) {
++            // Paper start - Add PlayerStartSpectatingEntityEvent and PlayerStopSpectatingEntity
++            if (this.camera == this) {
++                com.destroystokyo.paper.event.player.PlayerStopSpectatingEntityEvent playerStopSpectatingEntityEvent = new com.destroystokyo.paper.event.player.PlayerStopSpectatingEntityEvent(this.getBukkitEntity(), entity.getBukkitEntity());
++                if (!playerStopSpectatingEntityEvent.callEvent()) {
++                    this.camera = entity; // rollback camera entity again
++                    return;
++                }
++            } else {
++                com.destroystokyo.paper.event.player.PlayerStartSpectatingEntityEvent playerStartSpectatingEntityEvent = new com.destroystokyo.paper.event.player.PlayerStartSpectatingEntityEvent(this.getBukkitEntity(), entity.getBukkitEntity(), p_9214_.getBukkitEntity());
++                if (!playerStartSpectatingEntityEvent.callEvent()) {
++                    this.camera = entity; // rollback camera entity again
++                    return;
++                }
++            }
++            // Paper end - Add PlayerStartSpectatingEntityEvent and PlayerStopSpectatingEntity
              if (this.camera.level() instanceof ServerLevel serverlevel) {
                  this.teleportTo(serverlevel, this.camera.getX(), this.camera.getY(), this.camera.getZ(), Set.of(), this.getYRot(), this.getXRot());
+             }
 @@ -1653,7 +_,11 @@
  
      @Nullable
@@ -963,7 +1080,7 @@
          }
  
          private static float calculateLookAtYaw(Vec3 p_348686_, BlockPos p_348467_) {
-@@ -1968,4 +_,188 @@
+@@ -1968,4 +_,189 @@
              return (float)Mth.wrapDegrees(Mth.atan2(vec3.z, vec3.x) * 180.0F / (float)Math.PI - 90.0);
          }
      }
@@ -1073,6 +1190,7 @@
 +        }
 +        this.setHealth(this.getMaxHealth());
 +        this.stopUsingItem(); // CraftBukkit - SPIGOT-6682: Clear active item on reset
++        this.setAirSupply(this.getMaxAirSupply()); // Paper - Reset players airTicks on respawn
 +        this.setRemainingFireTicks(0);
 +        this.fallDistance = 0;
 +        this.foodData = new net.minecraft.world.food.FoodData(this);

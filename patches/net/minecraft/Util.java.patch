@@ -1,7 +1,11 @@
 --- a/net/minecraft/Util.java
 +++ b/net/minecraft/Util.java
-@@ -92,6 +_,20 @@
-     private static final ExecutorService BACKGROUND_EXECUTOR = makeExecutor("Main");
+@@ -89,9 +_,23 @@
+     private static final int DEFAULT_MAX_THREADS = 255;
+     private static final int DEFAULT_SAFE_FILE_OPERATION_RETRIES = 10;
+     private static final String MAX_THREADS_SYSTEM_PROPERTY = "max.bg.threads";
+-    private static final ExecutorService BACKGROUND_EXECUTOR = makeExecutor("Main");
++    private static final ExecutorService BACKGROUND_EXECUTOR = makeExecutor("Main", -1); // Paper - Perf: add priority
      private static final ExecutorService IO_POOL = makeIoExecutor("IO-Worker-", false);
      private static final ExecutorService DOWNLOAD_POOL = makeIoExecutor("Download-", true);
 +    // Paper start - don't submit BLOCKING PROFILE LOOKUPS to the world gen thread
@@ -30,6 +34,48 @@
      }
  
      public static long getEpochMillis() {
+@@ -146,15 +_,27 @@
+         return FILENAME_DATE_TIME_FORMATTER.format(ZonedDateTime.now());
+     }
+ 
+-    private static ExecutorService makeExecutor(String p_137478_) {
+-        int i = Mth.clamp(Runtime.getRuntime().availableProcessors() - 1, 1, getMaxThreads());
++    private static ExecutorService makeExecutor(String p_137478_, int priorityModifier) { // Paper - Perf: add priority
++        // Paper start - Perf: use simpler thread pool that allows 1 thread and reduce worldgen thread worker count for low core count CPUs
++        int cpus = Runtime.getRuntime().availableProcessors() / 2;
++        int i;
++        if (cpus <= 4) {
++            i = cpus <= 2 ? 1 : 2;
++        } else if (cpus <= 8) {
++            // [5, 8]
++            i = Math.max(3, cpus - 2);
++        } else {
++            i = cpus * 2 / 3;
++        }
++        i = Math.min(8, i);
++        i = Integer.getInteger("Paper.WorkerThreadCount", i);
+         ExecutorService executorservice;
+         if (i <= 0) {
+             executorservice = MoreExecutors.newDirectExecutorService();
+         } else {
+-            AtomicInteger atomicinteger = new AtomicInteger(1);
+-            executorservice = new ForkJoinPool(i, p_314383_ -> {
+-                ForkJoinWorkerThread forkjoinworkerthread = new ForkJoinWorkerThread(p_314383_) {
++            executorservice = new java.util.concurrent.ThreadPoolExecutor(i, i,0L, TimeUnit.MILLISECONDS, new java.util.concurrent.LinkedBlockingQueue<>(), target -> new io.papermc.paper.util.ServerWorkerThread(target, p_137478_, priorityModifier));
++        }
++        /*
+                     @Override
+                     protected void onTermination(Throwable p_211561_) {
+                         if (p_211561_ != null) {
+@@ -170,7 +_,7 @@
+                 return forkjoinworkerthread;
+             }, Util::onThreadException, true);
+         }
+-
++        }*/ // Paper end - Perf: use simpler thread pool
+         return executorservice;
+     }
+ 
 @@ -267,8 +_,8 @@
                  .getSchema(DataFixUtils.makeKey(SharedConstants.getCurrentVersion().getDataVersion().getVersion()))
                  .getChoiceType(p_137552_, p_137553_);

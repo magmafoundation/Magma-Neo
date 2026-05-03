@@ -26,6 +26,7 @@ public class Main {
         }
         // Paper end
         // Todo: Installation script
+        if (System.getProperty("jdk.nio.maxCachedBufferSize") == null) System.setProperty("jdk.nio.maxCachedBufferSize", "262144"); // Paper - cap per-thread NIO cache size; https://www.evanjones.ca/java-bytebuffer-leak.html
         OptionParser parser = new OptionParser() {
             {
                 acceptsAll(asList("?", "help"), "Show the help");
@@ -201,11 +202,19 @@ public class Main {
                 return;
             }
 
-            float javaVersion = Float.parseFloat(System.getProperty("java.class.version"));
-            if (javaVersion > 66.0) {
-                System.err.println("Unsupported Java detected (" + javaVersion + "). Only up to Java 22 is supported.");
-                return;
+            // Paper start - Improve java version check
+            boolean skip = Boolean.getBoolean("Paper.IgnoreJavaVersion");
+            String javaVersionName = System.getProperty("java.version");
+            // J2SE SDK/JRE Version String Naming Convention
+            boolean isPreRelease = javaVersionName.contains("-");
+            if (isPreRelease) {
+                if (!skip) {
+                    System.err.println("Unsupported Java detected (" + javaVersionName + "). You are running an unsupported, non official, version. Only general availability versions of Java are supported. Please update your Java version. See https://docs.papermc.io/paper/faq#unsupported-java-detected-what-do-i-do for more information.");
+                    return;
+                }
+                System.err.println("Unsupported Java detected (" + javaVersionName + "), but the check was skipped. Proceed with caution! ");
             }
+            // Paper end - Improve java version check
 
             try {
                 // Paper start - Handled by TerminalConsoleAppender

@@ -207,6 +207,7 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
     private BorderChangeListener clientWorldBorderListener = createWorldBorderListener();
     public org.bukkit.event.player.PlayerResourcePackStatusEvent.Status resourcePackStatus; // Paper - more resource pack API
     private static final boolean DISABLE_CHANNEL_LIMIT = System.getProperty("paper.disableChannelLimit") != null; // Paper - add a flag to disable the channel limit
+    private long lastSaveTime; // Paper - getLastPlayed replacement API
 
     public CraftPlayer(CraftServer server, ServerPlayer entity) {
         super(server, entity);
@@ -220,8 +221,12 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
 
     @Override
     public void remove() {
-        // Will lead to an inconsistent player state if we remove the player as any other entity.
-        throw new UnsupportedOperationException(String.format("Cannot remove player %s, use Player#kickPlayer(String) instead.", getName()));
+        if (this.getHandle().getClass().equals(ServerPlayer.class)) { // special case for NMS plugins inheriting
+            // Will lead to an inconsistent player state if we remove the player as any other entity.
+            throw new UnsupportedOperationException(String.format("Cannot remove player %s, use Player#kickPlayer(String) instead.", getName()));
+        } else {
+            super.remove();
+        }
     }
 
     @Override
@@ -648,6 +653,28 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
         if (connection != null) {
             connection.disconnect(message == null ? net.kyori.adventure.text.Component.empty() : message);
         }
+    }
+
+    @Override
+    public <T> T getClientOption(com.destroystokyo.paper.ClientOption<T> type) {
+        if (com.destroystokyo.paper.ClientOption.SKIN_PARTS == type) {
+            return type.getType().cast(new com.destroystokyo.paper.PaperSkinParts(getHandle().getEntityData().get(net.minecraft.world.entity.player.Player.DATA_PLAYER_MODE_CUSTOMISATION)));
+        } else if (com.destroystokyo.paper.ClientOption.CHAT_COLORS_ENABLED == type) {
+            return type.getType().cast(getHandle().canChatInColor());
+        } else if (com.destroystokyo.paper.ClientOption.CHAT_VISIBILITY == type) {
+            return type.getType().cast(getHandle().getChatVisibility() == null ? com.destroystokyo.paper.ClientOption.ChatVisibility.UNKNOWN : com.destroystokyo.paper.ClientOption.ChatVisibility.valueOf(getHandle().getChatVisibility().name()));
+        } else if (com.destroystokyo.paper.ClientOption.LOCALE == type) {
+            return type.getType().cast(getLocale());
+        } else if (com.destroystokyo.paper.ClientOption.MAIN_HAND == type) {
+            return type.getType().cast(getMainHand());
+        } else if (com.destroystokyo.paper.ClientOption.VIEW_DISTANCE == type) {
+            return type.getType().cast(getClientViewDistance());
+        } else if (com.destroystokyo.paper.ClientOption.ALLOW_SERVER_LISTINGS == type) {
+            return type.getType().cast(getHandle().allowsListing());
+        } else if (com.destroystokyo.paper.ClientOption.TEXT_FILTERING_ENABLED == type) {
+            return type.getType().cast(getHandle().isTextFilteringEnabled());
+        }
+        throw new RuntimeException("Unknown settings type");
     }
     // Paper end
 
@@ -2048,6 +2075,18 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
         this.firstPlayed = firstPlayed;
     }
 
+    // Paper start - getLastPlayed replacement API
+    @Override
+    public long getLastLogin() {
+        return this.getHandle().loginTime;
+    }
+
+    @Override
+    public long getLastSeen() {
+        return this.isOnline() ? System.currentTimeMillis() : this.lastSaveTime;
+    }
+    // Paper end - getLastPlayed replacement API
+
     public void readExtraData(CompoundTag nbttagcompound) {
         hasPlayedBefore = true;
         if (nbttagcompound.contains("bukkit")) {
@@ -2070,6 +2109,8 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
     }
 
     public void setExtraData(CompoundTag nbttagcompound) {
+        this.lastSaveTime = System.currentTimeMillis(); // Paper
+
         if (!nbttagcompound.contains("bukkit")) {
             nbttagcompound.put("bukkit", new CompoundTag());
         }
@@ -2084,6 +2125,16 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
         data.putLong("firstPlayed", getFirstPlayed());
         data.putLong("lastPlayed", System.currentTimeMillis());
         data.putString("lastKnownName", handle.getScoreboardName());
+
+        // Paper start - persist for use in offline save data
+        if (!nbttagcompound.contains("Paper")) {
+            nbttagcompound.put("Paper", new CompoundTag());
+        }
+
+        CompoundTag paper = nbttagcompound.getCompound("Paper");
+        paper.putLong("LastLogin", handle.loginTime);
+        paper.putLong("LastSeen", System.currentTimeMillis());
+        // Paper end
     }
 
     @Override

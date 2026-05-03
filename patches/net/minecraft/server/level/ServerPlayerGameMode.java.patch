@@ -32,16 +32,36 @@
      }
  
      public GameType getGameModeForPlayer() {
-@@ -93,7 +_,7 @@
+@@ -93,10 +_,10 @@
      }
  
      public void tick() {
 -        this.gameTicks++;
 +        this.gameTicks = net.minecraft.server.MinecraftServer.currentTick; // CraftBukkit;
          if (this.hasDelayedDestroy) {
-             BlockState blockstate = this.level.getBlockState(this.delayedDestroyPos);
-             if (blockstate.isAir()) {
-@@ -133,6 +_,10 @@
+-            BlockState blockstate = this.level.getBlockState(this.delayedDestroyPos);
+-            if (blockstate.isAir()) {
++            BlockState blockstate = this.level.getBlockStateIfLoaded(this.delayedDestroyPos); // Paper - Don't allow digging into unloaded chunks
++            if (blockstate == null || blockstate.isAir()) { // Paper - Don't allow digging into unloaded chunks
+                 this.hasDelayedDestroy = false;
+             } else {
+                 float f = this.incrementDestroyProgress(blockstate, this.delayedDestroyPos, this.delayedTickStart);
+@@ -106,7 +_,13 @@
+                 }
+             }
+         } else if (this.isDestroyingBlock) {
+-            BlockState blockstate1 = this.level.getBlockState(this.destroyPos);
++            // Paper start - Don't allow digging into unloaded chunks; don't want to do same logic as above, return instead
++            BlockState blockstate1 = this.level.getBlockStateIfLoaded(this.destroyPos);
++            if (blockstate1 == null) {
++                this.isDestroyingBlock = false;
++                return;
++            }
++            // Paper end - Don't allow digging into unloaded chunks
+             if (blockstate1.isAir()) {
+                 this.level.destroyBlockProgress(this.player.getId(), this.destroyPos, -1);
+                 this.lastSentState = -1;
+@@ -133,7 +_,12 @@
      }
  
      public void handleBlockBreakAction(BlockPos p_215120_, ServerboundPlayerActionPacket.Action p_215121_, Direction p_215122_, int p_215123_, int p_215124_) {
@@ -50,8 +70,10 @@
 +            return;
 +        }
          if (!this.player.canInteractWithBlock(p_215120_, 1.0)) {
++            if (true) return; // Paper - Don't allow digging into unloaded chunks; Don't notify if unreasonably far away
              this.debugLogging(p_215120_, false, p_215124_, "too far");
          } else if (p_215120_.getY() >= p_215123_) {
+             this.player.connection.send(new ClientboundBlockUpdatePacket(p_215120_, this.level.getBlockState(p_215120_)));
 @@ -141,16 +_,46 @@
          } else {
              if (p_215121_ == ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK) {
@@ -153,14 +175,20 @@
                  if (!blockstate.isAir() && f >= 1.0F) {
                      this.destroyAndAck(p_215120_, p_215124_, "insta mine");
                  } else {
-@@ -216,13 +_,15 @@
+@@ -215,14 +_,18 @@
+                 this.debugLogging(p_215120_, true, p_215124_, "stopped destroying");
              } else if (p_215121_ == ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK) {
                  this.isDestroyingBlock = false;
-                 if (!Objects.equals(this.destroyPos, p_215120_)) {
+-                if (!Objects.equals(this.destroyPos, p_215120_)) {
 -                    LOGGER.warn("Mismatch in destroy block pos: {} {}", this.destroyPos, p_215120_);
+-                    this.level.destroyBlockProgress(this.player.getId(), this.destroyPos, -1);
+-                    this.debugLogging(p_215120_, true, p_215124_, "aborted mismatched destroying");
++                if (!Objects.equals(this.destroyPos, p_215120_) && !BlockPos.ZERO.equals(this.destroyPos)) { // Paper
 +                    LOGGER.debug("Mismatch in destroy block pos: {} {}", this.destroyPos, p_215120_); // CraftBukkit - SPIGOT-5457 sent by client when interact event cancelled
-                     this.level.destroyBlockProgress(this.player.getId(), this.destroyPos, -1);
-                     this.debugLogging(p_215120_, true, p_215124_, "aborted mismatched destroying");
++                    BlockState type = this.level.getBlockStateIfLoaded(this.destroyPos); // Paper - don't load unloaded chunks for stale records here
++                    if (type != null) this.level.destroyBlockProgress(this.player.getId(), this.destroyPos, -1);
++                    if (type != null) this.debugLogging(p_215120_, true, p_215124_, "aborted mismatched destroying");
++                    this.destroyPos = BlockPos.ZERO; // Paper
                  }
  
                  this.level.destroyBlockProgress(this.player.getId(), p_215120_, -1);

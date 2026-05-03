@@ -1,5 +1,25 @@
 --- a/net/minecraft/world/level/chunk/storage/ChunkSerializer.java
 +++ b/net/minecraft/world/level/chunk/storage/ChunkSerializer.java
+@@ -82,6 +_,19 @@
+     public static final String BLOCK_LIGHT_TAG = "BlockLight";
+     public static final String SKY_LIGHT_TAG = "SkyLight";
+ 
++    // Paper start - guard against serializing mismatching coordinates
++    // TODO Note: This needs to be re-checked each update
++    public static ChunkPos getChunkCoordinate(final CompoundTag chunkData) {
++        final int dataVersion = ChunkStorage.getVersion(chunkData);
++        if (dataVersion < 2842) { // Level tag is removed after this version
++            final CompoundTag levelData = chunkData.getCompound("Level");
++            return new ChunkPos(levelData.getInt("xPos"), levelData.getInt("zPos"));
++        } else {
++            return new ChunkPos(chunkData.getInt("xPos"), chunkData.getInt("zPos"));
++        }
++    }
++    // Paper end - guard against serializing mismatching coordinates
++
+     public static ProtoChunk read(ServerLevel p_188231_, PoiManager p_188232_, RegionStorageInfo p_352213_, ChunkPos p_188233_, CompoundTag p_188234_) {
+         ChunkPos chunkpos = new ChunkPos(p_188234_.getInt("xPos"), p_188234_.getInt("zPos"));
+         if (!Objects.equals(p_188233_, chunkpos)) {
 @@ -99,6 +_,7 @@
          LevelLightEngine levellightengine = chunksource.getLightEngine();
          Registry<Biome> registry = p_188231_.registryAccess().registryOrThrow(Registries.BIOME);

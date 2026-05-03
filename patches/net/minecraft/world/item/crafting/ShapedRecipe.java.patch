@@ -1,6 +1,22 @@
 --- a/net/minecraft/world/item/crafting/ShapedRecipe.java
 +++ b/net/minecraft/world/item/crafting/ShapedRecipe.java
-@@ -30,6 +_,68 @@
+@@ -11,7 +_,7 @@
+ import net.minecraft.world.item.ItemStack;
+ import net.minecraft.world.level.Level;
+ 
+-public class ShapedRecipe implements CraftingRecipe {
++public class ShapedRecipe extends io.papermc.paper.inventory.recipe.RecipeBookExactChoiceRecipe<CraftingInput> implements CraftingRecipe { // Paper - improve exact recipe choices
+     public final ShapedRecipePattern pattern;
+     final ItemStack result;
+     final String group;
+@@ -24,12 +_,75 @@
+         this.pattern = p_312827_;
+         this.result = p_272852_;
+         this.showNotification = p_312010_;
++        this.checkExactIngredients(); // Paper - improve exact recipe choices
+     }
+ 
+     public ShapedRecipe(String p_250221_, CraftingBookCategory p_250716_, ShapedRecipePattern p_312814_, ItemStack p_248581_) {
          this(p_250221_, p_250716_, p_312814_, p_248581_, true);
      }
  

@@ -206,12 +206,20 @@
              this.updateChunkTracking(p_140185_);
          }
      }
-@@ -1069,9 +_,11 @@
+@@ -1069,9 +_,19 @@
      }
  
-     protected void addEntity(Entity p_140200_) {
+     public void addEntity(Entity p_140200_) {
 -        if (!(p_140200_ instanceof EnderDragonPart)) {
 +        org.spigotmc.AsyncCatcher.catchOp("entity track"); // Spigot
++        // Paper start - ignore and warn about illegal addEntity calls instead of crashing server
++        if (!p_140200_.valid || p_140200_.level() != this.level || this.entityMap.containsKey(p_140200_.getId())) {
++            LOGGER.error("Illegal ChunkMap::addEntity for world " + this.level.getWorld().getName()
++                    + ": " + p_140200_  + (this.entityMap.containsKey(p_140200_.getId()) ? " ALREADY CONTAINED (This would have crashed your server)" : ""), new Throwable());
++            return;
++        }
++        // Paper end - ignore and warn about illegal addEntity calls instead of crashing server
++        if (p_140200_ instanceof ServerPlayer && ((ServerPlayer) p_140200_).supressTrackerForLogin) return; // Paper - Fire PlayerJoinEvent when Player is actually ready; Delay adding to tracker until after list packets
 +        if (!(p_140200_ instanceof net.neoforged.neoforge.entity.PartEntity)) {
              EntityType<?> entitytype = p_140200_.getType();
              int i = entitytype.clientTrackingRange() * 16;

@@ -1,6 +1,10 @@
 --- a/net/minecraft/world/entity/EntitySelector.java
 +++ b/net/minecraft/world/entity/EntitySelector.java
-@@ -20,6 +_,11 @@
+@@ -17,9 +_,15 @@
+             || !p_20436_.isSpectator() && !((Player)p_20436_).isCreative();
+     public static final Predicate<Entity> NO_SPECTATORS = p_20434_ -> !p_20434_.isSpectator();
+     public static final Predicate<Entity> CAN_BE_COLLIDED_WITH = NO_SPECTATORS.and(Entity::canBeCollidedWith);
++    public static Predicate<Player> IS_INSOMNIAC = (player) -> net.minecraft.util.Mth.clamp(((net.minecraft.server.level.ServerPlayer) player).getStats().getValue(net.minecraft.stats.Stats.CUSTOM.get(net.minecraft.stats.Stats.TIME_SINCE_REST)), 1, Integer.MAX_VALUE) >= 72000; // Paper - Add phantom creative and insomniac controls
  
      private EntitySelector() {
      }

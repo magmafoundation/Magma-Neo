@@ -67,6 +67,43 @@
              this.level.getProfiler().push("pathfind");
              BlockPos blockpos = p_148225_ ? this.mob.blockPosition().above() : this.mob.blockPosition();
              int i = (int)(p_148227_ + (float)p_148224_);
+@@ -154,6 +_,11 @@
+         }
+     }
+ 
++    // Paper start - Perf: Optimise pathfinding
++    private int lastFailure = 0;
++    private int pathfindFailures = 0;
++    // Paper end - Perf: Optimise pathfinding
++
+     public boolean moveTo(double p_26520_, double p_26521_, double p_26522_, double p_26523_) {
+         return this.moveTo(this.createPath(p_26520_, p_26521_, p_26522_, 1), p_26523_);
+     }
+@@ -163,8 +_,23 @@
+     }
+ 
+     public boolean moveTo(Entity p_26532_, double p_26533_) {
++        // Paper start - Perf: Optimise pathfinding
++        if (this.pathfindFailures > 10 && this.path == null && net.minecraft.server.MinecraftServer.currentTick < this.lastFailure + 40) {
++            return false;
++        }
++        // Paper end - Perf: Optimise pathfinding
+         Path path = this.createPath(p_26532_, 1);
+-        return path != null && this.moveTo(path, p_26533_);
++        // Paper start - Perf: Optimise pathfinding
++        if (path != null && this.moveTo(path, p_26533_)) {
++            this.lastFailure = 0;
++            this.pathfindFailures = 0;
++            return true;
++        } else {
++            this.pathfindFailures++;
++            this.lastFailure = net.minecraft.server.MinecraftServer.currentTick;
++            return false;
++        }
++        // Paper end - Perf: Optimise pathfinding
+     }
+ 
+     public boolean moveTo(@Nullable Path p_26537_, double p_26538_) {
 @@ -232,10 +_,10 @@
          Vec3 vec3 = this.getTempMobPos();
          this.maxDistanceToWaypoint = this.mob.getBbWidth() > 0.75F ? this.mob.getBbWidth() / 2.0F : 0.75F - this.mob.getBbWidth() / 2.0F;

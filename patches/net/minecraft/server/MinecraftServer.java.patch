@@ -18,7 +18,7 @@
      private boolean stopped;
      private int tickCount;
      private int ticksUntilAutosave = 6000;
-@@ -223,7 +_,7 @@
+@@ -223,10 +_,15 @@
      private boolean pvp;
      private boolean allowFlight;
      @Nullable
@@ -27,7 +27,15 @@
      private int playerIdleTimeout;
      private final long[] tickTimesNanos = new long[100];
      private long aggregatedTickTimesNanos = 0L;
-@@ -262,9 +_,34 @@
++    // Paper start - Add tick times API and /mspt command
++    public final TickTimes tickTimes5s = new TickTimes(100);
++    public final TickTimes tickTimes10s = new TickTimes(200);
++    public final TickTimes tickTimes60s = new TickTimes(1200);
++    // Paper end - Add tick times API and /mspt command
+     @Nullable
+     private KeyPair keyPair;
+     @Nullable
+@@ -262,10 +_,36 @@
      private volatile boolean isSaving;
      private static final AtomicReference<RuntimeException> fatalException = new AtomicReference<>();
  
@@ -61,8 +69,10 @@
 -        Thread thread = new Thread(() -> atomicreference.get().runServer(), "Server thread");
 +        Thread thread = new Thread(net.neoforged.fml.util.thread.SidedThreadGroups.SERVER, () -> atomicreference.get().runServer(), "Server thread");
          thread.setUncaughtExceptionHandler((p_177909_, p_177910_) -> LOGGER.error("Uncaught exception in server thread", p_177910_));
++        thread.setPriority(Thread.NORM_PRIORITY+2); // Paper - Perf: Boost priority
          if (Runtime.getRuntime().availableProcessors() > 4) {
              thread.setPriority(8);
+         }
 @@ -287,6 +_,7 @@
          ChunkProgressListenerFactory p_236730_
      ) {
@@ -331,12 +341,13 @@
      }
  
      public GameType getDefaultGameType() {
-@@ -582,18 +_,42 @@
+@@ -582,18 +_,45 @@
          this.stopServer();
      }
  
 +    // CraftBukkit start
 +    private boolean hasStopped = false;
++    private boolean hasLoggedStop = false; // Paper - Debugging
 +    private final Object stopLock = new Object();
 +    public final boolean hasStopped() {
 +        synchronized (stopLock) {
@@ -351,12 +362,14 @@
 +            if (hasStopped) return;
 +            hasStopped = true;
 +        }
++        if (!hasLoggedStop && isDebugging()) io.papermc.paper.util.TraceUtil.dumpTraceForThread("Server stopped"); // Paper - Debugging
 +        // CraftBukkit end
          if (this.metricsRecorder.isRecording()) {
              this.cancelRecordingMetrics();
          }
  
          LOGGER.info("Stopping server");
++        Commands.COMMAND_SENDING_POOL.shutdownNow(); // Paper - Perf: Async command map building; Shutdown and don't bother finishing
 +        co.aikar.timings.MinecraftTimings.stopServer(); // Paper
 +        // CraftBukkit start
 +        if (this.server != null) {
@@ -402,7 +415,7 @@
      }
  
      public String getLocalIp() {
-@@ -650,6 +_,13 @@
+@@ -650,6 +_,15 @@
      }
  
      public void halt(boolean p_129884_) {
@@ -412,6 +425,8 @@
 +
 +    public void safeShutdown(boolean p_129884_, boolean isRestarting) {
 +        this.isRestarting = isRestarting;
++        this.hasLoggedStop = true; // Paper - Debugging
++        if (isDebugging()) io.papermc.paper.util.TraceUtil.dumpTraceForThread("Server stopped"); // Paper - Debugging
 +        // Paper end
          this.running = false;
          if (p_129884_) {
@@ -620,7 +635,7 @@
      }
  
      public boolean isPaused() {
-@@ -899,13 +_,27 @@
+@@ -899,13 +_,28 @@
      }
  
      public void tickServer(BooleanSupplier p_129871_) {
@@ -636,6 +651,7 @@
 +        isOversleep = false;
 +        co.aikar.timings.MinecraftTimings.serverOversleep.stopTiming();
 +        // Paper end
++        new com.destroystokyo.paper.event.server.ServerTickStartEvent(this.tickCount+1).callEvent(); // Paper - Server Tick Events
 +
          this.tickCount++;
 +        net.neoforged.neoforge.event.EventHooks.fireServerTickPre(p_129871_, this);
@@ -648,7 +664,7 @@
          }
  
          this.ticksUntilAutosave--;
-@@ -918,6 +_,12 @@
+@@ -918,6 +_,16 @@
              LOGGER.debug("Autosave finished");
          }
  
@@ -657,12 +673,23 @@
 +            this.runAllTasks();
 +        }
 +        // Paper end
-+
++        // Paper start - Server Tick Events
++        long endTime = System.nanoTime();
++        long remaining = (TICK_TIME - (endTime - lastTick)) - catchupTime;
++        new com.destroystokyo.paper.event.server.ServerTickEndEvent(this.tickCount, ((double)(endTime - lastTick) / 1000000D), remaining).callEvent();
++        // Paper end - Server Tick Events
          this.profiler.push("tallying");
          long j = Util.getNanos() - i;
          int k = this.tickCount % 100;
-@@ -927,6 +_,8 @@
+@@ -925,8 +_,15 @@
+         this.aggregatedTickTimesNanos += j;
+         this.tickTimesNanos[k] = j;
          this.smoothedTickTimeMillis = this.smoothedTickTimeMillis * 0.8F + (float)j / (float)TimeUtil.NANOSECONDS_PER_MILLISECOND * 0.19999999F;
++        // Paper start - Add tick times API and /mspt command
++        this.tickTimes5s.add(this.tickCount, j);
++        this.tickTimes10s.add(this.tickCount, j);
++        this.tickTimes60s.add(this.tickCount, j);
++        // Paper end - Add tick times API and /mspt command
          this.logTickMethodTime(i);
          this.profiler.pop();
 +        net.neoforged.neoforge.event.EventHooks.fireServerTickPost(p_129871_, this);
@@ -711,7 +738,7 @@
              ObjectArrayList<GameProfile> objectarraylist = new ObjectArrayList<>(j);
              int k = Mth.nextInt(this.random, 0, list.size() - j);
  
-@@ -992,11 +_,37 @@
+@@ -992,11 +_,50 @@
  
      public void tickChildren(BooleanSupplier p_129954_) {
          this.getPlayerList().getPlayers().forEach(p_341570_ -> p_341570_.connection.suspendFlushing());
@@ -736,12 +763,25 @@
 +
 +        co.aikar.timings.MinecraftTimings.timeUpdateTimer.startTiming(); // Spigot // Paper
 +        // Send time updates to everyone, it will get the right time from the world the player is in.
-+        if (this.tickCount % 20 == 0) {
-+            for (int i = 0; i < this.getPlayerList().players.size(); ++i) {
-+                ServerPlayer entityplayer = (ServerPlayer) this.getPlayerList().players.get(i);
++        // Paper start - Perf: Optimize time updates
++        for (final ServerLevel level : this.getAllLevels()) {
++            final boolean doDaylight = level.getGameRules().getBoolean(GameRules.RULE_DAYLIGHT);
++            final long dayTime = level.getDayTime();
++            long worldTime = level.getGameTime();
++            final ClientboundSetTimePacket worldPacket = new ClientboundSetTimePacket(worldTime, dayTime, doDaylight);
++            for (Player entityhuman : level.players()) {
++                if (!(entityhuman instanceof ServerPlayer) || (tickCount + entityhuman.getId()) % 20 != 0) {
++                    continue;
++                }
++                ServerPlayer entityplayer = (ServerPlayer) entityhuman;
++                long playerTime = entityplayer.getPlayerTime();
++                ClientboundSetTimePacket packet = (playerTime == dayTime) ? worldPacket :
++                        new ClientboundSetTimePacket(worldTime, playerTime, doDaylight);
++                entityplayer.connection.send(packet); // Add support for per player time
 +                entityplayer.connection.send(new ClientboundSetTimePacket(entityplayer.level().getGameTime(), entityplayer.getPlayerTime(), entityplayer.level().getGameRules().getBoolean(GameRules.RULE_DAYLIGHT))); // Add support for per player time
 +            }
 +        }
++        // Paper end - Perf: Optimize time updates
 +        co.aikar.timings.MinecraftTimings.timeUpdateTimer.stopTiming(); // Spigot // Paper
 +
 +        for(ServerLevel serverlevel : this.getWorldArray()) {
@@ -1029,11 +1069,10 @@
      }
  
      public boolean logIPs() {
-@@ -2010,6 +_,15 @@
- 
+@@ -2011,6 +_,15 @@
      public static record ServerResourcePackInfo(UUID id, String url, String hash, boolean isRequired, @Nullable Component prompt) {
      }
-+
+ 
 +    // Magma start
 +    private static void magma$forceUpgrade(LevelStorageSource.LevelStorageAccess worldSession, RegistryAccess.Frozen iregistrycustom_dimension) {
 +
@@ -1042,6 +1081,38 @@
 +        }, iregistrycustom_dimension, options.has("recreateRegionFiles"));
 +    }
 +    // Magma end
- 
++
      static class TimeProfiler {
          final long startNanos;
+         final int startTick;
+@@ -2059,4 +_,30 @@
+             };
+         }
+     }
++
++    // Paper start - Add tick times API and /mspt command
++    public static class TickTimes {
++        private final long[] times;
++
++        public TickTimes(int length) {
++            times = new long[length];
++        }
++
++        void add(int index, long time) {
++            times[index % times.length] = time;
++        }
++
++        public long[] getTimes() {
++            return times.clone();
++        }
++
++        public double getAverage() {
++            long total = 0L;
++            for (long value : times) {
++                total += value;
++            }
++            return ((double) total / (double) times.length) * 1.0E-6D;
++        }
++    }
++    // Paper end - Add tick times API and /mspt command
+ }

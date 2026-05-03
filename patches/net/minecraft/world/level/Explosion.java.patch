@@ -41,6 +41,15 @@
          this.level.gameEvent(this.source, GameEvent.EXPLODE, new Vec3(this.x, this.y, this.z));
          Set<BlockPos> set = Sets.newHashSet();
          int i = 16;
+@@ -237,7 +_,7 @@
+                         for (float f1 = 0.3F; f > 0.0F; f -= 0.22500001F) {
+                             BlockPos blockpos = BlockPos.containing(d4, d6, d8);
+                             BlockState blockstate = this.level.getBlockState(blockpos);
+-                            FluidState fluidstate = this.level.getFluidState(blockpos);
++                            FluidState fluidstate = blockstate.getFluidState(); // Paper - Perf: Optimize call to getFluid for explosions
+                             if (!this.level.isInWorldBounds(blockpos)) {
+                                 break;
+                             }
 @@ -268,7 +_,8 @@
          int i1 = Mth.floor(this.y + (double)f2 + 1.0);
          int j2 = Mth.floor(this.z - (double)f2 - 1.0);

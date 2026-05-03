@@ -97,3 +97,17 @@
                  removeDatafixingContext(p_188291_);
                  NbtUtils.addCurrentDataVersion(p_188291_);
                  return p_188291_;
+@@ -107,6 +_,13 @@
+     }
+ 
+     public CompletableFuture<Void> write(ChunkPos p_63503_, CompoundTag p_63504_) {
++        // Paper start - guard against serializing mismatching coordinates
++        if (p_63504_ != null && !p_63503_.equals(ChunkSerializer.getChunkCoordinate(p_63504_))) {
++            final String world = (this instanceof net.minecraft.server.level.ChunkMap) ? ((net.minecraft.server.level.ChunkMap) this).level.getWorld().getName() : null;
++            throw new IllegalArgumentException("Chunk coordinate and serialized data do not have matching coordinates, trying to serialize coordinate " + p_63503_
++                    + " but compound says coordinate is " + ChunkSerializer.getChunkCoordinate(p_63504_) + (world == null ? " for an unknown world" : (" for world: " + world)));
++        }
++        // Paper end - guard against serializing mismatching coordinates
+         this.handleLegacyStructureIndex(p_63503_);
+         return this.worker.store(p_63503_, p_63504_);
+     }

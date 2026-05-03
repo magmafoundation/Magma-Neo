@@ -1,0 +1,14 @@
+--- a/net/minecraft/network/protocol/game/ServerboundEditBookPacket.java
++++ b/net/minecraft/network/protocol/game/ServerboundEditBookPacket.java
+@@ -16,9 +_,9 @@
+     public static final StreamCodec<FriendlyByteBuf, ServerboundEditBookPacket> STREAM_CODEC = StreamCodec.composite(
+         ByteBufCodecs.VAR_INT,
+         ServerboundEditBookPacket::slot,
+-        ByteBufCodecs.stringUtf8(8192).apply(ByteBufCodecs.list(200)),
++            ByteBufCodecs.stringUtf8(net.minecraft.world.item.component.WritableBookContent.PAGE_EDIT_LENGTH).apply(ByteBufCodecs.list(net.minecraft.world.item.component.WritableBookContent.MAX_PAGES)), // Paper - limit books
+         ServerboundEditBookPacket::pages,
+-        ByteBufCodecs.stringUtf8(128).apply(ByteBufCodecs::optional),
++            ByteBufCodecs.stringUtf8(net.minecraft.world.item.component.WrittenBookContent.TITLE_MAX_LENGTH).apply(ByteBufCodecs::optional), // Paper - limit books
+         ServerboundEditBookPacket::title,
+         ServerboundEditBookPacket::new
+     );

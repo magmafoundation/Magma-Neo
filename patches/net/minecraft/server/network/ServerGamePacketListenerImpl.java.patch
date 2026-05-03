@@ -12,8 +12,11 @@
      private int dropSpamTickCount;
      private double firstGoodX;
      private double firstGoodY;
-@@ -237,14 +_,30 @@
+@@ -235,16 +_,33 @@
+     private final MessageSignatureCache messageSignatureCache = MessageSignatureCache.createDefault();
+     private final FutureChain chatMessageChain;
      private boolean waitingForSwitchToConfig;
++    private static final int MAX_SIGN_LINE_LENGTH = Integer.getInteger("Paper.maxSignLength", 80); // Paper - Limit client sign length
  
      public ServerGamePacketListenerImpl(MinecraftServer p_9770_, Connection p_9771_, ServerPlayer p_9772_, CommonListenerCookie p_301978_) {
 -        super(p_9770_, p_9771_, p_301978_);
@@ -88,7 +91,20 @@
              this.disconnect(Component.translatable("multiplayer.disconnect.idling"));
          }
      }
-@@ -407,7 +_,40 @@
+@@ -397,9 +_,9 @@
+                 double d0 = entity.getX();
+                 double d1 = entity.getY();
+                 double d2 = entity.getZ();
+-                double d3 = clampHorizontal(p_9876_.getX());
+-                double d4 = clampVertical(p_9876_.getY());
+-                double d5 = clampHorizontal(p_9876_.getZ());
++                double d3 = clampHorizontal(p_9876_.getX()); final double toX = d3; // Paper - OBFHELPER
++                double d4 = clampVertical(p_9876_.getY()); final double toY = d4; // Paper - OBFHELPER
++                double d5 = clampHorizontal(p_9876_.getZ()); final double toZ = d5; // Paper - OBFHELPER
+                 float f = Mth.wrapDegrees(p_9876_.getYRot());
+                 float f1 = Mth.wrapDegrees(p_9876_.getXRot());
+                 double d6 = d3 - this.vehicleFirstGoodX;
+@@ -407,7 +_,51 @@
                  double d8 = d5 - this.vehicleFirstGoodZ;
                  double d9 = entity.getDeltaMovement().lengthSqr();
                  double d10 = d6 * d6 + d7 * d7 + d8 * d8;
@@ -125,6 +141,17 @@
 +                    speed = player.getAbilities().walkingSpeed * 10f;
 +                }
 +                speed *= 2f; // TODO: Get the speed of the vehicle instead of the player
++
++                // Paper start - Prevent moving into unloaded chunks
++                if (this.player.level().paperConfig().chunks.preventMovingIntoUnloadedChunks && (
++                        !serverlevel.areChunksLoadedForMove(this.player.getBoundingBox().expandTowards(new Vec3(toX, toY, toZ).subtract(this.player.position()))) ||
++                                !serverlevel.areChunksLoadedForMove(entity.getBoundingBox().expandTowards(new Vec3(toX, toY, toZ).subtract(entity.position())))
++                )) {
++                    this.connection.send(new ClientboundMoveVehiclePacket(entity));
++                    return;
++                }
++                // Paper end - Prevent moving into unloaded chunks
++
 +                if (d10 - d9 > Math.max(100.0D, Math.pow((double) (org.spigotmc.SpigotConfig.movedTooQuicklyMultiplier * (float) i * speed), 2)) && !this.isSingleplayerOwner()) {
 +                    // CraftBukkit end
                      LOGGER.warn("{} (vehicle of {}) moved too quickly! {},{},{}", entity.getName().getString(), this.player.getName().getString(), d6, d7, d8);
@@ -252,7 +279,7 @@
          this.player.getRecipeBook().setBookSetting(p_9895_.getBookType(), p_9895_.isOpen(), p_9895_.isFiltering());
      }
  
-@@ -520,14 +_,57 @@
+@@ -520,14 +_,71 @@
          }
      }
  
@@ -303,22 +330,62 @@
 +                }
 +            }
 +            this.connection.send(new ClientboundCommandSuggestionsPacket(p_9847_.getId(), builder.buildFuture().join()));
++            // Paper start - Brigadier API
++            com.mojang.brigadier.suggestion.Suggestions suggestions = builder.buildFuture().join();
++            com.destroystokyo.paper.event.brigadier.AsyncPlayerSendSuggestionsEvent suggestEvent = new com.destroystokyo.paper.event.brigadier.AsyncPlayerSendSuggestionsEvent(this.getCraftPlayer(), suggestions, p_9847_.getCommand());
++            suggestEvent.setCancelled(suggestions.isEmpty());
++            if (suggestEvent.callEvent()) {
++                this.connection.send(new ClientboundCommandSuggestionsPacket(p_9847_.getId(), limitTo(suggestEvent.getSuggestions(), ServerGamePacketListenerImpl.MAX_COMMAND_SUGGESTIONS)));
++            }
++            // Paper end - Brigadier API
 +        }
 +    }
++
++    // Paper start - brig API
++    private static Suggestions limitTo(final Suggestions suggestions, final int size) {
++        return suggestions.getList().size() <= size ? suggestions : new Suggestions(suggestions.getRange(), suggestions.getList().subList(0, size));
++    }
++    // Paper end - brig API
 +
 +    private void sendServerSuggestions(final ServerboundCommandSuggestionPacket p_9847_, final StringReader stringreader) {
 +        // Paper end - AsyncTabCompleteEvent
          ParseResults<CommandSourceStack> parseresults = this.server.getCommands().getDispatcher().parse(stringreader, this.player.createCommandSourceStack());
          this.server
              .getCommands()
-@@ -535,6 +_,7 @@
+@@ -535,10 +_,13 @@
              .getCompletionSuggestions(parseresults)
              .thenAccept(
                  p_333513_ -> {
-+                    if (p_333513_.isEmpty()) return; // CraftBukkit - don't send through empty suggestions - prevents [<args>] from showing for plugins with nothing more to offer
-                     Suggestions suggestions = p_333513_.getList().size() <= 1000
-                         ? p_333513_
-                         : new Suggestions(p_333513_.getRange(), p_333513_.getList().subList(0, 1000));
+-                    Suggestions suggestions = p_333513_.getList().size() <= 1000
+-                        ? p_333513_
+-                        : new Suggestions(p_333513_.getRange(), p_333513_.getList().subList(0, 1000));
+-                    this.send(new ClientboundCommandSuggestionsPacket(p_9847_.getId(), suggestions));
++                    // Paper start - Brigadier API
++                    com.destroystokyo.paper.event.brigadier.AsyncPlayerSendSuggestionsEvent suggestEvent = new com.destroystokyo.paper.event.brigadier.AsyncPlayerSendSuggestionsEvent(this.getCraftPlayer(), p_333513_, p_9847_.getCommand());
++                    suggestEvent.setCancelled(p_333513_.isEmpty());
++                    if (suggestEvent.callEvent()) {
++                        this.send(new ClientboundCommandSuggestionsPacket(p_9847_.getId(), limitTo(suggestEvent.getSuggestions(), ServerGamePacketListenerImpl.MAX_COMMAND_SUGGESTIONS)));
++                    }
++                    // Paper end - Brigadier API
+                 }
+             );
+     }
+@@ -624,7 +_,14 @@
+     @Override
+     public void handlePickItem(ServerboundPickItemPacket p_9880_) {
+         PacketUtils.ensureRunningOnSameThread(p_9880_, this, this.player.serverLevel());
+-        this.player.getInventory().pickSlot(p_9880_.getSlot());
++        // Paper start - validate pick item position
++        if (!(p_9880_.getSlot() >= 0 && p_9880_.getSlot() < this.player.getInventory().items.size())) {
++            ServerGamePacketListenerImpl.LOGGER.warn("{} tried to set an invalid carried item", this.player.getName().getString());
++            this.disconnect(Component.literal("Invalid hotbar selection (Hacking?)"));
++            return;
++        }
++        this.player.getInventory().pickSlot(p_9880_.getSlot()); // Paper - Diff above if changed
++        // Paper end - validate pick item position
+         this.player
+             .connection
+             .send(
 @@ -750,6 +_,13 @@
          PacketUtils.ensureRunningOnSameThread(p_9905_, this, this.player.serverLevel());
          int i = p_9905_.getItem();
@@ -333,10 +400,48 @@
              if (!merchantmenu.stillValid(this.player)) {
                  LOGGER.debug("Player {} interacted with invalid menu {}", this.player, merchantmenu);
                  return;
-@@ -762,6 +_,13 @@
+@@ -762,6 +_,51 @@
  
      @Override
      public void handleEditBook(ServerboundEditBookPacket p_9862_) {
++        // Paper start - Book size limits
++        final io.papermc.paper.configuration.type.number.IntOr.Disabled pageMax = io.papermc.paper.configuration.GlobalConfiguration.get().itemValidation.bookSize.pageMax;
++        if (!this.cserver.isPrimaryThread() && pageMax.enabled()) {
++            final List<String> pageList = p_9862_.pages();
++            long byteTotal = 0;
++            final int maxBookPageSize = pageMax.intValue();
++            final double multiplier = Math.clamp(io.papermc.paper.configuration.GlobalConfiguration.get().itemValidation.bookSize.totalMultiplier, 0.3D, 1D);
++            long byteAllowed = maxBookPageSize;
++            for (final String page : pageList) {
++                final int byteLength = page.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
++                byteTotal += byteLength;
++                final int length = page.length();
++                int multiByteCharacters = 0;
++                if (byteLength != length) {
++                    // Count the number of multi byte characters
++                    for (final char c : page.toCharArray()) {
++                        if (c > 127) {
++                            multiByteCharacters++;
++                        }
++                    }
++                }
++
++                // Allow pages with fewer characters to consume less of the allowed byte quota
++                byteAllowed += maxBookPageSize * Math.clamp((double) length / 255D, 0.1D, 1) * multiplier;
++
++                if (multiByteCharacters > 1) {
++                    // Penalize multibyte characters
++                    byteAllowed -= multiByteCharacters;
++                }
++            }
++
++            if (byteTotal > byteAllowed) {
++                ServerGamePacketListenerImpl.LOGGER.warn("{} tried to send a book too large. Book size: {} - Allowed: {} - Pages: {}", this.player.getScoreboardName(), byteTotal, byteAllowed, pageList.size());
++                this.disconnect(Component.literal("Book too large!"));
++                return;
++            }
++        }
++        // Paper end - Book size limits
 +        // CraftBukkit start
 +        if (this.lastBookTick + 20 > MinecraftServer.currentTick) {
 +            this.disconnect(Component.literal("Book edited too quickly!"));
@@ -373,7 +478,7 @@
          }
      }
  
-@@ -840,7 +_,7 @@
+@@ -840,21 +_,29 @@
              this.disconnect(Component.translatable("multiplayer.disconnect.invalid_player_movement"));
          } else {
              ServerLevel serverlevel = this.player.serverLevel();
@@ -382,7 +487,16 @@
                  if (this.tickCount == 0) {
                      this.resetPosition();
                  }
-@@ -854,7 +_,15 @@
+ 
+                 if (!this.updateAwaitingTeleport()) {
+-                    double d0 = clampHorizontal(p_9874_.getX(this.player.getX()));
+-                    double d1 = clampVertical(p_9874_.getY(this.player.getY()));
+-                    double d2 = clampHorizontal(p_9874_.getZ(this.player.getZ()));
++                    double d0 = clampHorizontal(p_9874_.getX(this.player.getX())); final double toX = d0; // Paper - OBFHELPER
++                    double d1 = clampVertical(p_9874_.getY(this.player.getY())); final double toY = d1; // Paper - OBFHELPER
++                    double d2 = clampHorizontal(p_9874_.getZ(this.player.getZ())); final double toZ = d2; // Paper - OBFHELPER
+                     float f = Mth.wrapDegrees(p_9874_.getYRot(this.player.getYRot()));
+                     float f1 = Mth.wrapDegrees(p_9874_.getXRot(this.player.getXRot()));
                      if (this.player.isPassenger()) {
                          this.player.absMoveTo(this.player.getX(), this.player.getY(), this.player.getZ(), f, f1);
                          this.player.serverLevel().getChunkSource().move(this.player);
@@ -398,7 +512,7 @@
                          double d3 = this.player.getX();
                          double d4 = this.player.getY();
                          double d5 = this.player.getZ();
-@@ -872,15 +_,32 @@
+@@ -872,15 +_,38 @@
                              if (serverlevel.tickRateManager().runsNormally()) {
                                  this.receivedMovePacketCount++;
                                  int i = this.receivedMovePacketCount - this.knownMovePacketCount;
@@ -423,6 +537,12 @@
 +                                } else {
 +                                    speed = player.getAbilities().walkingSpeed * 10f;
 +                                }
++                                // Paper start - Prevent moving into unloaded chunks
++                                if (this.player.level().paperConfig().chunks.preventMovingIntoUnloadedChunks && (this.player.getX() != toX || this.player.getZ() != toZ) && !serverlevel.areChunksLoadedForMove(this.player.getBoundingBox().expandTowards(new Vec3(toX, toY, toZ).subtract(this.player.position())))) {
++                                    this.internalTeleport(this.player.getX(), this.player.getY(), this.player.getZ(), this.player.getYRot(), this.player.getXRot(), Collections.emptySet());
++                                    return;
++                                }
++                                // Paper end - Prevent moving into unloaded chunks
 +
                                  if (!this.player.isChangingDimension()
                                      && (!this.player.level().getGameRules().getBoolean(GameRules.RULE_DISABLE_ELYTRA_MOVEMENT_CHECK) || !flag)) {
@@ -563,7 +683,7 @@
  
              return true;
          } else {
-@@ -999,11 +_,61 @@
+@@ -999,11 +_,68 @@
          return false;
      }
  
@@ -614,6 +734,13 @@
 +    }
 +
 +    public void internalTeleport(double p_9781_, double p_9782_, double p_9783_, float p_9784_, float p_9785_, Set<RelativeMovement> p_9786_) { // Paper
++        // Paper start - Prevent teleporting dead entities
++        if (player.isRemoved()) {
++            LOGGER.info("Attempt to teleport removed player {} restricted", player.getScoreboardName());
++            if (server.isDebugging()) io.papermc.paper.util.TraceUtil.dumpTraceForThread("Attempt to teleport removed player");
++            return;
++        }
++        // Paper end - Prevent teleporting dead entities
 +        // CraftBukkit start
 +        if (Float.isNaN(p_9784_)) {
 +            p_9784_ = 0;
@@ -700,7 +827,18 @@
                      this.player.drop(false);
                  }
  
-@@ -1060,7 +_,7 @@
+@@ -1055,12 +_,18 @@
+             case START_DESTROY_BLOCK:
+             case ABORT_DESTROY_BLOCK:
+             case STOP_DESTROY_BLOCK:
++                // Paper start - Don't allow digging into unloaded chunks
++                if (this.player.level().getChunkIfLoadedImmediately(blockpos.getX() >> 4, blockpos.getZ() >> 4) == null) {
++                    this.player.connection.ackBlockChangesUpTo(p_9889_.getSequence());
++                    return;
++                }
++                // Paper end - Don't allow digging into unloaded chunks
+                 this.player
+                     .gameMode
                      .handleBlockBreakAction(
                          blockpos, serverboundplayeractionpacket$action, p_9889_.getDirection(), this.player.level().getMaxBuildHeight(), p_9889_.getSequence()
                      );
@@ -1815,7 +1953,25 @@
              if (flag1 && flag2) {
                  this.player.inventoryMenu.getSlot(p_9915_.slotNum()).setByPlayer(itemstack);
                  this.player.inventoryMenu.broadcastChanges();
-@@ -1738,6 +_,7 @@
+@@ -1733,11 +_,24 @@
+ 
+     @Override
+     public void handleSignUpdate(ServerboundSignUpdatePacket p_9921_) {
+-        List<String> list = Stream.of(p_9921_.getLines()).map(ChatFormatting::stripFormatting).collect(Collectors.toList());
++        // Paper start - Limit client sign length
++        String[] lines = p_9921_.getLines();
++        for (int i = 0; i < lines.length; ++i) {
++            if (MAX_SIGN_LINE_LENGTH > 0 && lines[i].length() > MAX_SIGN_LINE_LENGTH) {
++                // This handles multibyte characters as 1
++                int offset = lines[i].codePoints().limit(MAX_SIGN_LINE_LENGTH).map(Character::charCount).sum();
++                if (offset < lines[i].length()) {
++                    lines[i] = lines[i].substring(0, offset); // this will break any filtering, but filtering is NYI as of 1.17
++                }
++            }
++        }
++        List<String> list = (List) Stream.of(lines).map(ChatFormatting::stripFormatting).collect(Collectors.toList());
++        // Paper end - Limit client sign length
+         this.filterTextPacket(list).thenAcceptAsync(p_215245_ -> this.updateSignText(p_9921_, (List<FilteredText>)p_215245_), this.server);
      }
  
      private void updateSignText(ServerboundSignUpdatePacket p_9923_, List<FilteredText> p_9924_) {

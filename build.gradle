@@ -27,6 +27,11 @@ allprojects {
     apply plugin: 'java'
 
     java.toolchain.languageVersion.set(JavaLanguageVersion.of(project.java_version))
+
+    configurations.configureEach {
+        exclude group: 'com.mojang', module: 'brigadier'
+    }
+
 }
 
 // Remove src/ sources from the root project. They are used in the neoforge subproject.

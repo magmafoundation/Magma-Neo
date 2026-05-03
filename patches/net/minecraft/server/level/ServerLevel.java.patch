@@ -1,6 +1,6 @@
 --- a/net/minecraft/server/level/ServerLevel.java
 +++ b/net/minecraft/server/level/ServerLevel.java
-@@ -199,12 +_,53 @@
+@@ -199,12 +_,62 @@
      private final List<CustomSpawner> customSpawners;
      @Nullable
      private EndDragonFight dragonFight;
@@ -51,6 +51,15 @@
 +        return true;
 +    }
 +    // Paper end
++
++    // Paper start - optimise getPlayerByUUID
++    @Nullable
++    @Override
++    public Player getPlayerByUUID(UUID uuid) {
++        final Player player = this.getServer().getPlayerList().getPlayer(uuid);
++        return player != null && player.level() == this ? player : null;
++    }
++    // Paper end - optimise getPlayerByUUID
 +
      public ServerLevel(
          MinecraftServer p_214999_,
@@ -161,10 +170,11 @@
          );
          this.structureManager = new StructureManager(this, p_214999_.getWorldData().worldGenOptions(), this.structureCheck);
          if (this.dimension() == Level.END && this.dimensionTypeRegistration().is(BuiltinDimensionTypes.END)) {
-@@ -298,6 +_,19 @@
+@@ -298,7 +_,27 @@
          this.randomSequences = Objects.requireNonNullElseGet(
              p_288977_, () -> this.getDataStorage().computeIfAbsent(RandomSequences.factory(i), "random_sequences")
          );
+-    }
 +
 +        net.neoforged.neoforge.attachment.LevelAttachmentsSavedData.init(this);
 +        // Neo: Move the initialization of customSpawners to the end of costructor
@@ -178,9 +188,17 @@
 +        this.timings = new co.aikar.timings.WorldTimingsHandler(this); // Paper - code below can generate new world and access timings
 +        this.entityLimiter = new org.spigotmc.TickLimiter(spigotConfig.entityMaxTickTime);
 +        this.tileLimiter = new org.spigotmc.TickLimiter(spigotConfig.tileMaxTickTime);
-     }
++    }
++
++    // Paper start
++    @Override
++    public boolean hasChunk(int chunkX, int chunkZ) {
++        return this.getChunkSource().getChunkAtIfLoadedImmediately(chunkX, chunkZ) != null;
++    }
++    // Paper end
  
      @Deprecated
+     @VisibleForTesting
 @@ -342,7 +_,7 @@
          if (this.sleepStatus.areEnoughSleeping(i) && this.sleepStatus.areEnoughDeepSleeping(i, this.players)) {
              if (this.getGameRules().getBoolean(GameRules.RULE_DAYLIGHT)) {
@@ -533,7 +551,7 @@
          Entity entity = this.getEntities().get(p_8854_.getUUID());
          if (entity != null) {
              LOGGER.warn("Force-added player with duplicate UUID {}", p_8854_.getUUID());
-@@ -903,28 +_,62 @@
+@@ -903,28 +_,63 @@
              this.removePlayerImmediately((ServerPlayer)entity, Entity.RemovalReason.DISCARDED);
          }
  
@@ -550,6 +568,7 @@
 +            return true;
 +        }
 +        // Paper end - extra debug info
++        if (p_8873_.spawnReason == null) p_8873_.spawnReason = magma$spawnReason; // Paper - Entity#getEntitySpawnReason
          if (p_8873_.isRemoved()) {
 -            LOGGER.warn("Tried to add entity {} but it was marked as removed already", EntityType.getKey(p_8873_.getType()));
 +            // LOGGER.warn("Tried to add entity {} but it was marked as removed already", EntityType.getKey(p_8873_.getType())); // CraftBukkit
@@ -808,7 +827,7 @@
          return this.entityManager.getEntityGetter();
      }
  
-@@ -1693,9 +_,16 @@
+@@ -1693,10 +_,17 @@
  
          public void onTickingEnd(Entity p_143367_) {
              ServerLevel.this.entityTickList.remove(p_143367_);
@@ -821,11 +840,13 @@
          }
  
          public void onTrackingStart(Entity p_143371_) {
+-            ServerLevel.this.getChunkSource().addEntity(p_143371_);
 +            org.spigotmc.AsyncCatcher.catchOp("entity register"); // Spigot
-             ServerLevel.this.getChunkSource().addEntity(p_143371_);
++            // ServerLevel.this.getChunkSource().addEntity(p_143371_); // Paper - ignore and warn about illegal addEntity calls instead of crashing server; moved down below valid=true
              if (p_143371_ instanceof ServerPlayer serverplayer) {
                  ServerLevel.this.players.add(serverplayer);
-@@ -1713,16 +_,59 @@
+                 ServerLevel.this.updateSleepingPlayerList();
+@@ -1713,16 +_,60 @@
                  ServerLevel.this.navigatingMobs.add(mob);
              }
  
@@ -840,6 +861,7 @@
              p_143371_.updateDynamicGameEventListener(DynamicGameEventListener::add);
 +            p_143371_.inWorld = true; // CraftBukkit - Mark entity as in world
 +            p_143371_.valid = true; // CraftBukkit
++            ServerLevel.this.getChunkSource().addEntity(p_143371_); // Paper - ignore and warn about illegal addEntity calls instead of crashing server
 +            // Paper start - Entity origin API
 +            if (p_143371_.getOriginVector() == null) {
 +                p_143371_.setOrigin(p_143371_.getBukkitEntity().getLocation());

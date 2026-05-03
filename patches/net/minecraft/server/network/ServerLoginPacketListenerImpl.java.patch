@@ -34,7 +34,7 @@
      private final byte[] challenge;
      final MinecraftServer server;
 @@ -59,6 +_,7 @@
-     private GameProfile authenticatedProfile;
+     public GameProfile authenticatedProfile;
      private final String serverId = "";
      private final boolean transferred;
 +    private net.minecraft.server.level.ServerPlayer player; // CraftBukkit
@@ -310,7 +310,7 @@
 +    }
 +    // Spigot end
  
-     static enum State {
+     public static enum State {
          HELLO,
 @@ -259,6 +_,7 @@
          AUTHENTICATING,

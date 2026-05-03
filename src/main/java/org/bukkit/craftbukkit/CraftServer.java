@@ -42,6 +42,7 @@ import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 import javax.imageio.ImageIO;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.minecraft.advancements.AdvancementHolder;
@@ -251,6 +252,7 @@ import org.bukkit.plugin.SimpleServicesManager;
 import org.bukkit.plugin.messaging.Messenger;
 import org.bukkit.plugin.messaging.StandardMessenger;
 import org.bukkit.profile.PlayerProfile;
+import org.bukkit.scheduler.BukkitWorker;
 import org.bukkit.scoreboard.Criteria;
 import org.bukkit.structure.StructureManager;
 import org.bukkit.util.StringUtil;
@@ -967,6 +969,30 @@ public final class CraftServer implements Server {
     public void reload() {
         // Magma : Remove reload
     }
+
+    // Paper start - Wait for Async Tasks during shutdown
+    public void waitForAsyncTasksShutdown() {
+        int pollCount = 0;
+        // Wait for at most 5 seconds for plugins to close their threads
+        while (pollCount < 10*5 && getScheduler().getActiveWorkers().size() > 0) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {}
+            pollCount++;
+        }
+        List<BukkitWorker> overdueWorkers = getScheduler().getActiveWorkers();
+        for (BukkitWorker worker : overdueWorkers) {
+            Plugin plugin = worker.getOwner();
+            getLogger().log(Level.SEVERE, String.format(
+                    "Nag author(s): '%s' of '%s' about the following: %s",
+                    plugin.getPluginMeta().getAuthors(),
+                    plugin.getPluginMeta().getDisplayName(),
+                    "This plugin is not properly shutting down its async tasks when it is being shut down. This task may throw errors during the final shutdown logs and might not complete before process dies."
+            ));
+            if (console.isDebugging()) io.papermc.paper.util.TraceUtil.dumpTraceForThread(worker.getThread(), "still running"); // Paper - Debugging
+        }
+    }
+    // Paper end - Wait for Async Tasks during shutdown
 
     @Override
     public void reloadData() {
@@ -2586,6 +2612,16 @@ public final class CraftServer implements Server {
         return CraftMagicNumbers.INSTANCE;
     }
 
+    @Override
+    public long[] getTickTimes() {
+        return this.getServer().tickTimes5s.getTimes();
+    }
+
+    @Override
+    public double getAverageTickTime() {
+        return this.getServer().tickTimes5s.getAverage();
+    }
+
     // Spigot start
     private final org.bukkit.Server.Spigot spigot = new org.bukkit.Server.Spigot() {
         @Deprecated
@@ -2766,6 +2802,16 @@ public final class CraftServer implements Server {
     }
 
     @Override
+    public String getPermissionMessage() {
+        return net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().serialize(io.papermc.paper.configuration.GlobalConfiguration.get().messages.noPermission);
+    }
+
+    @Override
+    public net.kyori.adventure.text.Component permissionMessage() {
+        return io.papermc.paper.configuration.GlobalConfiguration.get().messages.noPermission;
+    }
+
+    @Override
     public com.destroystokyo.paper.profile.PlayerProfile createProfile(@Nonnull UUID uuid) {
         return createProfile(uuid, null);
     }
@@ -2797,6 +2843,23 @@ public final class CraftServer implements Server {
         final com.destroystokyo.paper.profile.CraftPlayerProfile profile = new com.destroystokyo.paper.profile.CraftPlayerProfile(uuid, name);
         profile.getGameProfile().getProperties().putAll(((CraftPlayer) player).getHandle().getGameProfile().getProperties());
         return profile;
+    }
+
+    @Override
+    public int getCurrentTick() {
+        return net.minecraft.server.MinecraftServer.currentTick;
+    }
+
+    @Override
+    public boolean isStopping() {
+        return net.minecraft.server.MinecraftServer.getServer().hasStopped();
+    }
+
+    private com.destroystokyo.paper.entity.ai.MobGoals mobGoals = new com.destroystokyo.paper.entity.ai.PaperMobGoals();
+
+    @Override
+    public com.destroystokyo.paper.entity.ai.MobGoals getMobGoals() {
+        return mobGoals;
     }
     // Paper end
 }

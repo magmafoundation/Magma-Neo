@@ -1,5 +1,6 @@
 package org.bukkit.craftbukkit.entity;
 
+import com.destroystokyo.paper.entity.TargetEntityInfo;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import java.util.ArrayList;
@@ -227,6 +228,39 @@ public class CraftLivingEntity extends CraftEntity implements LivingEntity {
         }
         return null;
     }
+
+    public Entity getTargetEntity(int maxDistance, boolean ignoreBlocks) {
+        net.minecraft.world.phys.EntityHitResult rayTrace = rayTraceEntity(maxDistance, ignoreBlocks);
+        return rayTrace == null ? null : rayTrace.getEntity().getBukkitEntity();
+    }
+
+    public TargetEntityInfo getTargetEntityInfo(int maxDistance, boolean ignoreBlocks) {
+        net.minecraft.world.phys.EntityHitResult rayTrace = rayTraceEntity(maxDistance, ignoreBlocks);
+        return rayTrace == null ? null : new TargetEntityInfo(rayTrace.getEntity().getBukkitEntity(), new org.bukkit.util.Vector(rayTrace.getLocation().x, rayTrace.getLocation().y, rayTrace.getLocation().z));
+    }
+
+    @Override
+    public RayTraceResult rayTraceEntities(int maxDistance, boolean ignoreBlocks) {
+        net.minecraft.world.phys.EntityHitResult rayTrace = this.rayTraceEntity(maxDistance, ignoreBlocks);
+        return rayTrace == null ? null : new org.bukkit.util.RayTraceResult(org.bukkit.craftbukkit.util.CraftVector.toBukkit(rayTrace.getLocation()), rayTrace.getEntity().getBukkitEntity());
+    }
+
+    public net.minecraft.world.phys.EntityHitResult rayTraceEntity(int maxDistance, boolean ignoreBlocks) {
+        net.minecraft.world.phys.EntityHitResult rayTrace = getHandle().getTargetEntity(maxDistance);
+        if (rayTrace == null) {
+            return null;
+        }
+        if (!ignoreBlocks) {
+            net.minecraft.world.phys.HitResult rayTraceBlocks = getHandle().getRayTrace(maxDistance, net.minecraft.world.level.ClipContext.Fluid.NONE);
+            if (rayTraceBlocks != null) {
+                net.minecraft.world.phys.Vec3 eye = getHandle().getEyePosition(1.0F);
+                if (eye.distanceToSqr(rayTraceBlocks.getLocation()) <= eye.distanceToSqr(rayTrace.getLocation())) {
+                    return null;
+                }
+            }
+        }
+        return rayTrace;
+    }
     // Paper end
 
     @Override
@@ -451,7 +485,7 @@ public class CraftLivingEntity extends CraftEntity implements LivingEntity {
 
     @Override
     public boolean addPotionEffect(PotionEffect effect, boolean force) {
-        getHandle().addEffect(new MobEffectInstance(CraftPotionEffectType.bukkitToMinecraftHolder(effect.getType()), effect.getDuration(), effect.getAmplifier(), effect.isAmbient(), effect.hasParticles()), EntityPotionEffectEvent.Cause.PLUGIN);
+        this.getHandle().addEffect(org.bukkit.craftbukkit.potion.CraftPotionUtil.fromBukkit(effect), EntityPotionEffectEvent.Cause.PLUGIN); // Paper - Don't ignore icon
         return true;
     }
 
@@ -472,7 +506,7 @@ public class CraftLivingEntity extends CraftEntity implements LivingEntity {
     @Override
     public PotionEffect getPotionEffect(PotionEffectType type) {
         MobEffectInstance handle = getHandle().getEffect(CraftPotionEffectType.bukkitToMinecraftHolder(type));
-        return (handle == null) ? null : new PotionEffect(CraftPotionEffectType.minecraftHolderToBukkit(handle.getEffect()), handle.getDuration(), handle.getAmplifier(), handle.isAmbient(), handle.isVisible());
+        return (handle == null) ? null : org.bukkit.craftbukkit.potion.CraftPotionUtil.toBukkit(handle); // Paper
     }
 
     @Override
@@ -484,7 +518,7 @@ public class CraftLivingEntity extends CraftEntity implements LivingEntity {
     public Collection<PotionEffect> getActivePotionEffects() {
         List<PotionEffect> effects = new ArrayList<PotionEffect>();
         for (MobEffectInstance handle : getHandle().activeEffects.values()) {
-            effects.add(new PotionEffect(CraftPotionEffectType.minecraftHolderToBukkit(handle.getEffect()), handle.getDuration(), handle.getAmplifier(), handle.isAmbient(), handle.isVisible()));
+            effects.add(org.bukkit.craftbukkit.potion.CraftPotionUtil.toBukkit(handle)); // Paper
         }
         return effects;
     }
@@ -940,4 +974,20 @@ public class CraftLivingEntity extends CraftEntity implements LivingEntity {
         return org.bukkit.craftbukkit.CraftEquipmentSlot.getHand(this.getHandle().getUsedItemHand());
     }
     // Paper end - active item API
+
+    // Paper start - entity jump API
+    @Override
+    public boolean isJumping() {
+        return getHandle().jumping;
+    }
+
+    @Override
+    public void setJumping(boolean jumping) {
+        getHandle().setJumping(jumping);
+        if (jumping && getHandle() instanceof Mob) {
+            // this is needed to actually make a mob jump
+            ((Mob) getHandle()).getJumpControl().jump();
+        }
+    }
+    // Paper end - entity jump API
 }

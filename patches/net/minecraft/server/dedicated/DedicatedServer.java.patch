@@ -227,10 +227,19 @@
      @Override
      public boolean isSpawningAnimals() {
          return this.getProperties().spawnAnimals && super.isSpawningAnimals();
-@@ -295,6 +_,11 @@
-         if (this.queryThreadGs4 != null) {
-             this.queryThreadGs4.stop();
+@@ -289,12 +_,17 @@
          }
+ 
+         if (this.rconThread != null) {
+-            this.rconThread.stop();
++            this.rconThread.stopNonBlocking(); // Paper - don't wait for remote connections
+         }
+ 
+         if (this.queryThreadGs4 != null) {
+-            this.queryThreadGs4.stop();
+-        }
++            // this.remoteStatusListener.stop(); // Paper - don't wait for remote connections
++        }
 +        if (this.dediLanPinger != null) {
 +            this.dediLanPinger.interrupt();
 +            this.dediLanPinger = null;

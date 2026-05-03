@@ -85,7 +85,7 @@
 +        }
 +    }
 +    // Paper end - Share random for entities to make them more random
-+
++    public org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason spawnReason; // Paper - Entity#getEntitySpawnReason
 +    private org.bukkit.craftbukkit.entity.CraftEntity bukkitEntity;
 +
 +    public org.bukkit.craftbukkit.entity.CraftEntity getBukkitEntity() {
@@ -133,7 +133,7 @@
      private final Set<TagKey<Fluid>> fluidOnEyes = new HashSet<>();
      public int invulnerableTime;
      protected boolean firstTick = true;
-@@ -244,6 +_,66 @@
+@@ -244,6 +_,67 @@
      @Nullable
      private BlockState inBlockState = null;
  
@@ -160,6 +160,7 @@
 +    public void inactiveTick() { }
 +    // Spigot end
 +    protected int numCollisions = 0; // Paper - Cap entity collisions
++    public boolean fromNetherPortal; // Paper - Add option to nerf pigmen from nether portals
 +    public boolean spawnedViaMobSpawner; // Paper - Yes this name is similar to above, upstream took the better one
 +    // Paper start - Entity origin API
 +    @org.jetbrains.annotations.Nullable
@@ -771,7 +772,7 @@
              this.addAdditionalSaveData(p_20241_);
              if (this.isVehicle()) {
                  ListTag listtag1 = new ListTag();
-@@ -1720,6 +_,19 @@
+@@ -1720,6 +_,25 @@
                  }
              }
  
@@ -783,9 +784,15 @@
 +                }
 +                p_20241_.put("Paper.Origin", this.newDoubleList(origin.getX(), origin.getY(), origin.getZ()));
 +            }
++            if (spawnReason != null) {
++                p_20241_.putString("Paper.SpawnReason", spawnReason.name());
++            }
 +            // Save entity's from mob spawner status
 +            if (spawnedViaMobSpawner) {
 +                p_20241_.putBoolean("Paper.FromMobSpawner", true);
++            }
++            if (fromNetherPortal) {
++                p_20241_.putBoolean("Paper.FromNetherPortal", true);
 +            }
 +            // Paper end
              return p_20241_;
@@ -800,7 +807,7 @@
                  if (p_20259_.contains("Tags", 9)) {
                      this.tags.clear();
                      ListTag listtag3 = p_20259_.getList("Tags", 8);
-@@ -1801,6 +_,61 @@
+@@ -1801,6 +_,82 @@
              } else {
                  throw new IllegalStateException("Entity has invalid rotation");
              }
@@ -857,6 +864,27 @@
 +            }
 +
 +            spawnedViaMobSpawner = p_20259_.getBoolean("Paper.FromMobSpawner"); // Restore entity's from mob spawner status
++            fromNetherPortal = p_20259_.getBoolean("Paper.FromNetherPortal");
++            if (p_20259_.contains("Paper.SpawnReason")) {
++                String spawnReasonName = p_20259_.getString("Paper.SpawnReason");
++                try {
++                    spawnReason = org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.valueOf(spawnReasonName);
++                } catch (Exception ignored) {
++                    LOGGER.error("Unknown SpawnReason " + spawnReasonName + " for " + this);
++                }
++            }
++            if (spawnReason == null) {
++                if (spawnedViaMobSpawner) {
++                    spawnReason = org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.SPAWNER;
++                } else if (this instanceof Mob && (this instanceof net.minecraft.world.entity.animal.Animal || this instanceof net.minecraft.world.entity.animal.AbstractFish) && !((Mob) this).removeWhenFarAway(0.0)) {
++                    if (!p_20259_.getBoolean("PersistenceRequired")) {
++                        spawnReason = org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.NATURAL;
++                    }
++                }
++            }
++            if (spawnReason == null) {
++                spawnReason = org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT;
++            }
 +            // Paper end
 +
          } catch (Throwable throwable) {

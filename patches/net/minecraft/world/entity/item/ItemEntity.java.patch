@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/entity/item/ItemEntity.java
 +++ b/net/minecraft/world/entity/item/ItemEntity.java
-@@ -49,6 +_,12 @@
+@@ -49,6 +_,13 @@
      @Nullable
      public UUID target;
      public final float bobOffs;
@@ -10,6 +10,7 @@
 +    public int lifespan = ItemEntity.LIFETIME;
 +    private int lastTick = net.minecraft.server.MinecraftServer.currentTick - 1; // CraftBukkit
 +    public boolean canMobPickup = true; // Paper - Item#canEntityPickup
++    private int despawnRate = -1; // Paper - Alternative item-despawn-rate
  
      public ItemEntity(EntityType<? extends ItemEntity> p_31991_, Level p_31992_) {
          super(p_31991_, p_31992_);
@@ -87,7 +88,7 @@
  
 -            if (!this.level().isClientSide && this.age >= 6000) {
 +            ItemStack item = this.getItem();
-+            if (!this.level().isClientSide && this.age >= lifespan) {
++            if (!this.level().isClientSide && this.age >= this.despawnRate) { // Spigot // Paper - Alternative item-despawn-rate
 +                // Clamping to MAX_VALUE -1 as age is a Short and going above that would produce an infinite lifespan implicitly (accidentally)
 +                this.lifespan = Mth.clamp(lifespan + net.neoforged.neoforge.event.EventHooks.onItemExpire(this), 0, Short.MAX_VALUE - 1);
 +                if (this.age >= lifespan) {
@@ -116,7 +117,7 @@
 +        if (this.age != -32768) this.age += elapsedTicks;
 +        this.lastTick = net.minecraft.server.MinecraftServer.currentTick;
 +        // CraftBukkit end
-+        if (!this.level().isClientSide && this.age >= this.level().spigotConfig.itemDespawnRate) { // Spigot
++        if (!this.level().isClientSide && this.age >= this.despawnRate) { // Spigot // Paper - Alternative item-despawn-rate
 +            // CraftBukkit start - fire ItemDespawnEvent
 +            if (org.bukkit.craftbukkit.event.CraftEventFactory.callItemDespawnEvent(this).isCancelled()) {
 +                this.age = 0;
@@ -144,7 +145,15 @@
                  if (itementity.isMergable()) {
                      this.tryToMerge(itementity);
                      if (this.isRemoved()) {
-@@ -229,7 +_,7 @@
+@@ -222,14 +_,14 @@
+ 
+     private boolean isMergable() {
+         ItemStack itemstack = this.getItem();
+-        return this.isAlive() && this.pickupDelay != 32767 && this.age != -32768 && this.age < 6000 && itemstack.getCount() < itemstack.getMaxStackSize();
++        return this.isAlive() && this.pickupDelay != 32767 && this.age != -32768 && this.age < this.despawnRate && itemstack.getCount() < itemstack.getMaxStackSize(); // Paper - Alternative item-despawn-rate
+     }
+ 
+     private void tryToMerge(ItemEntity p_32016_) {
          ItemStack itemstack = this.getItem();
          ItemStack itemstack1 = p_32016_.getItem();
          if (Objects.equals(this.target, p_32016_.target) && areMergable(itemstack, itemstack1)) {
@@ -302,6 +311,14 @@
                      this.discard();
                      itemstack.setCount(i);
                  }
+@@ -384,6 +_,7 @@
+ 
+     public void setItem(ItemStack p_32046_) {
+         this.getEntityData().set(DATA_ITEM, p_32046_);
++        this.despawnRate = this.level().paperConfig().entities.spawning.altItemDespawnRate.enabled ? this.level().paperConfig().entities.spawning.altItemDespawnRate.items.getOrDefault(p_32046_.getItem(), this.level().spigotConfig.itemDespawnRate) : this.level().spigotConfig.itemDespawnRate; // Paper - Alternative item-despawn-rate
+     }
+ 
+     @Override
 @@ -398,6 +_,15 @@
          this.target = p_266724_;
      }
@@ -318,12 +335,13 @@
      public void setThrower(Entity p_306324_) {
          this.thrower = p_306324_.getUUID();
          this.cachedThrower = p_306324_;
-@@ -437,7 +_,7 @@
+@@ -437,7 +_,8 @@
  
      public void makeFakeItem() {
          this.setNeverPickUp();
 -        this.age = 5999;
 +        this.age = getItem().getEntityLifespan(this.level()) - 1;
++        this.age = this.despawnRate - 1; // Spigot // Paper - Alternative item-despawn-rate
      }
  
      public float getSpin(float p_32009_) {

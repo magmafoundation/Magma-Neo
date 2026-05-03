@@ -13,6 +13,15 @@
      public LevelChunkSection(Registry<Biome> p_282873_) {
          this.states = new PalettedContainer<>(Block.BLOCK_STATE_REGISTRY, Blocks.AIR.defaultBlockState(), PalettedContainer.Strategy.SECTION_STATES);
          this.biomes = new PalettedContainer<>(p_282873_.asHolderIdMap(), p_282873_.getHolderOrThrow(Biomes.PLAINS), PalettedContainer.Strategy.SECTION_BIOMES);
+@@ -40,7 +_,7 @@
+     }
+ 
+     public FluidState getFluidState(int p_63008_, int p_63009_, int p_63010_) {
+-        return this.states.get(p_63008_, p_63009_, p_63010_).getFluidState();
++        return this.states.get(p_63008_, p_63009_, p_63010_).getFluidState(); // Paper - Perf: Optimise Chunk#getFluid; diff on change - we expect this to be effectively just getType(x, y, z).getFluid(). If this changes we need to check other patches that use IBlockData#getFluid.
+     }
+ 
+     public void acquire() {
 @@ -65,7 +_,7 @@
  
          FluidState fluidstate = blockstate.getFluidState();

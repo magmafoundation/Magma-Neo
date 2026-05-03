@@ -12,6 +12,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundOpenScreenPacket;
 import net.minecraft.network.protocol.game.ServerboundContainerClosePacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -121,6 +122,22 @@ public class CraftHumanEntity extends CraftLivingEntity implements HumanEntity {
     public int getSleepTicks() {
         return getHandle().sleepCounter;
     }
+
+    // Paper start - Potential bed api
+    @Override
+    public Location getPotentialBedLocation() {
+        ServerPlayer handle = (ServerPlayer) getHandle();
+        BlockPos bed = handle.getRespawnPosition();
+        if (bed == null) {
+            return null;
+        }
+        ServerLevel worldServer = handle.server.getLevel(handle.getRespawnDimension());
+        if (worldServer == null) {
+            return null;
+        }
+        return new Location(worldServer.getWorld(), bed.getX(), bed.getY(), bed.getZ());
+    }
+    // Paper end
 
     @Override
     public boolean sleep(Location location, boolean force) {
@@ -334,7 +351,7 @@ public class CraftHumanEntity extends CraftLivingEntity implements HumanEntity {
         net.kyori.adventure.text.Component adventure$title = container.getBukkitView().title(); // Paper
         if (adventure$title == null) adventure$title = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(container.getBukkitView().getTitle()); // Paper
 
-        player.connection.send(new ClientboundOpenScreenPacket(container.containerId, windowType, io.papermc.paper.adventure.PaperAdventure.asVanilla(adventure$title))); // Paper
+        if (!player.isImmobile()) player.connection.send(new ClientboundOpenScreenPacket(container.containerId, windowType, io.papermc.paper.adventure.PaperAdventure.asVanilla(adventure$title))); // Paper - Prevent opening inventories when frozen
         player.containerMenu = container;
         player.initMenu(container);
     }
@@ -407,7 +424,7 @@ public class CraftHumanEntity extends CraftLivingEntity implements HumanEntity {
         MenuType<?> windowType = CraftContainer.getNotchInventoryType(inventory.getTopInventory());
         net.kyori.adventure.text.Component adventure$title = inventory.title(); // Paper
         if (adventure$title == null) adventure$title = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(inventory.getTitle()); // Paper
-        player.connection.send(new ClientboundOpenScreenPacket(container.containerId, windowType, io.papermc.paper.adventure.PaperAdventure.asVanilla(adventure$title))); // Paper
+        if (!player.isImmobile()) player.connection.send(new ClientboundOpenScreenPacket(container.containerId, windowType, io.papermc.paper.adventure.PaperAdventure.asVanilla(adventure$title))); // Paper - Prevent opening inventories when frozen
         player.containerMenu = container;
         player.initMenu(container);
     }

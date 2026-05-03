@@ -63,7 +63,7 @@
          this.onItemChanged(p_31790_);
          this.getEntityData().set(DATA_ITEM, p_31790_);
 -        if (!p_31790_.isEmpty()) {
-+        if (!p_31790_.isEmpty() && playSound) { // CraftBukkit
++        if (!p_31790_.isEmpty() && p_31791_ && playSound) { // CraftBukkit // Paper - only play sound when update flag is set
              this.playSound(this.getAddItemSound(), 1.0F, 1.0F);
          }
  

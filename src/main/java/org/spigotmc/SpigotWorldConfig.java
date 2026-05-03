@@ -16,7 +16,7 @@ public class SpigotWorldConfig {
     }
 
     public void init() {
-        this.verbose = getBoolean("verbose", true);
+        this.verbose = this.getBoolean("verbose", false); // Paper
 
         log("-------- World Settings For [" + worldName + "] --------");
         SpigotConfig.readConfig(SpigotWorldConfig.class, this);

@@ -1,0 +1,11 @@
+--- a/net/minecraft/world/level/block/entity/SculkShriekerBlockEntity.java
++++ b/net/minecraft/world/level/block/entity/SculkShriekerBlockEntity.java
+@@ -190,7 +_,7 @@
+     private boolean trySummonWarden(ServerLevel p_222881_) {
+         return this.warningLevel < 4
+             ? false
+-            : SpawnUtil.trySpawnMob(EntityType.WARDEN, MobSpawnType.TRIGGERED, p_222881_, this.getBlockPos(), 20, 5, 6, SpawnUtil.Strategy.ON_TOP_OF_COLLIDER)
++            : SpawnUtil.trySpawnMob(EntityType.WARDEN, MobSpawnType.TRIGGERED, p_222881_, this.getBlockPos(), 20, 5, 6, SpawnUtil.Strategy.ON_TOP_OF_COLLIDER, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.NATURAL, null) // Paper - Entity#getEntitySpawnReason
+                 .isPresent();
+     }
+ 

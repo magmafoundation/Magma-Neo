@@ -42,6 +42,7 @@ public final class PaperCommand extends Command {
         commands.put(Set.of("reload"), new ReloadCommand());
         commands.put(Set.of("version"), new VersionCommand());
         commands.put(Set.of("dumpplugins"), new DumpPluginsCommand());
+        commands.put(Set.of("syncloadinfo"), new SyncLoadInfoCommand());
 
         return commands.entrySet().stream()
                 .flatMap(entry -> entry.getKey().stream().map(s -> Map.entry(s, entry.getValue())))
@@ -77,7 +78,7 @@ public final class PaperCommand extends Command {
         if (sender.hasPermission(BASE_PERM + permission) || sender.hasPermission("bukkit.command.paper")) {
             return true;
         }
-        sender.sendMessage(text("I'm sorry, but you do not have permission to perform this command. Please contact the server administrators if you believe that this is in error.", RED));
+        sender.sendMessage(Bukkit.permissionMessage());
         return false;
     }
 

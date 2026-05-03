@@ -1,5 +1,76 @@
 --- a/net/minecraft/world/level/levelgen/PatrolSpawner.java
 +++ b/net/minecraft/world/level/levelgen/PatrolSpawner.java
+@@ -20,28 +_,57 @@
+ 
+     @Override
+     public int tick(ServerLevel p_64570_, boolean p_64571_, boolean p_64572_) {
++        if (p_64570_.paperConfig().entities.behavior.pillagerPatrols.disable || p_64570_.paperConfig().entities.behavior.pillagerPatrols.spawnChance == 0) return 0; // Paper - Add option to disable pillager patrols & Pillager patrol spawn settings and per player options
+         if (!p_64571_) {
+             return 0;
+         } else if (!p_64570_.getGameRules().getBoolean(GameRules.RULE_DO_PATROL_SPAWNING)) {
+             return 0;
+         } else {
+             RandomSource randomsource = p_64570_.random;
+-            this.nextTick--;
+-            if (this.nextTick > 0) {
+-                return 0;
+-            } else {
+-                this.nextTick = this.nextTick + 12000 + randomsource.nextInt(1200);
+-                long i = p_64570_.getDayTime() / 24000L;
+-                if (i < 5L || !p_64570_.isDay()) {
+-                    return 0;
+-                } else if (randomsource.nextInt(5) != 0) {
+-                    return 0;
+-                } else {
+-                    int j = p_64570_.players().size();
++            // Paper start - Pillager patrol spawn settings and per player options
++            // Random player selection moved up for per player spawning and configuration
++            int j = p_64570_.players().size();
++            if (j < 1) {
++                return 0;
++            }
++
++            net.minecraft.server.level.ServerPlayer player = p_64570_.players().get(randomsource.nextInt(j));
++            if (player.isSpectator()) {
++                return 0;
++            }
++
++            int patrolSpawnDelay;
++            if (p_64570_.paperConfig().entities.behavior.pillagerPatrols.spawnDelay.perPlayer) {
++                --player.patrolSpawnDelay;
++                patrolSpawnDelay = player.patrolSpawnDelay;
++            } else {
++                this.nextTick--;
++                patrolSpawnDelay = this.nextTick;
++            }
++            if (patrolSpawnDelay > 0) {
++                return 0;
++            } else {
++                long days;
++                if (p_64570_.paperConfig().entities.behavior.pillagerPatrols.start.perPlayer) {
++                    days = player.getStats().getValue(net.minecraft.stats.Stats.CUSTOM.get(net.minecraft.stats.Stats.PLAY_TIME)) / 24000L; // PLAY_ONE_MINUTE is actually counting in ticks, a misnomer by Mojang
++                } else {
++                    days = p_64570_.getDayTime() / 24000L;
++                }
++                if (p_64570_.paperConfig().entities.behavior.pillagerPatrols.spawnDelay.perPlayer) {
++                    player.patrolSpawnDelay += p_64570_.paperConfig().entities.behavior.pillagerPatrols.spawnDelay.ticks + randomsource.nextInt(1200);
++                } else {
++                    this.nextTick += p_64570_.paperConfig().entities.behavior.pillagerPatrols.spawnDelay.ticks + randomsource.nextInt(1200);
++                }
++
++                if (days >= p_64570_.paperConfig().entities.behavior.pillagerPatrols.start.day && p_64570_.isDay()) {
++                    if (randomsource.nextDouble() >= p_64570_.paperConfig().entities.behavior.pillagerPatrols.spawnChance) {
++                        // Paper end - Pillager patrol spawn settings and per player options
++                        return 0;
++                    }
++                } else {
+                     if (j < 1) {
+                         return 0;
+                     } else {
+-                        Player player = p_64570_.players().get(randomsource.nextInt(j));
+                         if (player.isSpectator()) {
+                             return 0;
+                         } else if (p_64570_.isCloseToVillage(player.blockPosition(), 2)) {
 @@ -109,7 +_,7 @@
  
                  patrollingmonster.setPos((double)p_224534_.getX(), (double)p_224534_.getY(), (double)p_224534_.getZ());

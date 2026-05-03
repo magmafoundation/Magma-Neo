@@ -43,7 +43,7 @@
      public ThreadedLevelLightEngine getLightEngine() {
          return this.lightEngine;
      }
-@@ -150,9 +_,17 @@
+@@ -150,9 +_,18 @@
                  }
              }
  
@@ -55,6 +55,7 @@
              CompletableFuture<ChunkResult<ChunkAccess>> completablefuture = this.getChunkFutureMainThread(p_8360_, p_8361_, p_330876_, p_8363_);
 -            this.mainThreadProcessor.managedBlock(completablefuture::isDone);
 +            if (!completablefuture.isDone()) { // Paper
++                com.destroystokyo.paper.io.SyncLoadFinder.logSyncLoad(this.level, p_8360_, p_8361_); // Paper - Add debug for sync chunk loads
 +                this.level.timings.syncChunkLoad.startTiming(); // Paper
 +                this.mainThreadProcessor.managedBlock(completablefuture::isDone);
 +                this.level.timings.syncChunkLoad.stopTiming(); // Paper

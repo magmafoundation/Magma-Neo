@@ -1,0 +1,10 @@
+--- a/net/minecraft/world/entity/ai/behavior/SleepInBed.java
++++ b/net/minecraft/world/entity/ai/behavior/SleepInBed.java
+@@ -43,6 +_,7 @@
+                 }
+ 
+                 BlockState blockstate = p_24154_.getBlockState(globalpos.pos());
++                if (blockstate == null) { return false; } // Paper - Prevent sync chunk loads when villagers try to find beds
+                 return globalpos.pos().closerToCenterThan(p_24155_.position(), 2.0) && blockstate.is(BlockTags.BEDS) && !blockstate.getValue(BedBlock.OCCUPIED);
+             }
+         }

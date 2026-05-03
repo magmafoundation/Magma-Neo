@@ -1,5 +1,13 @@
 --- a/net/minecraft/world/level/block/TripWireHookBlock.java
 +++ b/net/minecraft/world/level/block/TripWireHookBlock.java
+@@ -165,6 +_,7 @@
+ 
+             emitState(p_57686_, p_57687_, flag2, flag3, flag, flag1);
+             if (!p_57689_) {
++                if (p_57686_.getBlockState(p_57687_).getBlock() == Blocks.TRIPWIRE_HOOK) // Paper - Validate tripwire hook placement before update
+                 p_57686_.setBlock(p_57687_, blockstate1.setValue(FACING, direction), 3);
+                 if (p_57690_) {
+                     notifyNeighbors(block, p_57686_, p_57687_, direction);
 @@ -176,8 +_,8 @@
                      BlockPos blockpos2 = p_57687_.relative(direction, k);
                      BlockState blockstate2 = ablockstate[k];

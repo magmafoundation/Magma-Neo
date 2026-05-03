@@ -54,7 +54,7 @@
      @Override
      public GameEventListenerRegistry getListenerRegistry(int p_251193_) {
          return this.level instanceof ServerLevel serverlevel
-@@ -209,6 +_,18 @@
+@@ -209,32 +_,52 @@
          }
      }
  
@@ -73,16 +73,41 @@
      @Override
      public FluidState getFluidState(BlockPos p_62895_) {
          return this.getFluidState(p_62895_.getX(), p_62895_.getY(), p_62895_.getZ());
-@@ -233,8 +_,13 @@
-         }
      }
  
+     public FluidState getFluidState(int p_62815_, int p_62816_, int p_62817_) {
+-        try {
+-            int i = this.getSectionIndex(p_62816_);
+-            if (i >= 0 && i < this.sections.length) {
+-                LevelChunkSection levelchunksection = this.sections[i];
++        // Paper start - Perf: Optimise Chunk#getFluid
++        int index = this.getSectionIndex(p_62816_);
++        if (index >= 0 && index < this.sections.length) {
++            LevelChunkSection levelchunksection = this.sections[index];
+                 if (!levelchunksection.hasOnlyAir()) {
+-                    return levelchunksection.getFluidState(p_62815_ & 15, p_62816_ & 15, p_62817_ & 15);
++                    return levelchunksection.states.get((p_62816_ & 15) << 8 | (p_62817_ & 15) << 4 | p_62815_ & 15).getFluidState();
++                    // Paper end - Perf: Optimise Chunk#getFluid
+                 }
+             }
+ 
+             return Fluids.EMPTY.defaultFluidState();
++         /* // Paper - Perf: Optimise Chunk#getFluid
+         } catch (Throwable throwable) {
+             CrashReport crashreport = CrashReport.forThrowable(throwable, "Getting fluid state");
+             CrashReportCategory crashreportcategory = crashreport.addCategory("Block being got");
+             crashreportcategory.setDetail("Location", () -> CrashReportCategory.formatLocation(this, p_62815_, p_62816_, p_62817_));
+             throw new ReportedException(crashreport);
+         }
++        */  // Paper - Perf: Optimise Chunk#getFluid
++    }
++
 +    // Magma
 +    private boolean magma$doPlace = true;
 +    public void setMagma$doPlace(boolean doPlace) {
 +        this.magma$doPlace = doPlace;
-+    }
-+
+     }
+ 
      @Nullable
 -    @Override
      public BlockState setBlockState(BlockPos p_62865_, BlockState p_62866_, boolean p_62867_) {

@@ -308,7 +308,7 @@
          this.connection.setReadOnly();
 -        this.server.executeBlocking(this.connection::handleDisconnection);
 +        // CraftBukkit - Don't wait
-+        this.server.wrapRunnable(this.connection::handleDisconnection);
++        this.server.scheduleOnMain(this.connection::handleDisconnection); // Paper
      }
  
      protected boolean isSingleplayerOwner() {

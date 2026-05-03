@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/level/block/entity/trialspawner/TrialSpawner.java
 +++ b/net/minecraft/world/level/block/entity/trialspawner/TrialSpawner.java
-@@ -229,15 +_,21 @@
+@@ -229,15 +_,22 @@
                                  }
  
                                  boolean flag = spawndata.getEntityToSpawn().size() == 1 && spawndata.getEntityToSpawn().contains("id", 8);
@@ -17,6 +17,7 @@
  
 -                            if (!p_312582_.tryAddFreshEntityWithPassengers(entity)) {
 +                            entity.spawnedViaMobSpawner = true; // Paper
++                            entity.spawnReason = org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.TRIAL_SPAWNER; // Paper - Entity#getEntitySpawnReason
 +                            // CraftBukkit start
 +                            if (org.bukkit.craftbukkit.event.CraftEventFactory.callTrialSpawnerSpawnEvent(entity, p_312518_).isCancelled()) {
 +                                return Optional.empty();

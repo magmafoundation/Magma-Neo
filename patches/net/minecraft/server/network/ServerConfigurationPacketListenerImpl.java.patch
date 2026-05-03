@@ -13,6 +13,17 @@
          this.gameProfile = p_302003_.gameProfile();
          this.clientInformation = p_302003_.clientInformation();
      }
+@@ -62,6 +_,10 @@
+ 
+     @Override
+     public void onDisconnect(DisconnectionDetails p_350569_) {
++        // Paper start - Debugging
++        if (net.minecraft.server.MinecraftServer.getServer().isDebugging()) {
++            ServerConfigurationPacketListenerImpl.LOGGER.info("{} lost connection: {}, while in configuration phase {}", this.gameProfile, p_350569_.reason().getString(), currentTask != null ? currentTask.type().id() : "null");
++        } else // Paper end
+         LOGGER.info("{} lost connection: {}", this.gameProfile, p_350569_.reason().getString());
+         super.onDisconnect(p_350569_);
+     }
 @@ -72,8 +_,23 @@
      }
  
@@ -102,7 +113,7 @@
  
          try {
              PlayerList playerlist = this.server.getPlayerList();
-@@ -134,14 +_,14 @@
+@@ -134,16 +_,21 @@
                  return;
              }
  
@@ -119,4 +130,11 @@
 +            playerlist.placeNewPlayer(this.connection, serverplayer, this.createCookie(this.clientInformation, this.connectionType));
          } catch (Exception exception) {
              LOGGER.error("Couldn't place player in world", (Throwable)exception);
++            // Paper start - Debugging
++            if (MinecraftServer.getServer().isDebugging()) {
++                exception.printStackTrace();
++            }
++            // Paper end - Debugging
              this.connection.send(new ClientboundDisconnectPacket(DISCONNECT_REASON_INVALID_DATA));
+             this.connection.disconnect(DISCONNECT_REASON_INVALID_DATA);
+         }
