@@ -71,6 +71,19 @@
                  ChunkAccess chunkaccess1 = chunkholder.getChunkIfPresent(ChunkStatus.FULL);
                  if (chunkaccess1 != null) {
                      this.storeInCache(i, chunkaccess1, ChunkStatus.FULL);
+@@ -282,6 +_,12 @@
+         }
+     }
+ 
++    // Paper start
++    public boolean isPositionTicking(Entity entity) {
++        return this.isPositionTicking(ChunkPos.asLong(net.minecraft.util.Mth.floor(entity.getX()) >> 4, net.minecraft.util.Mth.floor(entity.getZ()) >> 4));
++    }
++    // Paper end
++
+     public boolean isPositionTicking(long p_143240_) {
+         ChunkHolder chunkholder = this.getVisibleChunkIfPresent(p_143240_);
+         if (chunkholder == null) {
 @@ -293,32 +_,60 @@
  
      public void save(boolean p_8420_) {

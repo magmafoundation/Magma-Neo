@@ -20,3 +20,12 @@
                  } catch (Throwable throwable) {
                      CrashReport crashreport = CrashReport.forThrowable(throwable, "Executing command block");
                      CrashReportCategory crashreportcategory = crashreport.addCategory("Command to be executed");
+@@ -184,7 +_,7 @@
+     }
+ 
+     public InteractionResult usedBy(Player p_45413_) {
+-        if (!p_45413_.canUseGameMasterBlocks()) {
++        if (!p_45413_.canUseGameMasterBlocks() && (!p_45413_.isCreative() || !p_45413_.getBukkitEntity().hasPermission("minecraft.commandblock"))) { // Paper - command block permission
+             return InteractionResult.PASS;
+         } else {
+             if (p_45413_.getCommandSenderWorld().isClientSide) {

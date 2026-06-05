@@ -23,7 +23,6 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.item.ItemParser;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
@@ -324,7 +323,13 @@ public final class CraftMagicNumbers implements UnsafeValues {
                     Bukkit.getLogger().log(Level.SEVERE, "Error saving advancement " + key, ex);
                 }
 
-                MinecraftServer.getServer().getPlayerList().reloadResources();
+                // Paper start - Fix client lag on advancement loading
+                //MinecraftServer.getServer().getPlayerList().reload();
+                MinecraftServer.getServer().getPlayerList().getPlayers().forEach(player -> {
+                    player.getAdvancements().reload(MinecraftServer.getServer().getAdvancements());
+                    player.getAdvancements().flushDirty(player);
+                });
+                // Paper end - Fix client lag on advancement loading
 
                 return bukkit;
             }
@@ -386,7 +391,11 @@ public final class CraftMagicNumbers implements UnsafeValues {
 
     @Override
     public Multimap<Attribute, AttributeModifier> getDefaultAttributeModifiers(Material material, EquipmentSlot slot) {
-        return material.getDefaultAttributeModifiers(slot);
+        // Paper start - delegate to method on ItemType
+        final org.bukkit.inventory.ItemType item = material.asItemType();
+        Preconditions.checkArgument(item != null, material + " is not an item and does not have default attributes");
+        return item.getDefaultAttributeModifiers(slot);
+        // Paper end - delegate to method on ItemType
     }
 
     @Override
@@ -484,7 +493,31 @@ public final class CraftMagicNumbers implements UnsafeValues {
         return CraftItemStack.asCraftMirror(net.minecraft.world.item.ItemStack.parse(MinecraftServer.getServer().registryAccess(), compound).orElseThrow());
     }
 
-    private byte[] serializeNbtToBytes(CompoundTag compound) {
+    @Override
+    public byte[] serializeEntity(org.bukkit.entity.Entity entity) {
+        Preconditions.checkNotNull(entity, "null cannot be serialized");
+        Preconditions.checkArgument(entity instanceof org.bukkit.craftbukkit.entity.CraftEntity, "only CraftEntities can be serialized");
+        net.minecraft.nbt.CompoundTag compound = new net.minecraft.nbt.CompoundTag();
+        ((org.bukkit.craftbukkit.entity.CraftEntity) entity).getHandle().serializeEntity(compound);
+        return serializeNbtToBytes(compound);
+    }
+
+    @Override
+    public org.bukkit.entity.Entity deserializeEntity(byte[] data, org.bukkit.World world, boolean preserveUUID) {
+        Preconditions.checkNotNull(data, "null cannot be deserialized");
+        Preconditions.checkArgument(data.length > 0, "cannot deserialize nothing");
+        net.minecraft.nbt.CompoundTag compound = deserializeNbtFromBytes(data);
+        int dataVersion = compound.getInt("DataVersion");
+        compound = (net.minecraft.nbt.CompoundTag) MinecraftServer.getServer().fixerUpper.update(References.ENTITY, new Dynamic<>(NbtOps.INSTANCE, compound), dataVersion, this.getDataVersion()).getValue();
+        if (!preserveUUID) {
+            // Generate a new UUID so we don't have to worry about deserializing the same entity twice
+            compound.remove("UUID");
+        }
+        return net.minecraft.world.entity.EntityType.create(compound, ((org.bukkit.craftbukkit.CraftWorld) world).getHandle())
+                .orElseThrow(() -> new IllegalArgumentException("An ID was not found for the data. Did you downgrade?")).getBukkitEntity();
+    }
+
+    private byte[] serializeNbtToBytes(net.minecraft.nbt.CompoundTag compound) {
         compound.putInt("DataVersion", getDataVersion());
         java.io.ByteArrayOutputStream outputStream = new java.io.ByteArrayOutputStream();
         try {
@@ -508,6 +541,41 @@ public final class CraftMagicNumbers implements UnsafeValues {
         int dataVersion = compound.getInt("DataVersion");
         Preconditions.checkArgument(dataVersion <= getDataVersion(), "Newer version! Server downgrades are not supported!");
         return compound;
+    }
+
+    @Override
+    public int nextEntityId() {
+        return net.minecraft.world.entity.Entity.nextEntityId();
+    }
+
+    @Override
+    public String getMainLevelName() {
+        return ((net.minecraft.server.dedicated.DedicatedServer) net.minecraft.server.MinecraftServer.getServer()).getProperties().levelName;
+    }
+
+    @Override
+    public int getProtocolVersion() {
+        return net.minecraft.SharedConstants.getCurrentVersion().getProtocolVersion();
+    }
+
+    @Override
+    public boolean isValidRepairItemStack(org.bukkit.inventory.ItemStack itemToBeRepaired, org.bukkit.inventory.ItemStack repairMaterial) {
+        if (!itemToBeRepaired.getType().isItem() || !repairMaterial.getType().isItem()) {
+            return false;
+        }
+        return CraftMagicNumbers.getItem(itemToBeRepaired.getType()).isValidRepairItem(CraftItemStack.asNMSCopy(itemToBeRepaired), CraftItemStack.asNMSCopy(repairMaterial));
+    }
+
+    @Override
+    public boolean hasDefaultEntityAttributes(NamespacedKey bukkitEntityKey) {
+        return net.minecraft.world.entity.ai.attributes.DefaultAttributes.hasSupplier(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(CraftNamespacedKey.toMinecraft(bukkitEntityKey)));
+    }
+
+    @Override
+    public org.bukkit.attribute.Attributable getDefaultEntityAttributes(NamespacedKey bukkitEntityKey) {
+        Preconditions.checkArgument(hasDefaultEntityAttributes(bukkitEntityKey), bukkitEntityKey + " doesn't have default attributes");
+        var supplier = net.minecraft.world.entity.ai.attributes.DefaultAttributes.getSupplier((net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.LivingEntity>) net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(CraftNamespacedKey.toMinecraft(bukkitEntityKey)));
+        return new io.papermc.paper.attribute.UnmodifiableAttributeMap(supplier);
     }
     // Paper end
 

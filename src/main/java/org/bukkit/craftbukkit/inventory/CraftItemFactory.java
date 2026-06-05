@@ -9,6 +9,7 @@ import net.minecraft.core.HolderSet;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.tags.EnchantmentTags;
 import net.minecraft.util.RandomSource;
@@ -246,4 +247,102 @@ public final class CraftItemFactory implements ItemFactory {
         return nms != null ? net.minecraft.locale.Language.getInstance().getOrDefault(nms.getItem().getDescriptionId(nms)) : null;
     }
     // Paper end - add getI18NDisplayName
+
+    // Paper start - bungee hover events
+    @Override
+    public net.md_5.bungee.api.chat.hover.content.Content hoverContentOf(ItemStack itemStack) {
+        throw new UnsupportedOperationException("BungeeCord Chat API does not support data components");
+        /*
+        net.md_5.bungee.api.chat.ItemTag itemTag = net.md_5.bungee.api.chat.ItemTag.ofNbt(CraftItemStack.asNMSCopy(itemStack).getOrCreateTag().toString());
+        return new net.md_5.bungee.api.chat.hover.content.Item(
+         itemStack.getType().getKey().toString(),
+         itemStack.getAmount(),
+         itemTag);
+         */
+    }
+
+    @Override
+    public net.md_5.bungee.api.chat.hover.content.Content hoverContentOf(org.bukkit.entity.Entity entity) {
+        return hoverContentOf(entity, org.apache.commons.lang3.StringUtils.isBlank(entity.getCustomName()) ? null : new net.md_5.bungee.api.chat.TextComponent(entity.getCustomName()));
+    }
+
+    @Override
+    public net.md_5.bungee.api.chat.hover.content.Content hoverContentOf(org.bukkit.entity.Entity entity, String customName) {
+        return hoverContentOf(entity, org.apache.commons.lang3.StringUtils.isBlank(customName) ? null : new net.md_5.bungee.api.chat.TextComponent(customName));
+    }
+
+    @Override
+    public net.md_5.bungee.api.chat.hover.content.Content hoverContentOf(org.bukkit.entity.Entity entity, net.md_5.bungee.api.chat.BaseComponent customName) {
+        return new net.md_5.bungee.api.chat.hover.content.Entity(
+                entity.getType().getKey().toString(),
+                entity.getUniqueId().toString(),
+                customName);
+    }
+
+    @Override
+    public net.md_5.bungee.api.chat.hover.content.Content hoverContentOf(org.bukkit.entity.Entity entity, net.md_5.bungee.api.chat.BaseComponent[] customName) {
+        return new net.md_5.bungee.api.chat.hover.content.Entity(
+                entity.getType().getKey().toString(),
+                entity.getUniqueId().toString(),
+                new net.md_5.bungee.api.chat.TextComponent(customName));
+    }
+    // Paper end - bungee hover events
+
+    // Paper start - old getSpawnEgg API
+    // @Override // used to override, upstream added conflicting method, is called via Commodore now
+    @Deprecated
+    public ItemStack getSpawnEgg0(org.bukkit.entity.EntityType type) {
+        if (type == null) {
+            return null;
+        }
+        String typeId = type.getKey().toString();
+        net.minecraft.resources.ResourceLocation typeKey = ResourceLocation.parse(typeId);
+        net.minecraft.world.entity.EntityType<?> nmsType = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(typeKey);
+        net.minecraft.world.item.SpawnEggItem eggItem = net.minecraft.world.item.SpawnEggItem.byId(nmsType);
+        return eggItem == null ? null : new net.minecraft.world.item.ItemStack(eggItem).asBukkitMirror();
+    }
+    // Paper end - old getSpawnEgg API
+    // Paper start - enchantWithLevels API
+    @Override
+    public ItemStack enchantWithLevels(ItemStack itemStack, int levels, boolean allowTreasure, java.util.Random random) {
+        return enchantWithLevels(
+                itemStack,
+                levels,
+                allowTreasure
+                        ? Optional.empty()
+                        // While IN_ENCHANTING_TABLE is not logically the same as all but TREASURE, the tag is defined as
+                        // NON_TREASURE, which does contain all enchantments not in the treasure tag.
+                        // Additionally, the allowTreasure boolean is more intended to configure this method to behave like
+                        // an enchanting table.
+                        : net.minecraft.server.MinecraftServer.getServer().registryAccess().registryOrThrow(Registries.ENCHANTMENT).getTag(EnchantmentTags.IN_ENCHANTING_TABLE),
+                random
+        );
+    }
+
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    private ItemStack enchantWithLevels(
+            ItemStack itemStack,
+            int levels,
+            Optional<? extends net.minecraft.core.HolderSet<net.minecraft.world.item.enchantment.Enchantment>> possibleEnchantments,
+            java.util.Random random
+    ) {
+        Preconditions.checkArgument(itemStack != null, "Argument 'itemStack' must not be null");
+        Preconditions.checkArgument(!itemStack.isEmpty(), "Argument 'itemStack' cannot be empty");
+        Preconditions.checkArgument(levels > 0 && levels <= 30, "Argument 'levels' must be in range [1, 30] (attempted " + levels + ")");
+        Preconditions.checkArgument(random != null, "Argument 'random' must not be null");
+        final net.minecraft.world.item.ItemStack internalStack = CraftItemStack.asNMSCopy(itemStack);
+        if (internalStack.isEnchanted()) {
+            internalStack.set(net.minecraft.core.component.DataComponents.ENCHANTMENTS, net.minecraft.world.item.enchantment.ItemEnchantments.EMPTY);
+        }
+        final net.minecraft.core.RegistryAccess registryAccess = net.minecraft.server.MinecraftServer.getServer().registryAccess();
+        final net.minecraft.world.item.ItemStack enchanted = net.minecraft.world.item.enchantment.EnchantmentHelper.enchantItem(
+                new org.bukkit.craftbukkit.util.RandomSourceWrapper(random),
+                internalStack,
+                levels,
+                registryAccess,
+                possibleEnchantments
+        );
+        return CraftItemStack.asCraftMirror(enchanted);
+    }
+    // Paper end - enchantWithLevels API
 }

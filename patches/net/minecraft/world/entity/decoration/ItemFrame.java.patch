@@ -25,7 +25,7 @@
          }
      }
  
-@@ -138,6 +_,11 @@
+@@ -138,6 +_,18 @@
              return false;
          } else if (!p_31776_.is(DamageTypeTags.IS_EXPLOSION) && !this.getItem().isEmpty()) {
              if (!this.level().isClientSide) {
@@ -34,6 +34,13 @@
 +                    return true;
 +                }
 +                // CraftBukkit end
++                // Paper start - Add PlayerItemFrameChangeEvent
++                if (p_31776_.getEntity() instanceof Player player) {
++                    var event = new io.papermc.paper.event.player.PlayerItemFrameChangeEvent((org.bukkit.entity.Player) player.getBukkitEntity(), (org.bukkit.entity.ItemFrame) this.getBukkitEntity(), this.getItem().asBukkitCopy(), io.papermc.paper.event.player.PlayerItemFrameChangeEvent.ItemFrameChangeAction.REMOVE);
++                    if (!event.callEvent()) return true; // return true here because you aren't cancelling the damage, just the change
++                    this.setItem(ItemStack.fromBukkitCopy(event.getItemStack()), false);
++                }
++                // Paper end - Add PlayerItemFrameChangeEvent
                  this.dropItem(p_31776_.getEntity(), false);
                  this.gameEvent(GameEvent.BLOCK_CHANGE, p_31776_.getEntity());
                  this.playSound(this.getRemoveItemSound(), 1.0F, 1.0F);
@@ -67,3 +74,32 @@
              this.playSound(this.getAddItemSound(), 1.0F, 1.0F);
          }
  
+@@ -354,7 +_,13 @@
+                         }
+                     }
+ 
+-                    this.setItem(itemstack);
++                    // Paper start - Add PlayerItemFrameChangeEvent
++                    io.papermc.paper.event.player.PlayerItemFrameChangeEvent event = new io.papermc.paper.event.player.PlayerItemFrameChangeEvent((org.bukkit.entity.Player) p_31787_.getBukkitEntity(), (org.bukkit.entity.ItemFrame) this.getBukkitEntity(), itemstack.asBukkitCopy(), io.papermc.paper.event.player.PlayerItemFrameChangeEvent.ItemFrameChangeAction.PLACE);
++                    if (!event.callEvent()) {
++                        return InteractionResult.FAIL;
++                    }
++                    this.setItem(ItemStack.fromBukkitCopy(event.getItemStack()));
++                    // Paper end - Add PlayerItemFrameChangeEvent
+                     this.gameEvent(GameEvent.BLOCK_CHANGE, p_31787_);
+                     itemstack.consume(1, p_31787_);
+                 }
+@@ -366,6 +_,13 @@
+ 
+             return InteractionResult.CONSUME;
+         } else {
++            // Paper start - Add PlayerItemFrameChangeEvent
++            io.papermc.paper.event.player.PlayerItemFrameChangeEvent event = new io.papermc.paper.event.player.PlayerItemFrameChangeEvent((org.bukkit.entity.Player) p_31787_.getBukkitEntity(), (org.bukkit.entity.ItemFrame) this.getBukkitEntity(), this.getItem().asBukkitCopy(), io.papermc.paper.event.player.PlayerItemFrameChangeEvent.ItemFrameChangeAction.ROTATE);
++            if (!event.callEvent()) {
++                return InteractionResult.FAIL;
++            }
++            setItem(ItemStack.fromBukkitCopy(event.getItemStack()), false, false);
++            // Paper end - Add PlayerItemFrameChangeEvent
+             return !flag && !flag1 ? InteractionResult.PASS : InteractionResult.SUCCESS;
+         }
+     }

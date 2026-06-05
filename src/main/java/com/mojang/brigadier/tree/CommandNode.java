@@ -27,7 +27,7 @@ public abstract class CommandNode<S> implements Comparable<CommandNode<S>> {
     private final Map<String, CommandNode<S>> children = new LinkedHashMap<>();
     private final Map<String, LiteralCommandNode<S>> literals = new LinkedHashMap<>();
     private final Map<String, ArgumentCommandNode<S, ?>> arguments = new LinkedHashMap<>();
-    private final Predicate<S> requirement;
+    public Predicate<S> requirement;
     private final CommandNode<S> redirect;
     private final RedirectModifier<S> modifier;
     private final boolean forks;
@@ -62,8 +62,18 @@ public abstract class CommandNode<S> implements Comparable<CommandNode<S>> {
         return modifier;
     }
 
-    public boolean canUse(final S source) {
-        return requirement.test(source);
+    // CraftBukkit start
+    public synchronized boolean canUse(final S source) {
+        if (source instanceof CommandSourceStack) {
+            try {
+                ((CommandSourceStack) source).currentCommand.put(Thread.currentThread(), this); // Paper - Thread Safe Vanilla Command permission checking
+                return this.requirement.test(source);
+            } finally {
+                ((CommandSourceStack) source).currentCommand.remove(Thread.currentThread()); // Paper - Thread Safe Vanilla Command permission checking
+            }
+        }
+        // CraftBukkit end
+        return this.requirement.test(source);
     }
 
     public void addChild(final CommandNode<S> node) {

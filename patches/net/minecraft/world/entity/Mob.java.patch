@@ -334,14 +334,19 @@
                  this.discard();
                  return t;
              }
-@@ -1351,6 +_,7 @@
+@@ -1351,7 +_,11 @@
      public boolean startRiding(Entity p_21396_, boolean p_21397_) {
          boolean flag = super.startRiding(p_21396_, p_21397_);
          if (flag && this.isLeashed()) {
-+            this.level().getCraftServer().getPluginManager().callEvent(new org.bukkit.event.entity.EntityUnleashEvent(this.getBukkitEntity(), org.bukkit.event.entity.EntityUnleashEvent.UnleashReason.UNKNOWN)); // CraftBukkit
-             this.dropLeash(true, true);
+-            this.dropLeash(true, true);
++            // Paper start - Expand EntityUnleashEvent
++            org.bukkit.event.entity.EntityUnleashEvent event = new org.bukkit.event.entity.EntityUnleashEvent(this.getBukkitEntity(), org.bukkit.event.entity.EntityUnleashEvent.UnleashReason.UNKNOWN, true);
++            if (!event.callEvent()) { return flag; }
++            this.dropLeash(true, event.isDropLeash());
++            // Paper end - Expand EntityUnleashEvent
          }
  
+         return flag;
 @@ -1434,6 +_,7 @@
          if (flag) {
              float f1 = this.getKnockback(p_21372_, damagesource);

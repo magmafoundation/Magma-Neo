@@ -9,6 +9,14 @@
              p_57615_.setBlock(p_57616_, p_57617_.setValue(DISARMED, Boolean.valueOf(true)), 4);
              p_57615_.gameEvent(p_57618_, GameEvent.SHEAR, p_57616_);
          }
+@@ -133,6 +_,7 @@
+ 
+     @Override
+     protected void entityInside(BlockState p_57625_, Level p_57626_, BlockPos p_57627_, Entity p_57628_) {
++        if (!new io.papermc.paper.event.entity.EntityInsideBlockEvent(p_57628_.getBukkitEntity(), org.bukkit.craftbukkit.block.CraftBlock.at(p_57626_, p_57627_)).callEvent()) { return; } // Paper - Add EntityInsideBlockEvent
+         if (!p_57626_.isClientSide) {
+             if (!p_57625_.getValue(POWERED)) {
+                 this.checkPressed(p_57626_, p_57627_);
 @@ -160,6 +_,40 @@
                  }
              }

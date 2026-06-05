@@ -535,9 +535,13 @@ public class CommandDispatcher<S> {
         int i = 0;
         for (final CommandNode<S> node : parent.getChildren()) {
             CompletableFuture<Suggestions> future = Suggestions.empty();
-            try {
-                future = node.listSuggestions(context.build(truncatedInput), new SuggestionsBuilder(truncatedInput, truncatedInputLowerCase, start));
-            } catch (final CommandSyntaxException ignored) {}
+            // Paper start - Don't suggest if the requirement isn't met
+            if (parent != this.root || node.canUse(context.getSource())) {
+                try {
+                    future = node.listSuggestions(context.build(truncatedInput), new SuggestionsBuilder(truncatedInput, truncatedInputLowerCase, start)); // CraftBukkit
+                } catch (final CommandSyntaxException ignored) {}
+            }
+            // Paper end - Don't suggest if the requirement isn't met
             futures[i++] = future;
         }
 

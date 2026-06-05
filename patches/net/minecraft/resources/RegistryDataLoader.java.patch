@@ -46,7 +46,7 @@
  
          for (Entry<ResourceLocation, Resource> entry : filetoidconverter.listMatchingResources(p_321535_).entrySet()) {
              ResourceLocation resourcelocation = entry.getKey();
-@@ -304,13 +_,20 @@
+@@ -304,13 +_,21 @@
          void apply(RegistryDataLoader.Loader<?> p_321864_, RegistryOps.RegistryInfoLookup p_321656_);
      }
  
@@ -66,6 +66,7 @@
 +            registryBuilderConsumer.accept(registryBuilder);
 +
 +            WritableRegistry<T> writableregistry = (WritableRegistry<T>) registryBuilder.disableRegistrationCheck().create();
++            io.papermc.paper.registry.PaperRegistryAccess.instance().registerRegistry(this.key, writableregistry); // Paper - initialize API registry
              return new RegistryDataLoader.Loader<>(this, writableregistry, p_251565_);
          }
  

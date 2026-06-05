@@ -1,6 +1,6 @@
 --- a/net/minecraft/server/Services.java
 +++ b/net/minecraft/server/Services.java
-@@ -11,15 +_,30 @@
+@@ -11,15 +_,39 @@
  import net.minecraft.util.SignatureValidator;
  
  public record Services(
@@ -12,15 +12,24 @@
 +        this(sessionService, servicesKeySet, profileRepository, profileCache, null);
 +    }
 +
++    // Magma start
++    public static void setUserCacheFileAndOptions(File userCacheFile, joptsimple.OptionSet optionset) {
++        Services.userCacheFile = userCacheFile;
++        Services.optionSet = optionset;
++    }
++    // Magma end
++
 +    @Override
 +    public io.papermc.paper.configuration.PaperConfigurations paperConfigurations() {
 +        return java.util.Objects.requireNonNull(this.paperConfigurations);
 +    }
 +    // Paper end - add paper configuration files
-     private static final String USERID_CACHE_FILE = "usercache.json";
+     public static final String USERID_CACHE_FILE = "usercache.json";
++    public static File userCacheFile;
++    public static joptsimple.OptionSet optionSet;
  
 -    public static Services create(YggdrasilAuthenticationService p_214345_, File p_214346_) {
-+    public static Services create(YggdrasilAuthenticationService p_214345_, File p_214346_, joptsimple.OptionSet optionSet) throws Exception { // Paper - add optionset to load paper config files
++    public static Services create(YggdrasilAuthenticationService p_214345_, File p_214346_) throws Exception { // Paper - add optionset to load paper config files
          MinecraftSessionService minecraftsessionservice = p_214345_.createMinecraftSessionService();
          GameProfileRepository gameprofilerepository = p_214345_.createProfileRepository();
          GameProfileCache gameprofilecache = new GameProfileCache(gameprofilerepository, new File(p_214346_, "usercache.json"));

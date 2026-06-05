@@ -51,7 +51,13 @@
              for (int l = 0; l < k; l++) {
                  float f2 = ((float)(l % 2) - 0.5F) * f1;
                  float f3 = ((float)(l / 2) - 0.5F) * f1;
-@@ -218,8 +_,20 @@
+@@ -213,13 +_,26 @@
+                         slime.setPersistenceRequired();
+                     }
+ 
++                    slime.aware = this.aware; // Paper - Fix nerfed slime when splitting
+                     slime.setCustomName(component);
+                     slime.setNoAi(flag);
                      slime.setInvulnerable(this.isInvulnerable());
                      slime.setSize(j, true);
                      slime.moveTo(this.getX() + (double)f2, this.getY() + 0.5, this.getZ() + (double)f3, this.random.nextFloat() * 360.0F, 0.0F);
@@ -73,15 +79,40 @@
              }
          }
  
-@@ -305,7 +_,7 @@
+@@ -290,13 +_,16 @@
+                 if (p_219115_ == MobSpawnType.SPAWNER) {
+                     return checkMobSpawnRules(p_219113_, p_219114_, p_219115_, p_219116_, p_219117_);
+                 }
+-
++                // Paper start - Replace rules for Height in Swamp Biome
++                final double maxHeightSwamp = p_219114_.getMinecraftWorld().paperConfig().entities.spawning.slimeSpawnHeight.surfaceBiome.maximum;
++                final double minHeightSwamp = p_219114_.getMinecraftWorld().paperConfig().entities.spawning.slimeSpawnHeight.surfaceBiome.minimum;
+                 if (p_219114_.getBiome(p_219116_).is(BiomeTags.ALLOWS_SURFACE_SLIME_SPAWNS)
+-                    && p_219116_.getY() > 50
+-                    && p_219116_.getY() < 70
++                    && p_219116_.getY() > minHeightSwamp
++                    && p_219116_.getY() < maxHeightSwamp
+                     && p_219117_.nextFloat() < 0.5F
+                     && p_219117_.nextFloat() < p_219114_.getMoonBrightness()
+                     && p_219114_.getMaxLocalRawBrightness(p_219116_) <= p_219117_.nextInt(8)) {
++                    // Paper end - Replace rules for Height in Swamp Biome
+                     return checkMobSpawnRules(p_219113_, p_219114_, p_219115_, p_219116_, p_219117_);
+                 }
+ 
+@@ -305,8 +_,11 @@
                  }
  
                  ChunkPos chunkpos = new ChunkPos(p_219116_);
 -                boolean flag = WorldgenRandom.seedSlimeChunk(chunkpos.x, chunkpos.z, ((WorldGenLevel)p_219114_).getSeed(), 987234911L).nextInt(10) == 0;
-+                boolean flag = p_219114_.getMinecraftWorld().paperConfig().entities.spawning.allChunksAreSlimeChunks || WorldgenRandom.seedSlimeChunk(chunkpos.x, chunkpos.z, ((WorldGenLevel) p_219114_).getSeed(), p_219114_.getMinecraftWorld().spigotConfig.slimeSeed).nextInt(10) == 0; // Spigot // Paper
-                 if (p_219117_.nextInt(10) == 0 && flag && p_219116_.getY() < 40) {
+-                if (p_219117_.nextInt(10) == 0 && flag && p_219116_.getY() < 40) {
++                boolean flag = p_219114_.getMinecraftWorld().paperConfig().entities.spawning.allChunksAreSlimeChunks || WorldgenRandom.seedSlimeChunk(chunkpos.x, chunkpos.z, ((WorldGenLevel)p_219114_).getSeed(), p_219114_.getMinecraftWorld().spigotConfig.slimeSeed).nextInt(10) == 0; // Spigot
++                // Paper start - Replace rules for Height in Slime Chunks
++                final double maxHeightSlimeChunk = p_219114_.getMinecraftWorld().paperConfig().entities.spawning.slimeSpawnHeight.slimeChunk.maximum;
++                if (p_219117_.nextInt(10) == 0 && flag && p_219116_.getY() < maxHeightSlimeChunk) {
++                    // Paper end - Replace rules for Height in Slime Chunks
                      return checkMobSpawnRules(p_219113_, p_219114_, p_219115_, p_219116_, p_219117_);
                  }
+             }
 @@ -334,6 +_,7 @@
          Vec3 vec3 = this.getDeltaMovement();
          this.setDeltaMovement(vec3.x, (double)this.getJumpPower(), vec3.z);

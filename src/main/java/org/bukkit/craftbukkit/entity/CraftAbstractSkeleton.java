@@ -19,5 +19,17 @@ public abstract class CraftAbstractSkeleton extends CraftMonster implements Abst
     public net.minecraft.world.entity.monster.AbstractSkeleton getHandle() {
         return (net.minecraft.world.entity.monster.AbstractSkeleton) super.getHandle();
     }
+
+    // Paper end
+    // Paper start
+    @Override
+    public boolean shouldBurnInDay() {
+        return getHandle().shouldBurnInDay();
+    }
+
+    @Override
+    public void setShouldBurnInDay(boolean shouldBurnInDay) {
+        getHandle().setShouldBurnInDay(shouldBurnInDay);
+    }
     // Paper end
 }

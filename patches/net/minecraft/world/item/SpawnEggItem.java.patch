@@ -15,6 +15,14 @@
          BY_ID.put(p_43207_, this);
      }
  
+@@ -61,6 +_,7 @@
+             Direction direction = p_43223_.getClickedFace();
+             BlockState blockstate = level.getBlockState(blockpos);
+             if (level.getBlockEntity(blockpos) instanceof Spawner spawner) {
++                if (level.paperConfig().entities.spawning.disableMobSpawnerSpawnEggTransformation) return InteractionResult.FAIL; // Paper - Allow disabling mob spawner spawn egg transformation
+                 EntityType<?> entitytype1 = this.getType(itemstack);
+                 spawner.setEntityId(entitytype1, level.getRandom());
+                 level.sendBlockUpdated(blockpos, blockstate, blockstate, 3);
 @@ -134,6 +_,8 @@
  
      @Nullable

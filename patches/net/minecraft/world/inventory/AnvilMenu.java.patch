@@ -159,6 +159,14 @@
          }
      }
  
+@@ -283,6 +_,7 @@
+             }
+ 
+             this.createResult();
++            org.bukkit.craftbukkit.event.CraftEventFactory.callPrepareResultEvent(this, RESULT_SLOT); // Paper - Add PrepareResultEvent
+             return true;
+         } else {
+             return false;
 @@ -298,4 +_,26 @@
      public int getCost() {
          return this.cost.get();

@@ -97,7 +97,7 @@
  
              Path path = optionset.valueOf(optionspec14);
              if (path != null) {
-@@ -101,28 +_,40 @@
+@@ -101,28 +_,52 @@
                  JvmProfiler.INSTANCE.start(Environment.SERVER);
              }
  
@@ -134,10 +134,22 @@
 -                LOGGER.info("You need to agree to the EULA in order to run the server. Go to eula.txt for more info.");
 -                return;
 -            }
--
-             File file1 = new File(optionset.valueOf(optionspec9));
++            org.spigotmc.SpigotConfig.disabledAdvancements = spigotConfiguration.getStringList("advancements.disabled"); // Paper - fix SPIGOT-5885, must be set early in init
+ 
+-            File file1 = new File(optionset.valueOf(optionspec9));
 -            Services services = Services.create(new YggdrasilAuthenticationService(Proxy.NO_PROXY), file1);
-+            Services services = Services.create(new com.destroystokyo.paper.profile.PaperAuthenticationService(Proxy.NO_PROXY), file1, optionset); // Paper - pass OptionSet to load paper config files; override authentication service
++            // Paper start - fix SPIGOT-5824
++            File file1;
++            File userCacheFile = new File(Services.USERID_CACHE_FILE);
++            if (optionset.has("universe")) {
++                file1 = (File) optionset.valueOf("universe"); // CraftBukkit
++                userCacheFile = new File(file1, Services.USERID_CACHE_FILE);
++            } else {
++                file1 = new File(bukkitConfiguration.getString("settings.world-container", "."));
++            }
++            // Paper end - fix SPIGOT-5824
++            Services.setUserCacheFileAndOptions(userCacheFile, optionset); // Magma
++            Services services = Services.create(new com.destroystokyo.paper.profile.PaperAuthenticationService(Proxy.NO_PROXY), file1); // Paper - pass OptionSet to load paper config files; override authentication service; fix world-container
              String s = Optional.ofNullable(optionset.valueOf(optionspec10)).orElse(dedicatedserversettings.getProperties().levelName);
 +            if (s == null || s.isEmpty() || new File(file1, s).getAbsolutePath().equals(new File(s).getAbsolutePath())) {
 +                LOGGER.error("Invalid world directory specified, must not be null, empty or the same directory as your universe! " + s);
@@ -215,7 +227,7 @@
                                          WorldDimensions.Complete worlddimensions$complete = worlddimensions.bake(registry);
                                          Lifecycle lifecycle = worlddimensions$complete.lifecycle().add(p_307161_.datapackWorldgen().allRegistriesLifecycle());
                                          return new WorldLoader.DataLoadOutput<>(
-@@ -246,24 +_,25 @@
+@@ -246,24 +_,26 @@
  
              WorldData worlddata = worldstem.worldData();
              levelstoragesource$levelstorageaccess.saveDataTag(registryaccess$frozen, worlddata);
@@ -248,6 +260,7 @@
                      boolean flag2 = !optionset.has(optionspec) && !optionset.valuesOf(optionspec15).contains("nogui");
 -                    if (flag2 && !GraphicsEnvironment.isHeadless()) {
 -                        dedicatedserver1.showGui();
++                    if(!Boolean.parseBoolean(System.getenv().getOrDefault("PAPER_DISABLE_SERVER_GUI", String.valueOf(false)))) // Paper - Add environment variable to disable server gui
 +                    if (dedicatedserver1 instanceof DedicatedServer dedicatedServer && flag2 && !GraphicsEnvironment.isHeadless()) {
 +                        // Magma: Disable GUI
 +                        //dedicatedServer.showGui();

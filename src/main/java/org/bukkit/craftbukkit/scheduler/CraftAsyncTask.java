@@ -24,73 +24,80 @@ class CraftAsyncTask extends CraftTask {
     @Override
     public void run() {
         final Thread thread = Thread.currentThread();
-        synchronized (workers) {
-            if (getPeriod() == CraftTask.CANCEL) {
-                // Never continue running after cancelled.
-                // Checking this with the lock is important!
-                return;
-            }
-            workers.add(
-                    new BukkitWorker() {
-                        @Override
-                        public Thread getThread() {
-                            return thread;
-                        }
-
-                        @Override
-                        public int getTaskId() {
-                            return CraftAsyncTask.this.getTaskId();
-                        }
-
-                        @Override
-                        public Plugin getOwner() {
-                            return CraftAsyncTask.this.getOwner();
-                        }
-                    });
-        }
-        Throwable thrown = null;
+        // Paper start - name threads according to running plugin
+        final String nameBefore = thread.getName();
+        thread.setName(nameBefore + " - " + this.getOwner().getName());
         try {
-            super.run();
-        } catch (final Throwable t) {
-            thrown = t;
-            getOwner().getLogger().log(
-                    Level.WARNING,
-                    String.format(
-                            "Plugin %s generated an exception while executing task %s",
-                            getOwner().getDescription().getFullName(),
-                            getTaskId()),
-                    thrown);
-        } finally {
-            // Cleanup is important for any async task, otherwise ghost tasks are everywhere
-            synchronized (workers) {
-                try {
-                    final Iterator<BukkitWorker> workers = this.workers.iterator();
-                    boolean removed = false;
-                    while (workers.hasNext()) {
-                        if (workers.next().getThread() == thread) {
-                            workers.remove();
-                            removed = true; // Don't throw exception
-                            break;
+            synchronized (this.workers) {  // Paper end - name threads according to running plugin
+                if (getPeriod() == CraftTask.CANCEL) {
+                    // Never continue running after cancelled.
+                    // Checking this with the lock is important!
+                    return;
+                }
+                workers.add(
+                        new BukkitWorker() {
+                            @Override
+                            public Thread getThread() {
+                                return thread;
+                            }
+
+                            @Override
+                            public int getTaskId() {
+                                return CraftAsyncTask.this.getTaskId();
+                            }
+
+                            @Override
+                            public Plugin getOwner() {
+                                return CraftAsyncTask.this.getOwner();
+                            }
+                        });
+            }
+            Throwable thrown = null;
+            try {
+                super.run();
+            } catch (final Throwable t) {
+                thrown = t;
+                getOwner().getLogger().log(
+                        Level.WARNING,
+                        String.format(
+                                "Plugin %s generated an exception while executing task %s",
+                                getOwner().getDescription().getFullName(),
+                                getTaskId()),
+                        thrown);
+            } finally {
+                // Cleanup is important for any async task, otherwise ghost tasks are everywhere
+                synchronized (workers) {
+                    try {
+                        final Iterator<BukkitWorker> workers = this.workers.iterator();
+                        boolean removed = false;
+                        while (workers.hasNext()) {
+                            if (workers.next().getThread() == thread) {
+                                workers.remove();
+                                removed = true; // Don't throw exception
+                                break;
+                            }
                         }
-                    }
-                    if (!removed) {
-                        throw new IllegalStateException(
-                                String.format(
-                                        "Unable to remove worker %s on task %s for %s",
-                                        thread.getName(),
-                                        getTaskId(),
-                                        getOwner().getDescription().getFullName()),
-                                thrown); // We don't want to lose the original exception, if any
-                    }
-                } finally {
-                    if (getPeriod() < 0 && workers.isEmpty()) {
-                        // At this spot, we know we are the final async task being executed!
-                        // Because we have the lock, nothing else is running or will run because delay < 0
-                        runners.remove(getTaskId());
+                        if (!removed) {
+                            throw new IllegalStateException(
+                                    String.format(
+                                            "Unable to remove worker %s on task %s for %s",
+                                            thread.getName(),
+                                            getTaskId(),
+                                            getOwner().getDescription().getFullName()),
+                                    thrown); // We don't want to lose the original exception, if any
+                        }
+                    } finally {
+                        if (getPeriod() < 0 && workers.isEmpty()) {
+                            // At this spot, we know we are the final async task being executed!
+                            // Because we have the lock, nothing else is running or will run because delay < 0
+                            runners.remove(getTaskId());
+                        }
                     }
                 }
             }
-        }
+        } finally {
+            thread.setName(nameBefore);
+        } // Paper - name threads according to running plugin
     }
 
     LinkedList<BukkitWorker> getWorkers() {

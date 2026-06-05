@@ -1,5 +1,21 @@
 --- a/net/minecraft/server/gui/MinecraftServerGui.java
 +++ b/net/minecraft/server/gui/MinecraftServerGui.java
+@@ -54,6 +_,15 @@
+         jframe.pack();
+         jframe.setLocationRelativeTo(null);
+         jframe.setVisible(true);
++        jframe.setName("Minecraft server"); // Paper - Improve ServerGUI
++
++        // Paper start - Improve ServerGUI
++        try {
++            jframe.setIconImage(javax.imageio.ImageIO.read(java.util.Objects.requireNonNull(MinecraftServerGui.class.getClassLoader().getResourceAsStream("logo.png"))));
++        } catch (java.io.IOException ignore) {
++        }
++        // Paper end - Improve ServerGUI
++
+         jframe.addWindowListener(new WindowAdapter() {
+             @Override
+             public void windowClosing(WindowEvent p_139944_) {
 @@ -88,7 +_,7 @@
  
      private JComponent buildInfoPanel() {

@@ -43,6 +43,7 @@ public final class MinecraftTimings {
 
     public static final Timing antiXrayUpdateTimer = Timings.ofSafe("anti-xray - update");
     public static final Timing antiXrayObfuscateTimer = Timings.ofSafe("anti-xray - obfuscate");
+    public static final Timing scoreboardScoreSearch = Timings.ofSafe("Scoreboard score search"); // Paper - add timings for scoreboard search
 
     private static final Map<Class<?>, String> taskNameCache = new MapMaker().weakKeys().makeMap();
 
@@ -112,6 +113,14 @@ public final class MinecraftTimings {
      */
     public static Timing getEntityTimings(String entityType, String type) {
         return Timings.ofSafe("Minecraft", "## tickEntity - " + entityType + " - " + type, tickEntityTimer);
+    }
+
+    public static Timing getBehaviorTimings(String type) {
+        return Timings.ofSafe("## Behavior - " + type);
+    }
+
+    public static Timing getSensorTimings(String type, int rate) {
+        return Timings.ofSafe("## Sensor - " + type + " (Default rate: " + rate + ")");
     }
 
     /**

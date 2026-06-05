@@ -31,6 +31,13 @@ public final class CraftCandle extends org.bukkit.craftbukkit.block.data.CraftBl
         return getMax(CANDLES);
     }
 
+    // Paper start
+    @Override
+    public int getMinimumCandles() {
+        return getMin(CraftCandle.CANDLES);
+    }
+    // Paper end
+
     // org.bukkit.craftbukkit.block.data.CraftLightable
 
     private static final net.minecraft.world.level.block.state.properties.BooleanProperty LIT = getBoolean(net.minecraft.world.level.block.CandleBlock.class, "lit");

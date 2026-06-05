@@ -1,15 +1,12 @@
 package org.bukkit.craftbukkit.util;
 
 import com.google.common.base.Predicates;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 import com.google.common.io.ByteStreams;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -208,20 +205,10 @@ public class Commodore {
 
     public byte[] convert(byte[] b, final String pluginName, final ApiVersion pluginVersion, final Set<String> activeCompatibilities) {
         final boolean modern = pluginVersion.isNewerThanOrSameAs(ApiVersion.FLATTENING);
-        final boolean enumCompatibility = pluginVersion.isOlderThanOrSameAs(ApiVersion.getOrCreateVersion("1.20.6")) && activeCompatibilities.contains("enum-compatibility-mode");
         ClassReader cr = new ClassReader(b);
         ClassWriter cw = new ClassWriter(cr, 0);
 
-        List<String> methodEnumSignatures = getMethodSignatures(b);
-        Multimap<String, String> enumLessToEnum = HashMultimap.create();
-        for (String method : methodEnumSignatures) {
-            enumLessToEnum.put(method.replace("Ljava/lang/Enum;", "Ljava/lang/Object;"), method);
-        }
-
         ClassVisitor visitor = cw;
-        if (enumCompatibility) {
-            visitor = new LimitedClassRemapper(cw, new SimpleRemapper(ENUM_RENAMES));
-        }
 
         visitor = io.papermc.paper.pluginremap.reflect.ReflectionRemapper.visitor(visitor); // Paper
         cr.accept(new ClassRemapper(new ClassVisitor(Opcodes.ASM9, visitor) {
@@ -288,15 +275,6 @@ public class Commodore {
 
             @Override
             public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
-                if (enumCompatibility && (access & Opcodes.ACC_SYNTHETIC) != 0 && (access & Opcodes.ACC_BRIDGE) != 0 && desc.contains("Ljava/lang/Object;")) {
-                    // SPIGOT-7820: Do not use object method if enum method is present
-                    // The object method does only redirect to the enum method
-                    Collection<String> result = enumLessToEnum.get(desc.replace("Ljava/lang/Enum;", "Ljava/lang/Object;") + " " + name);
-                    if (result.size() == 2) {
-                        name = name + "_BUKKIT_UNUSED";
-                    }
-                }
-
                 return new MethodVisitor(api, super.visitMethod(access, name, desc, signature, exceptions)) {
 
                     // Paper start - Plugin rewrites
@@ -462,8 +440,22 @@ public class Commodore {
                             super.visitMethodInsn(opcode, owner, name, "()Lcom/destroystokyo/paper/profile/PlayerProfile;", itf);
                             return;
                         }
+                        if (owner.equals("org/bukkit/advancement/Advancement") && name.equals("getDisplay") && desc.endsWith(")Lorg/bukkit/advancement/AdvancementDisplay;")) {
+                            super.visitTypeInsn(Opcodes.CHECKCAST, runtimeCbPkgPrefix() + "advancement/CraftAdvancement");
+                            super.visitMethodInsn(Opcodes.INVOKEVIRTUAL, runtimeCbPkgPrefix() + "advancement/CraftAdvancement", "getDisplay0", desc, false);
+                            return;
+                        }
                         // Paper end
 
+                        // Paper start - ItemFactory#getSpawnEgg (paper had original method that returned ItemStack, upstream added identical but returned Material)
+                        if (owner.equals("org/bukkit/inventory/ItemFactory") && name.equals("getSpawnEgg") && desc.equals("(Lorg/bukkit/entity/EntityType;)Lorg/bukkit/inventory/ItemStack;")) {
+                            super.visitInsn(Opcodes.SWAP); // has 1 param, this moves the owner instance to the top for the checkcast
+                            super.visitTypeInsn(Opcodes.CHECKCAST, runtimeCbPkgPrefix() + "inventory/CraftItemFactory");
+                            super.visitInsn(Opcodes.SWAP); // moves param back to the the top of stack
+                            super.visitMethodInsn(Opcodes.INVOKEVIRTUAL, runtimeCbPkgPrefix() + "inventory/CraftItemFactory", "getSpawnEgg0", desc, false);
+                            return;
+                        }
+                        // Paper end - ItemFactory#getSpawnEgg
                         if (modern) {
                             if (owner.equals("org/bukkit/Material") || (instantiatedMethodType != null && instantiatedMethodType.getDescriptor().startsWith("(Lorg/bukkit/Material;)"))) {
                                 switch (name) {

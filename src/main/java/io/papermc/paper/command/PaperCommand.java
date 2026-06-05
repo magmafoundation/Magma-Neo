@@ -3,10 +3,13 @@ package io.papermc.paper.command;
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.format.NamedTextColor.RED;
 
+import io.papermc.paper.command.subcommands.DumpItemCommand;
 import io.papermc.paper.command.subcommands.DumpPluginsCommand;
 import io.papermc.paper.command.subcommands.EntityCommand;
 import io.papermc.paper.command.subcommands.HeapDumpCommand;
+import io.papermc.paper.command.subcommands.MobcapsCommand;
 import io.papermc.paper.command.subcommands.ReloadCommand;
+import io.papermc.paper.command.subcommands.SyncLoadInfoCommand;
 import io.papermc.paper.command.subcommands.VersionCommand;
 import it.unimi.dsi.fastutil.Pair;
 import java.util.ArrayList;
@@ -43,6 +46,8 @@ public final class PaperCommand extends Command {
         commands.put(Set.of("version"), new VersionCommand());
         commands.put(Set.of("dumpplugins"), new DumpPluginsCommand());
         commands.put(Set.of("syncloadinfo"), new SyncLoadInfoCommand());
+        commands.put(Set.of("dumpitem"), new DumpItemCommand());
+        commands.put(Set.of("mobcaps", "playermobcaps"), new MobcapsCommand());
 
         return commands.entrySet().stream()
                 .flatMap(entry -> entry.getKey().stream().map(s -> Map.entry(s, entry.getValue())))

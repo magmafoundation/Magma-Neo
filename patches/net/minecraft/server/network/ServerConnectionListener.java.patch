@@ -1,6 +1,6 @@
 --- a/net/minecraft/server/network/ServerConnectionListener.java
 +++ b/net/minecraft/server/network/ServerConnectionListener.java
-@@ -48,16 +_,26 @@
+@@ -48,28 +_,52 @@
  
  public class ServerConnectionListener {
      private static final Logger LOGGER = LogUtils.getLogger();
@@ -29,15 +29,34 @@
  
      public ServerConnectionListener(MinecraftServer p_9707_) {
          this.server = p_9707_;
-@@ -65,6 +_,8 @@
+         this.running = true;
      }
  
++    // Paper start - Unix domain socket support
      public void startTcpServerListener(@Nullable InetAddress p_9712_, int p_9713_) throws IOException {
 +        if (p_9712_ == null) p_9712_ = new java.net.InetSocketAddress(p_9713_).getAddress();
 +        net.neoforged.neoforge.network.DualStackUtils.checkIPv6(p_9712_);
++        bind(new java.net.InetSocketAddress(p_9712_, p_9713_));
++    }
++
++    public void bind(java.net.SocketAddress address) throws IOException {
++        // Paper end - Unix domain socket support
          synchronized (this.channels) {
-             Class<? extends ServerSocketChannel> oclass;
+-            Class<? extends ServerSocketChannel> oclass;
++            Class oclass;
              EventLoopGroup eventloopgroup;
+             if (Epoll.isAvailable() && this.server.isEpollEnabled()) {
+-                oclass = EpollServerSocketChannel.class;
++                // Paper start - Unix domain socket support
++                if (address instanceof io.netty.channel.unix.DomainSocketAddress) {
++                    oclass = io.netty.channel.epoll.EpollServerDomainSocketChannel.class;
++                } else {
++                    oclass = EpollServerSocketChannel.class;
++                }
++                // Paper end - Unix domain socket support
+                 eventloopgroup = SERVER_EPOLL_EVENT_GROUP.get();
+                 LOGGER.info("Using epoll channel type");
+             } else {
 @@ -86,7 +_,7 @@
                      } catch (ChannelException channelexception) {
                      }
@@ -47,7 +66,7 @@
                      if (ServerConnectionListener.this.server.repliesToStatus()) {
                          channelpipeline.addLast("legacy_query", new LegacyQueryHandler(ServerConnectionListener.this.getServer()));
                      }
-@@ -94,13 +_,24 @@
+@@ -94,13 +_,25 @@
                      Connection.configureSerialization(channelpipeline, PacketFlow.SERVERBOUND, false, null);
                      int i = ServerConnectionListener.this.server.getRateLimitPacketsPerSecond();
                      Connection connection = (Connection)(i > 0 ? new RateKickingConnection(i) : new Connection(PacketFlow.SERVERBOUND));
@@ -56,11 +75,12 @@
 +                    pending.add(connection); // Paper - prevent blocking on adding a new connection while the server is ticking
                      connection.configurePacketHandler(channelpipeline);
                      connection.setListenerForServerboundHandshake(new ServerHandshakePacketListenerImpl(ServerConnectionListener.this.server, connection));
++                    io.papermc.paper.network.ChannelInitializeListenerHolder.callListeners(p_9729_); // Paper - Add Channel initialization listeners
                  }
 -            }).group(eventloopgroup).localAddress(p_9712_, p_9713_).bind().syncUninterruptibly());
 -        }
 -    }
-+            }).group(eventloopgroup).localAddress(p_9712_, p_9713_).option(ChannelOption.AUTO_READ, false).bind().syncUninterruptibly()); // CraftBukkit
++            }).group(eventloopgroup).localAddress(address).option(ChannelOption.AUTO_READ, false).bind().syncUninterruptibly()); // CraftBukkit // Paper - Unix domain socket support
 +        }
 +    }
 +

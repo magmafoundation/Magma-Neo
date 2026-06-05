@@ -30,6 +30,7 @@ public final class CraftScoreboardManager implements ScoreboardManager {
 
     public CraftScoreboardManager(MinecraftServer minecraftserver, net.minecraft.world.scores.Scoreboard scoreboardServer) {
         mainScoreboard = new CraftScoreboard(scoreboardServer);
+        mainScoreboard.registeredGlobally = true; // Paper
         server = minecraftserver;
         scoreboards.add(mainScoreboard);
     }
@@ -43,9 +44,21 @@ public final class CraftScoreboardManager implements ScoreboardManager {
     public CraftScoreboard getNewScoreboard() {
         org.spigotmc.AsyncCatcher.catchOp("scoreboard creation"); // Spigot
         CraftScoreboard scoreboard = new CraftScoreboard(new ServerScoreboard(server));
-        scoreboards.add(scoreboard);
+        // Paper start
+        if (io.papermc.paper.configuration.GlobalConfiguration.get().scoreboards.trackPluginScoreboards) {
+            scoreboard.registeredGlobally = true;
+            scoreboards.add(scoreboard);
+        }
+        // Paper end
         return scoreboard;
     }
+
+    // Paper start
+    public void registerScoreboardForVanilla(CraftScoreboard scoreboard) {
+        org.spigotmc.AsyncCatcher.catchOp("scoreboard registration");
+        scoreboards.add(scoreboard);
+    }
+    // Paper end
 
     // CraftBukkit method
     public CraftScoreboard getPlayerBoard(CraftPlayer player) {
@@ -100,9 +113,18 @@ public final class CraftScoreboardManager implements ScoreboardManager {
 
     // CraftBukkit method
     public void forAllObjectives(ObjectiveCriteria criteria, ScoreHolder holder, Consumer<ScoreAccess> consumer) {
-        for (CraftScoreboard scoreboard : scoreboards) {
-            Scoreboard board = scoreboard.board;
-            board.forAllObjectives(criteria, holder, (score) -> consumer.accept(score));
+        // Paper start - add timings for scoreboard search
+        // plugins leaking scoreboards will make this very expensive, let server owners debug it easily
+        co.aikar.timings.MinecraftTimings.scoreboardScoreSearch.startTimingIfSync();
+        try {
+            // Paper end - add timings for scoreboard search
+            for (CraftScoreboard scoreboard : scoreboards) {
+                Scoreboard board = scoreboard.board;
+                board.forAllObjectives(criteria, holder, (score) -> consumer.accept(score));
+            }
+        } finally { // Paper start - add timings for scoreboard search
+            co.aikar.timings.MinecraftTimings.scoreboardScoreSearch.stopTimingIfSync();
         }
+        // Paper end - add timings for scoreboard search
     }
 }

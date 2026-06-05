@@ -10,20 +10,7 @@ public abstract class CraftProjectile extends AbstractProjectile implements Proj
         super(server, entity);
     }
 
-    @Override
-    public ProjectileSource getShooter() {
-        return getHandle().projectileSource;
-    }
-
-    @Override
-    public void setShooter(ProjectileSource shooter) {
-        if (shooter instanceof CraftLivingEntity) {
-            getHandle().setOwner((LivingEntity) ((CraftLivingEntity) shooter).entity);
-        } else {
-            getHandle().setOwner(null);
-        }
-        getHandle().projectileSource = shooter;
-    }
+    // Paper - moved to AbstractProjectile
 
     @Override
     public net.minecraft.world.entity.projectile.Projectile getHandle() {

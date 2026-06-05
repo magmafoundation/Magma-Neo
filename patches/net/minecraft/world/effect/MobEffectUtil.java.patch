@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/effect/MobEffectUtil.java
 +++ b/net/minecraft/world/effect/MobEffectUtil.java
-@@ -47,6 +_,12 @@
+@@ -47,18 +_,32 @@
      public static List<ServerPlayer> addEffectToPlayersAround(
          ServerLevel p_216947_, @Nullable Entity p_216948_, Vec3 p_216949_, double p_216950_, MobEffectInstance p_216951_, int p_216952_
      ) {
@@ -9,13 +9,33 @@
 +    }
 +
 +    public static List<ServerPlayer> addEffectToPlayersAround(ServerLevel p_216947_, @Nullable Entity p_216948_, Vec3 p_216949_, double p_216950_, MobEffectInstance p_216951_, int p_216952_, org.bukkit.event.entity.EntityPotionEffectEvent.Cause cause) {
++        // Paper start - Add ElderGuardianAppearanceEvent
++        return addEffectToPlayersAround(p_216947_, p_216948_, p_216949_, p_216950_, p_216951_, p_216952_, cause, null);
++    }
++
++    public static List<ServerPlayer> addEffectToPlayersAround(ServerLevel p_216947_, @Nullable Entity p_216948_, Vec3 p_216949_, double p_216950_, MobEffectInstance p_216951_, int p_216952_, org.bukkit.event.entity.EntityPotionEffectEvent.Cause cause, @Nullable java.util.function.Predicate<ServerPlayer> playerPredicate) {
++        // Paper end - Add ElderGuardianAppearanceEvent
 +        // CraftBukkit end
          Holder<MobEffect> holder = p_216951_.getEffect();
          List<ServerPlayer> list = p_216947_.getPlayers(
-             p_267925_ -> p_267925_.gameMode.isSurvival()
-@@ -58,7 +_,7 @@
-                             || p_267925_.getEffect(holder).endsWithin(p_216952_ - 1)
-                     )
+-            p_267925_ -> p_267925_.gameMode.isSurvival()
+-                    && (p_216948_ == null || !p_216948_.isAlliedTo(p_267925_))
+-                    && p_216949_.closerThan(p_267925_.position(), p_216950_)
+-                    && (
+-                        !p_267925_.hasEffect(holder)
+-                            || p_267925_.getEffect(holder).getAmplifier() < p_216951_.getAmplifier()
+-                            || p_267925_.getEffect(holder).endsWithin(p_216952_ - 1)
+-                    )
++            p_267925_ -> {
++                // Paper start - Add ElderGuardianAppearanceEvent
++                boolean condition = p_267925_.gameMode.isSurvival() && (p_216948_ == null || !p_216948_.isAlliedTo((Entity) p_267925_)) && p_216949_.closerThan(p_267925_.position(), p_216950_) && (!p_267925_.hasEffect(holder) || p_267925_.getEffect(holder).getAmplifier() < p_216951_.getAmplifier() || p_267925_.getEffect(holder).endsWithin(p_216952_ - 1));
++                if (condition) {
++                    return playerPredicate == null || playerPredicate.test(p_267925_); // Only test the player AFTER it is true
++                } else {
++                    return false;
++                }
++                // Paper ned - Add ElderGuardianAppearanceEvent
++            }
          );
 -        list.forEach(p_238232_ -> p_238232_.addEffect(new MobEffectInstance(p_216951_), p_216948_));
 +        list.forEach(p_238232_ -> p_238232_.addEffect(new MobEffectInstance(p_216951_), p_216948_, cause)); // CraftBukkit

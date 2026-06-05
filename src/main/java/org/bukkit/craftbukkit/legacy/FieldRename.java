@@ -1,18 +1,14 @@
 package org.bukkit.craftbukkit.legacy;
 
 import java.util.function.BiFunction;
-import org.bukkit.Keyed;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
-import org.bukkit.Registry;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Biome;
 import org.bukkit.block.banner.PatternType;
-import org.bukkit.craftbukkit.CraftRegistry;
 import org.bukkit.craftbukkit.legacy.fieldrename.FieldRenameData;
 import org.bukkit.craftbukkit.legacy.reroute.DoNotReroute;
 import org.bukkit.craftbukkit.legacy.reroute.InjectPluginVersion;
-import org.bukkit.craftbukkit.legacy.reroute.RequireCompatibility;
 import org.bukkit.craftbukkit.legacy.reroute.RerouteMethodName;
 import org.bukkit.craftbukkit.legacy.reroute.RerouteStatic;
 import org.bukkit.craftbukkit.util.ApiVersion;
@@ -34,6 +30,7 @@ public class FieldRename {
         }
 
         return switch (owner) {
+            case "org/bukkit/scoreboard/DisplaySlot" -> FieldRename.convertDisplaySlot(from); // Paper - DisplaySlot
             case "org/bukkit/block/banner/PatternType" -> convertPatternTypeName(apiVersion, from);
             case "org/bukkit/enchantments/Enchantment" -> convertEnchantmentName(apiVersion, from);
             case "org/bukkit/block/Biome" -> convertBiomeName(apiVersion, from);
@@ -50,11 +47,24 @@ public class FieldRename {
         };
     }
 
-    @RequireCompatibility("allow-old-keys-in-registry")
-    public static <T extends Keyed> T get(Registry<T> registry, NamespacedKey namespacedKey) {
-        // We don't have version-specific changes, so just use current, and don't inject a version
-        return CraftRegistry.get(registry, namespacedKey, ApiVersion.CURRENT);
+    // Paper start - absolutely not, having this as an expectation for plugin developers opens a huge
+    // can of worms in the future, especially if mojang comes back and reuses some old key
+    //@RequireCompatibility("allow-old-keys-in-registry")
+    //public static <T extends Keyed> T get(Registry<T> registry, NamespacedKey namespacedKey) {
+    //    // We don't have version-specific changes, so just use current, and don't inject a version
+    //    return CraftRegistry.get(registry, namespacedKey, ApiVersion.CURRENT);
+    //}
+    // Paper end
+
+    // Paper start - DisplaySlot
+    @DoNotReroute
+    public static String convertDisplaySlot(final String from) {
+        if (from.startsWith("SIDEBAR_") && !from.startsWith("SIDEBAR_TEAM_")) {
+            return from.replace("SIDEBAR_", "SIDEBAR_TEAM_");
+        }
+        return from;
     }
+    // Paper end - DisplaySlot
 
     // PatternType
     private static final FieldRenameData PATTERN_TYPE_DATA = FieldRenameData.Builder.newBuilder()

@@ -266,7 +266,7 @@ public class TimingsExport extends Thread {
         JSONObject object = new JSONObject();
         for (String key : config.getKeys(false)) {
             String fullKey = (parentKey != null ? parentKey + "." + key : key);
-            if (fullKey.equals("database") || fullKey.equals("settings.bungeecord-addresses") || TimingsManager.hiddenConfigs.contains(fullKey) || key.startsWith("seed-") || key.equals("worldeditregentempworld")) {
+            if (fullKey.equals("database") || fullKey.equals("settings.bungeecord-addresses") || TimingsManager.hiddenConfigs.contains(fullKey) || key.startsWith("seed-") || key.equals("worldeditregentempworld") || key.equals("feature-seeds")) {
                 continue;
             }
             final Object val = config.get(key);

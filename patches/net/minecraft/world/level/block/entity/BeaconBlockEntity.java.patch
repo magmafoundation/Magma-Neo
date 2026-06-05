@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/level/block/entity/BeaconBlockEntity.java
 +++ b/net/minecraft/world/level/block/entity/BeaconBlockEntity.java
-@@ -108,6 +_,16 @@
+@@ -108,6 +_,36 @@
          }
      };
  
@@ -13,6 +13,26 @@
 +        return (hasSecondaryEffect(levels, primaryPower, secondaryPower)) ? org.bukkit.craftbukkit.potion.CraftPotionUtil.toBukkit(new MobEffectInstance(this.secondaryPower, getLevel(this.levels), getAmplification(levels, primaryPower, secondaryPower), true, true)) : null;
 +    }
 +    // CraftBukkit end
++    // Paper start - Custom beacon ranges
++    private final String PAPER_RANGE_TAG = "Paper.Range";
++    private double effectRange = -1;
++
++    public double getEffectRange() {
++        if (this.effectRange < 0) {
++            return this.levels * 10 + 10;
++        } else {
++            return effectRange;
++        }
++    }
++
++    public void setEffectRange(double range) {
++        this.effectRange = range;
++    }
++
++    public void resetEffectRange() {
++        this.effectRange = -1;
++    }
++    // Paper end - Custom beacon ranges
 +
      @Nullable
      static Holder<MobEffect> filterEffect(@Nullable Holder<MobEffect> p_316372_) {
@@ -28,7 +48,38 @@
                  if (p_155111_.checkingBeamSections.size() <= 1) {
                      beaconblockentity$beaconbeamsection = new BeaconBlockEntity.BeaconBeamSection(j1);
                      p_155111_.checkingBeamSections.add(beaconblockentity$beaconbeamsection);
-@@ -233,31 +_,78 @@
+@@ -173,11 +_,21 @@
+             }
+ 
+             if (p_155111_.levels > 0 && !p_155111_.beamSections.isEmpty()) {
+-                applyEffects(p_155108_, p_155109_, p_155111_.levels, p_155111_.primaryPower, p_155111_.secondaryPower);
++                applyEffects(p_155108_, p_155109_, p_155111_.levels, p_155111_.primaryPower, p_155111_.secondaryPower, p_155111_); // Paper - Custom beacon ranges
+                 playSound(p_155108_, p_155109_, SoundEvents.BEACON_AMBIENT);
+             }
+         }
+ 
++        // Paper start - beacon activation/deactivation events
++        if (k1 <= 0 && p_155111_.levels > 0) {
++            org.bukkit.block.Block block = org.bukkit.craftbukkit.block.CraftBlock.at(p_155108_, p_155109_);
++            new io.papermc.paper.event.block.BeaconActivatedEvent(block).callEvent();
++        } else if (k1 > 0 && p_155111_.levels <= 0) {
++            org.bukkit.block.Block block = org.bukkit.craftbukkit.block.CraftBlock.at(p_155108_, p_155109_);
++            new io.papermc.paper.event.block.BeaconDeactivatedEvent(block).callEvent();
++        }
++        // Paper end - beacon activation/deactivation events
++
+         if (p_155111_.lastCheckY >= l) {
+             p_155111_.lastCheckY = p_155108_.getMinBuildHeight() - 1;
+             boolean flag = k1 > 0;
+@@ -229,35 +_,98 @@
+ 
+     @Override
+     public void setRemoved() {
++        // Paper start - beacon activation/deactivation events
++        org.bukkit.block.Block block = org.bukkit.craftbukkit.block.CraftBlock.at(level, worldPosition);
++        new io.papermc.paper.event.block.BeaconDeactivatedEvent(block).callEvent();
++        // Paper end - beacon activation/deactivation events
+         playSound(this.level, this.worldPosition, SoundEvents.BEACON_DEACTIVATE);
          super.setRemoved();
      }
  
@@ -52,8 +103,14 @@
 +    }
 +
 +    public static List getHumansInRange(Level p_155098_, BlockPos p_155099_, int i) {
++        // Paper start - Custom beacon ranges
++        return BeaconBlockEntity.getHumansInRange(p_155098_, p_155099_, i, null);
++    }
++
++    public static List getHumansInRange(Level p_155098_, BlockPos p_155099_, int i, @Nullable BeaconBlockEntity blockEntity) {
++        // Paper end - Custom beacon ranges
 +        {
-+            double d0 = (double) (i * 10 + 10);
++            double d0 = blockEntity != null ? blockEntity.getEffectRange() : (i * 10 + 10); // Paper - Custom beacon ranges
 +            AABB aabb = (new AABB(p_155099_)).inflate(d0).expandTowards(0.0D, (double) p_155098_.getHeight(), 0.0D);
 +            List<Player> list = p_155098_.getEntitiesOfClass(Player.class, aabb);
 +            return list;
@@ -89,6 +146,12 @@
      private static void applyEffects(
          Level p_155098_, BlockPos p_155099_, int p_155100_, @Nullable Holder<MobEffect> p_316599_, @Nullable Holder<MobEffect> p_316343_
      ) {
++        // Paper start - Custom beacon ranges
++        BeaconBlockEntity.applyEffects(p_155098_, p_155099_, p_155100_, p_316599_, p_316343_, null);
++    }
++
++    private static void applyEffects(Level p_155098_, BlockPos p_155099_, int p_155100_, @Nullable Holder<MobEffect> p_316599_, @Nullable Holder<MobEffect> p_316343_, @Nullable BeaconBlockEntity blockEntity) {
++        // Paper end - Custom beacon ranges
          if (!p_155098_.isClientSide && p_316599_ != null) {
              double d0 = (double)(p_155100_ * 10 + 10);
 -            int i = 0;
@@ -111,7 +174,7 @@
 +            byte b0 = getAmplification(p_155100_, p_316599_, p_316343_);
 +
 +            int j = getLevel(p_155100_);
-+            List list = getHumansInRange(p_155098_, p_155099_, p_155100_);
++            List list = getHumansInRange(p_155098_, p_155099_, p_155100_, blockEntity); // Paper - Custom beacon ranges
 +
 +            applyEffect(list, p_316599_, j, b0, true, p_155099_); // Paper - BeaconEffectEvent
 +
@@ -133,7 +196,7 @@
          } else {
              return null;
          }
-@@ -297,6 +_,7 @@
+@@ -297,11 +_,13 @@
          super.loadAdditional(p_338669_, p_338291_);
          this.primaryPower = loadEffect(p_338669_, "primary_effect");
          this.secondaryPower = loadEffect(p_338669_, "secondary_effect");
@@ -141,3 +204,17 @@
          if (p_338669_.contains("CustomName", 8)) {
              this.name = parseCustomNameSafe(p_338669_.getString("CustomName"), p_338291_);
          }
+ 
+         this.lockKey = LockCode.fromTag(p_338669_);
++        this.effectRange = p_338669_.contains(PAPER_RANGE_TAG, 6) ? p_338669_.getDouble(PAPER_RANGE_TAG) : -1; // Paper - Custom beacon ranges
+     }
+ 
+     @Override
+@@ -315,6 +_,7 @@
+         }
+ 
+         this.lockKey.addToTag(p_187463_);
++        p_187463_.putDouble(PAPER_RANGE_TAG, this.effectRange); // Paper - Custom beacon ranges
+     }
+ 
+     public void setCustomName(@Nullable Component p_58682_) {

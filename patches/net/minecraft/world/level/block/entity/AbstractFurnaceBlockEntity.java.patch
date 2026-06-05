@@ -173,10 +173,11 @@
 +                if (p_155017_.isLit() && furnaceBurnEvent.isBurning()) {
 +                    // CraftBukkit end
                      flag1 = true;
+-                    if (flag3) {
 +                    if (itemstack.hasCraftingRemainingItem())
 +                        p_155017_.items.set(1, itemstack.getCraftingRemainingItem());
 +                    else
-                     if (flag3) {
++                    if (flag3 && furnaceBurnEvent.willConsumeFuel()) { // Paper - add consumeFuel to FurnaceBurnEvent
                          Item item = itemstack.getItem();
                          itemstack.shrink(1);
                          if (itemstack.isEmpty()) {
@@ -252,7 +253,7 @@
 +            org.bukkit.craftbukkit.inventory.CraftItemStack source = org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(itemstack);
 +            org.bukkit.inventory.ItemStack result = org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(itemstack1);
 +
-+            org.bukkit.event.inventory.FurnaceSmeltEvent furnaceSmeltEvent = new org.bukkit.event.inventory.FurnaceSmeltEvent(org.bukkit.craftbukkit.block.CraftBlock.at(furnace.level, furnace.worldPosition), source, result);
++            org.bukkit.event.inventory.FurnaceSmeltEvent furnaceSmeltEvent = new org.bukkit.event.inventory.FurnaceSmeltEvent(org.bukkit.craftbukkit.block.CraftBlock.at(furnace.level, furnace.worldPosition), source, result, (org.bukkit.inventory.CookingRecipe<?>) p_300910_.toBukkitRecipe()); // Paper - Add recipe to cook events
 +            furnace.level.getCraftServer().getPluginManager().callEvent(furnaceSmeltEvent);
 +
 +            if (furnaceSmeltEvent.isCancelled()) {

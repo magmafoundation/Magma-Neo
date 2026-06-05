@@ -34,20 +34,7 @@ public class CraftFireball extends AbstractProjectile implements Fireball {
         getHandle().bukkitYield = yield;
     }
 
-    @Override
-    public ProjectileSource getShooter() {
-        return getHandle().projectileSource;
-    }
-
-    @Override
-    public void setShooter(ProjectileSource shooter) {
-        if (shooter instanceof CraftLivingEntity) {
-            getHandle().setOwner(((CraftLivingEntity) shooter).getHandle());
-        } else {
-            getHandle().setOwner(null);
-        }
-        getHandle().projectileSource = shooter;
-    }
+    // Paper - moved to AbstractProjectile
 
     @Override
     public Vector getDirection() {
@@ -83,6 +70,18 @@ public class CraftFireball extends AbstractProjectile implements Fireball {
         Vec3 delta = getHandle().getDeltaMovement();
         return new Vector(delta.x, delta.y, delta.z);
     }
+
+    // Paper start - Expose power on fireball projectiles
+    @Override
+    public void setPower(final Vector power) {
+        this.setAcceleration(power);
+    }
+
+    @Override
+    public Vector getPower() {
+        return this.getAcceleration();
+    }
+    // Paper end - Expose power on fireball projectiles
 
     @Override
     public AbstractHurtingProjectile getHandle() {

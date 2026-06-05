@@ -50,4 +50,16 @@ public final class CraftMangroveLeaves extends org.bukkit.craftbukkit.block.data
     public void setWaterlogged(boolean waterlogged) {
         set(WATERLOGGED, waterlogged);
     }
+
+    // Paper start
+    @Override
+    public int getMinimumDistance() {
+        return getMin(CraftMangroveLeaves.DISTANCE);
+    }
+
+    @Override
+    public int getMaximumDistance() {
+        return getMax(CraftMangroveLeaves.DISTANCE);
+    }
+    // Paper end
 }

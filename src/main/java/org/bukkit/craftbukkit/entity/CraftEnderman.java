@@ -44,6 +44,28 @@ public class CraftEnderman extends CraftMonster implements Enderman {
         getHandle().setCarriedBlock(blockData == null ? null : ((CraftBlockData) blockData).getState());
     }
 
+    // Paper start
+    @Override
+    public boolean isScreaming() {
+        return this.getHandle().isCreepy();
+    }
+
+    @Override
+    public void setScreaming(boolean screaming) {
+        this.getHandle().setCreepy(screaming);
+    }
+
+    @Override
+    public boolean hasBeenStaredAt() {
+        return this.getHandle().hasBeenStaredAt();
+    }
+
+    @Override
+    public void setHasBeenStaredAt(boolean hasBeenStaredAt) {
+        this.getHandle().setHasBeenStaredAt(hasBeenStaredAt);
+    }
+    // Paper end
+
     @Override
     public EnderMan getHandle() {
         return (EnderMan) entity;

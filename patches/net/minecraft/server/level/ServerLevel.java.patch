@@ -1,6 +1,6 @@
 --- a/net/minecraft/server/level/ServerLevel.java
 +++ b/net/minecraft/server/level/ServerLevel.java
-@@ -199,12 +_,62 @@
+@@ -199,12 +_,63 @@
      private final List<CustomSpawner> customSpawners;
      @Nullable
      private EndDragonFight dragonFight;
@@ -16,6 +16,7 @@
 +    public final LevelStorageSource.LevelStorageAccess convertable;
 +    public final UUID uuid;
 +    public boolean hasPhysicsEvent = true; // Paper - BlockPhysicsEvent
++    public boolean hasEntityMoveEvent; // Paper - Add EntityMoveEvent
 +    public ResourceKey<LevelStem> typeKey;
 +
 +    public LevelChunk getChunkIfLoaded(int x, int z) {
@@ -103,7 +104,7 @@
 +        //Magma end
 +        if (biomeProvider != null) {
 +            org.bukkit.generator.WorldInfo worldInfo = new org.bukkit.craftbukkit.generator.CraftWorldInfo(worldDataServer, p_215001_, environment, p_215004_.type().value());
-+            net.minecraft.world.level.biome.BiomeSource worldChunkManager = new org.bukkit.craftbukkit.generator.CustomWorldChunkManager(worldInfo, biomeProvider, server.registryAccess().registryOrThrow(Registries.BIOME));
++            net.minecraft.world.level.biome.BiomeSource worldChunkManager = new org.bukkit.craftbukkit.generator.CustomWorldChunkManager(worldInfo, biomeProvider, server.registryAccess().registryOrThrow(Registries.BIOME), chunkgenerator.getBiomeSource()); // Paper - add vanillaBiomeProvider
 +            if (chunkgenerator instanceof net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator cga) {
 +                chunkgenerator = new net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator(worldChunkManager, cga.settings);
 +            } else if (chunkgenerator instanceof net.minecraft.world.level.levelgen.FlatLevelSource cpf) {
@@ -375,6 +376,27 @@
                  }
              }
  
+@@ -583,6 +_,12 @@
+     }
+ 
+     protected BlockPos findLightningTargetAround(BlockPos p_143289_) {
++        // Paper start - Add methods to find targets for lightning strikes
++        return this.findLightningTargetAround(p_143289_, false);
++    }
++
++    public BlockPos findLightningTargetAround(BlockPos p_143289_, boolean returnNullWhenNoTarget) {
++        // Paper end - Add methods to find targets for lightning strikes
+         BlockPos blockpos = this.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, p_143289_);
+         Optional<BlockPos> optional = this.findLightningRod(blockpos);
+         if (optional.isPresent()) {
+@@ -595,6 +_,7 @@
+             if (!list.isEmpty()) {
+                 return list.get(this.random.nextInt(list.size())).blockPosition();
+             } else {
++                if (returnNullWhenNoTarget) return null; // Paper - Add methods to find targets for lightning strikes
+                 if (blockpos.getY() == this.getMinBuildHeight() - 1) {
+                     blockpos = blockpos.above(2);
+                 }
 @@ -714,15 +_,19 @@
                  .broadcastAll(new ClientboundGameEventPacket(ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE, this.thunderLevel), this.dimension());
          }
@@ -551,7 +573,7 @@
          Entity entity = this.getEntities().get(p_8854_.getUUID());
          if (entity != null) {
              LOGGER.warn("Force-added player with duplicate UUID {}", p_8854_.getUUID());
-@@ -903,28 +_,63 @@
+@@ -903,28 +_,67 @@
              this.removePlayerImmediately((ServerPlayer)entity, Entity.RemovalReason.DISCARDED);
          }
  
@@ -610,9 +632,13 @@
 +        // Spigot Start
 +        for (net.minecraft.world.level.block.entity.BlockEntity tileentity : p_8713_.getBlockEntities().values()) {
 +            if (tileentity instanceof net.minecraft.world.Container) {
++                // Paper start - this area looks like it can load chunks, change the behavior
++                // chests for example can apply physics to the world
++                // so instead we just change the active container and call the event
 +                for (org.bukkit.entity.HumanEntity h : Lists.newArrayList(((net.minecraft.world.Container) tileentity).getViewers())) {
-+                    h.closeInventory(org.bukkit.event.inventory.InventoryCloseEvent.Reason.UNLOADED); // Paper - Inventory close reason
++                    ((org.bukkit.craftbukkit.entity.CraftHumanEntity) h).getHandle().closeUnloadedInventory(org.bukkit.event.inventory.InventoryCloseEvent.Reason.UNLOADED); // Paper - Inventory close reason
 +                }
++                // Paper end - this area looks like it can load chunks, change the behavior
 +            }
 +        }
 +        // Spigot End
@@ -704,7 +730,20 @@
          this.gameEventDispatcher.post(p_316597_, p_215042_, p_215043_);
      }
  
-@@ -1057,11 +_,17 @@
+@@ -1031,6 +_,7 @@
+ 
+         this.getChunkSource().blockChanged(p_8755_);
+         this.pathTypesByPosCache.invalidate(p_8755_);
++        if (this.paperConfig().misc.updatePathfindingOnBlockUpdate) { // Paper - option to disable pathfinding updates
+         VoxelShape voxelshape1 = p_8756_.getCollisionShape(this, p_8755_);
+         VoxelShape voxelshape = p_8757_.getCollisionShape(this, p_8755_);
+         if (Shapes.joinIsNotEmpty(voxelshape1, voxelshape, BooleanOp.NOT_SAME)) {
+@@ -1053,15 +_,22 @@
+                 this.isUpdatingNavigations = false;
+             }
+         }
++        } // Paper - option to disable pathfinding updates
+     }
  
      @Override
      public void updateNeighborsAt(BlockPos p_215045_, Block p_215046_) {
@@ -807,6 +846,28 @@
          this.getServer().overworld().getDataStorage().set(p_323697_.key(), p_143306_);
      }
  
+@@ -1326,7 +_,9 @@
+         BlockPos blockpos = this.levelData.getSpawnPos();
+         float f = this.levelData.getSpawnAngle();
+         if (!blockpos.equals(p_8734_) || f != p_8735_) {
++            org.bukkit.Location prevSpawnLoc = this.getWorld().getSpawnLocation(); // Paper - Call SpawnChangeEvent
+             this.levelData.setSpawn(p_8734_, p_8735_);
++            new org.bukkit.event.world.SpawnChangeEvent(this.getWorld(), prevSpawnLoc).callEvent(); // Paper - Call SpawnChangeEvent
+             this.getServer().getPlayerList().broadcastAll(new ClientboundSetDefaultSpawnPositionPacket(p_8734_, p_8735_));
+         }
+ 
+@@ -1385,6 +_,11 @@
+                     DebugPackets.sendPoiRemovedPacket(this, blockpos);
+                 }));
+             optional1.ifPresent(p_215057_ -> this.getServer().execute(() -> {
++                    // Paper start - Remove stale POIs
++                    if (optional.isEmpty() && this.getPoiManager().exists(blockpos, poiType -> true)) {
++                        this.getPoiManager().remove(blockpos);
++                    }
++                    // Paper end - Remove stale POIs
+                     this.getPoiManager().add(blockpos, (Holder<PoiType>)p_215057_);
+                     DebugPackets.sendPoiAddedPacket(this, blockpos);
+                 }));
 @@ -1525,6 +_,11 @@
      @Override
      public void blockUpdated(BlockPos p_8743_, Block p_8744_) {
@@ -846,7 +907,7 @@
              if (p_143371_ instanceof ServerPlayer serverplayer) {
                  ServerLevel.this.players.add(serverplayer);
                  ServerLevel.this.updateSleepingPlayerList();
-@@ -1713,16 +_,60 @@
+@@ -1713,16 +_,65 @@
                  ServerLevel.this.navigatingMobs.add(mob);
              }
  
@@ -901,6 +962,11 @@
 +            // Spigot end
 +            // Spigot Start
 +            if (p_143375_.getBukkitEntity() instanceof org.bukkit.inventory.InventoryHolder && (!(p_143375_ instanceof ServerPlayer) || p_143375_.getRemovalReason() != Entity.RemovalReason.KILLED)) { // SPIGOT-6876: closeInventory clears death message
++                // Paper start - Fix merchant inventory not closing on entity removal
++                if (p_143375_.getBukkitEntity() instanceof org.bukkit.inventory.Merchant merchant && merchant.getTrader() != null) {
++                    merchant.getTrader().closeInventory(org.bukkit.event.inventory.InventoryCloseEvent.Reason.UNLOADED);
++                }
++                // Paper end - Fix merchant inventory not closing on entity removal
 +                for (org.bukkit.entity.HumanEntity h : Lists.newArrayList(((org.bukkit.inventory.InventoryHolder) p_143375_.getBukkitEntity()).getInventory().getViewers())) {
 +                    h.closeInventory(org.bukkit.event.inventory.InventoryCloseEvent.Reason.UNLOADED); // Paper - Inventory close reason
 +                }

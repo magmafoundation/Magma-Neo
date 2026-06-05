@@ -289,7 +289,7 @@
 +        // CraftBukkit end
 +        p_129941_.stop();
 +        // CraftBukkit start
-+        serverlevel.setSpawnSettings(this.isSpawningMonsters(), this.isSpawningAnimals());
++        serverlevel.setSpawnSettings(serverlevel.serverLevelData.getDifficulty() != Difficulty.PEACEFUL && ((net.minecraft.server.dedicated.DedicatedServer) this).settings.getProperties().spawnMonsters, this.isSpawningAnimals()); // Paper - per level difficulty (from setDifficulty(ServerLevel, Difficulty, boolean))
 +        this.forceTicks = false;
 +        // CraftBukkit end
 +    }
@@ -341,7 +341,7 @@
      }
  
      public GameType getDefaultGameType() {
-@@ -582,18 +_,45 @@
+@@ -582,18 +_,46 @@
          this.stopServer();
      }
  
@@ -374,6 +374,7 @@
 +        // CraftBukkit start
 +        if (this.server != null) {
 +            this.server.disablePlugins();
++            this.server.waitForAsyncTasksShutdown(); // Paper - Wait for Async Tasks during shutdown
 +        }
 +        // CraftBukkit end
 +        if (io.papermc.paper.plugin.PluginInitializerManager.instance().pluginRemapper != null) io.papermc.paper.plugin.PluginInitializerManager.instance().pluginRemapper.shutdown(); // Paper - Plugin remapping
@@ -627,6 +628,25 @@
      }
  
      @Override
+@@ -844,15 +_,16 @@
+         if (super.pollTask()) {
+             return true;
+         } else {
++            boolean ret = false; // Paper - force execution of all worlds, do not just bias the first
+             if (this.tickRateManager.isSprinting() || this.haveTime()) {
+                 for (ServerLevel serverlevel : this.getAllLevels()) {
+                     if (serverlevel.getChunkSource().pollTask()) {
+-                        return true;
++                        ret = true; // Paper - force execution of all worlds, do not just bias the first
+                     }
+                 }
+             }
+ 
+-            return false;
++            return ret; // Paper - force execution of all worlds, do not just bias the first
+         }
+     }
+ 
 @@ -892,6 +_,7 @@
      }
  
@@ -738,7 +758,7 @@
              ObjectArrayList<GameProfile> objectarraylist = new ObjectArrayList<>(j);
              int k = Mth.nextInt(this.random, 0, list.size() - j);
  
-@@ -992,11 +_,50 @@
+@@ -992,11 +_,51 @@
  
      public void tickChildren(BooleanSupplier p_129954_) {
          this.getPlayerList().getPlayers().forEach(p_341570_ -> p_341570_.connection.suspendFlushing());
@@ -787,6 +807,7 @@
 +        for(ServerLevel serverlevel : this.getWorldArray()) {
 +            long tickStart = Util.getNanos();
 +            serverlevel.hasPhysicsEvent = org.bukkit.event.block.BlockPhysicsEvent.getHandlerList().getRegisteredListeners().length > 0; // Paper - BlockPhysicsEvent
++            serverlevel.hasEntityMoveEvent = io.papermc.paper.event.entity.EntityMoveEvent.getHandlerList().getRegisteredListeners().length > 0; // Paper - Add EntityMoveEvent
              this.profiler.push(() -> serverlevel + " " + serverlevel.dimension().location());
              if (this.tickCount % 20 == 0) {
                  this.profiler.push("timeSync");
@@ -900,6 +921,32 @@
      }
  
      public KeyPair getKeyPair() {
+@@ -1198,13 +_,24 @@
+         }
+     }
+ 
++    // Paper start - per level difficulty
++    public void setDifficulty(ServerLevel level, Difficulty difficulty, boolean forceUpdate) {
++        net.minecraft.world.level.storage.PrimaryLevelData worldData = (net.minecraft.world.level.storage.PrimaryLevelData) level.serverLevelData; // Magma: todo add serverLevelData creator
++        if (forceUpdate || !worldData.isDifficultyLocked()) {
++            worldData.setDifficulty(worldData.isHardcore() ? Difficulty.HARD : difficulty);
++            level.setSpawnSettings(worldData.getDifficulty() != Difficulty.PEACEFUL && ((net.minecraft.server.dedicated.DedicatedServer) this).settings.getProperties().spawnMonsters, this.isSpawningAnimals());
++            // this.getPlayerList().getPlayers().forEach(this::sendDifficultyUpdate);
++            // Paper end - per level difficulty
++        }
++    }
++
+     public int getScaledTrackingDistance(int p_129935_) {
+         return p_129935_;
+     }
+ 
+     private void updateMobSpawningFlags() {
+         for (ServerLevel serverlevel : this.getAllLevels()) {
+-            serverlevel.setSpawnSettings(this.isSpawningMonsters(), this.isSpawningAnimals());
++            serverlevel.setSpawnSettings(serverlevel.serverLevelData.getDifficulty() != Difficulty.PEACEFUL && ((net.minecraft.server.dedicated.DedicatedServer) this).settings.getProperties().spawnMonsters, this.isSpawningAnimals()); // Paper - per level difficulty (from setDifficulty(ServerLevel, Difficulty, boolean))
+         }
+     }
+ 
 @@ -1288,10 +_,20 @@
  
      @Override
@@ -931,16 +978,25 @@
      }
  
      public boolean isReady() {
-@@ -1441,7 +_,7 @@
+@@ -1439,9 +_,16 @@
+         return this.functionManager;
+     }
  
++    // Paper start - Add ServerResourcesReloadedEvent
++    @Deprecated @io.papermc.paper.annotation.DoNotUse
      public CompletableFuture<Void> reloadResources(Collection<String> p_129862_) {
++        return this.reloadResources(p_129862_, io.papermc.paper.event.server.ServerResourcesReloadedEvent.Cause.PLUGIN);
++    }
++
++    public CompletableFuture<Void> reloadResources(Collection<String> p_129862_, io.papermc.paper.event.server.ServerResourcesReloadedEvent.Cause cause) {
++        // Paper end - Add ServerResourcesReloadedEvent
          CompletableFuture<Void> completablefuture = CompletableFuture.<ImmutableList>supplyAsync(
 -                () -> p_129862_.stream().map(this.packRepository::getPack).filter(Objects::nonNull).map(Pack::open).collect(ImmutableList.toImmutableList()),
 +                () -> this.packRepository.rebuildSelected(p_129862_).stream().map(Pack::open).collect(ImmutableList.toImmutableList()),
                  this
              )
              .thenCompose(
-@@ -1469,6 +_,7 @@
+@@ -1469,15 +_,20 @@
                      this.resources.close();
                      this.resources = p_335203_;
                      this.packRepository.setSelected(p_129862_);
@@ -948,11 +1004,16 @@
                      WorldDataConfiguration worlddataconfiguration = new WorldDataConfiguration(
                          getSelectedPacks(this.packRepository, true), this.worldData.enabledFeatures()
                      );
-@@ -1478,6 +_,7 @@
+                     this.worldData.setDataConfiguration(worlddataconfiguration);
+                     this.resources.managers.updateRegistryTags();
++                    this.potionBrewing = this.potionBrewing.reload(this.worldData.enabledFeatures()); // Paper - Custom Potion Mixes
+                     this.getPlayerList().saveAll();
                      this.getPlayerList().reloadResources();
                      this.functionManager.replaceLibrary(this.resources.managers.getFunctionLibrary());
                      this.structureTemplateManager.onResourceManagerReload(this.resources.resourceManager);
 +                    this.getPlayerList().getPlayers().forEach(this.getPlayerList()::sendPlayerPermissionLevel); //Forge: Fix newly added/modified commands not being sent to the client when commands reload.
++                    org.bukkit.craftbukkit.block.data.CraftBlockData.reloadCache(); // Paper - cache block data strings; they can be defined by datapacks so refresh it here
++                    new io.papermc.paper.event.server.ServerResourcesReloadedEvent(cause).callEvent(); // Paper - Add ServerResourcesReloadedEvent; fire after everything has been reloaded
                  },
                  this
              );
@@ -977,6 +1038,20 @@
              return configureRepositoryWithSelection(p_248681_, set, featureflagset, true);
          }
      }
+@@ -1596,10 +_,11 @@
+         if (this.isEnforceWhitelist()) {
+             PlayerList playerlist = p_129850_.getServer().getPlayerList();
+             UserWhiteList userwhitelist = playerlist.getWhiteList();
++            if (!((net.minecraft.server.dedicated.DedicatedServer) getServer()).getProperties().whiteList.get()) return; // Paper - whitelist not enabled
+ 
+             for (ServerPlayer serverplayer : Lists.newArrayList(playerlist.getPlayers())) {
+-                if (!userwhitelist.isWhiteListed(serverplayer.getGameProfile())) {
+-                    serverplayer.connection.disconnect(Component.translatable("multiplayer.disconnect.not_whitelisted"));
++                if (!userwhitelist.isWhiteListed(serverplayer.getGameProfile()) && !this.getPlayerList().isOp(serverplayer.getGameProfile())) { // Paper - Fix kicking ops when whitelist is reloaded (MC-171420)
++                    serverplayer.connection.disconnect(net.kyori.adventure.text.Component.text(org.spigotmc.SpigotConfig.whitelistMessage), org.bukkit.event.player.PlayerKickEvent.Cause.WHITELIST); // Paper - use configurable message & kick event cause
+                 }
+             }
+         }
 @@ -1712,6 +_,31 @@
  
      public abstract boolean isSingleplayerOwner(GameProfile p_129840_);

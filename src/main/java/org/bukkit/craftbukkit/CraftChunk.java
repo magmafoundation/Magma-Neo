@@ -14,7 +14,6 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.thread.ProcessorMailbox;
@@ -335,14 +334,17 @@ public class CraftChunk implements Chunk {
         PalettedContainerRO<Holder<net.minecraft.world.level.biome.Biome>>[] biome = (includeBiome || includeBiomeTempRain) ? new PalettedContainer[cs.length] : null;
 
         Registry<net.minecraft.world.level.biome.Biome> iregistry = worldServer.registryAccess().registryOrThrow(Registries.BIOME);
-        Codec<PalettedContainerRO<Holder<net.minecraft.world.level.biome.Biome>>> biomeCodec = PalettedContainer.codecRO(iregistry.asHolderIdMap(), iregistry.holderByNameCodec(), PalettedContainer.Strategy.SECTION_BIOMES, iregistry.getHolderOrThrow(Biomes.PLAINS));
 
         for (int i = 0; i < cs.length; i++) {
-            CompoundTag data = new CompoundTag();
 
-            data.put("block_states", ChunkSerializer.BLOCK_STATE_CODEC.encodeStart(NbtOps.INSTANCE, cs[i].getStates()).getOrThrow());
-            sectionBlockIDs[i] = ChunkSerializer.BLOCK_STATE_CODEC.parse(NbtOps.INSTANCE, data.getCompound("block_states")).getOrThrow(ChunkSerializer.ChunkReadException::new);
-            sectionEmpty[i] = cs[i].hasOnlyAir();
+            // Paper start - Fix ChunkSnapshot#isSectionEmpty(int); and remove codec usage
+            sectionEmpty[i] = cs[i].hasOnlyAir(); // fix sectionEmpty array not being filled
+            if (!sectionEmpty[i]) {
+                sectionBlockIDs[i] = cs[i].getStates().copy(); // use copy instead of round tripping with codecs
+            } else {
+                sectionBlockIDs[i] = CraftChunk.emptyBlockIDs; // use cached instance for empty block sections
+            }
+            // Paper end - Fix ChunkSnapshot#isSectionEmpty(int)
 
             LevelLightEngine lightengine = worldServer.getLightEngine();
             DataLayer skyLightArray = lightengine.getLayerListener(LightLayer.SKY).getDataLayerData(SectionPos.of(x, chunk.getSectionYFromSectionIndex(i), z)); // SPIGOT-7498: Convert section index
@@ -361,8 +363,7 @@ public class CraftChunk implements Chunk {
             }
 
             if (biome != null) {
-                data.put("biomes", biomeCodec.encodeStart(NbtOps.INSTANCE, cs[i].getBiomes()).getOrThrow());
-                biome[i] = biomeCodec.parse(NbtOps.INSTANCE, data.getCompound("biomes")).getOrThrow(ChunkSerializer.ChunkReadException::new);
+                biome[i] = ((PalettedContainer<Holder<net.minecraft.world.level.biome.Biome>>) cs[i].getBiomes()).copy(); // Paper - Perf: use copy instead of round tripping with codecs
             }
         }
 

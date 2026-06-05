@@ -89,7 +89,7 @@ public class CraftEnchantment extends Enchantment implements Handleable<net.mine
 
     @Override
     public boolean isTreasure() {
-        return !handle.is(EnchantmentTags.IN_ENCHANTING_TABLE);
+        return this.handle.is(EnchantmentTags.TREASURE); // Paper - use treasure tag
     }
 
     @Override
@@ -148,9 +148,72 @@ public class CraftEnchantment extends Enchantment implements Handleable<net.mine
     // Paper start
     @Override
     public net.kyori.adventure.text.Component displayName(int level) {
-        return io.papermc.paper.adventure.PaperAdventure.asAdventure(getHandle().getFullname(level));
+        return io.papermc.paper.adventure.PaperAdventure.asAdventure(net.minecraft.world.item.enchantment.Enchantment.getFullname(this.handle, level));
     }
     // Paper end
+
+    // Paper start - add translationKey methods
+    @Override
+    public String translationKey() {
+        if (!(this.getHandle().description().getContents() instanceof final net.minecraft.network.chat.contents.TranslatableContents translatableContents)) {
+            throw new UnsupportedOperationException("Description isn't translatable!"); // Paper
+        }
+        return translatableContents.getKey();
+    }
+    // Paper end - add translationKey methods
+
+    // Paper start - more Enchantment API
+    @Override
+    public boolean isTradeable() {
+        return this.handle.is(EnchantmentTags.TRADEABLE);
+    }
+
+    @Override
+    public boolean isDiscoverable() {
+        return this.handle.is(EnchantmentTags.IN_ENCHANTING_TABLE)
+                || this.handle.is(EnchantmentTags.ON_RANDOM_LOOT)
+                || this.handle.is(EnchantmentTags.ON_MOB_SPAWN_EQUIPMENT)
+                || this.handle.is(EnchantmentTags.TRADEABLE)
+                || this.handle.is(EnchantmentTags.ON_TRADED_EQUIPMENT);
+    }
+
+    @Override
+    public int getMinModifiedCost(int level) {
+        return this.getHandle().definition().minCost().calculate(level);
+    }
+
+    @Override
+    public int getMaxModifiedCost(int level) {
+        return this.getHandle().definition().maxCost().calculate(level);
+    }
+
+    @Override
+    public int getAnvilCost() {
+        return this.getHandle().definition().anvilCost();
+    }
+
+    @Override
+    public io.papermc.paper.enchantments.EnchantmentRarity getRarity() {
+        throw new UnsupportedOperationException("Enchantments don't have a rarity anymore in 1.20.5+.");
+    }
+
+    @Override
+    public float getDamageIncrease(int level, org.bukkit.entity.EntityCategory entityCategory) {
+        throw new UnsupportedOperationException("Enchantments are based on complex effect maps since 1.21, cannot compute a simple damage increase");
+    }
+
+    @Override
+    public float getDamageIncrease(int level, org.bukkit.entity.EntityType entityType) {
+        throw new UnsupportedOperationException("Enchantments are based on complex effect maps since 1.21, cannot compute a simple damage increase");
+    }
+
+    @Override
+    public java.util.Set<org.bukkit.inventory.EquipmentSlotGroup> getActiveSlotGroups() {
+        return this.getHandle().definition().slots().stream()
+                .map(org.bukkit.craftbukkit.CraftEquipmentSlot::getSlot)
+                .collect(java.util.stream.Collectors.toSet());
+    }
+    // Paper end - more Enchantment API
 
     @Override
     public String getTranslationKey() {

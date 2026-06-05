@@ -248,6 +248,13 @@ public class CraftMetaShield extends CraftMetaItem implements ShieldMeta, BlockS
         return (banner != null) ? banner.copy() : getBlockState(null);
     }
 
+    // Paper start - add method to clear block state
+    @Override
+    public void clearBlockState() {
+        this.banner = null;
+    }
+    // Paper end - add method to clear block state
+
     @Override
     public void setBlockState(BlockState blockState) {
         Preconditions.checkArgument(blockState != null, "blockState must not be null");

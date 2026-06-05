@@ -278,7 +278,7 @@
              Pair<Vec3i, Vec3i> pair = exits(railshape);
              Vec3i vec3i = pair.getFirst();
              Vec3i vec3i1 = pair.getSecond();
-@@ -647,9 +_,21 @@
+@@ -647,9 +_,22 @@
  
      @Override
      public void push(Entity p_38165_) {
@@ -288,6 +288,7 @@
 +        }
          if (!this.level().isClientSide) {
              if (!p_38165_.noPhysics && !this.noPhysics) {
++                if (!this.level().paperConfig().collisions.allowVehicleCollisions && this.level().paperConfig().collisions.onlyPlayersCollide && !(p_38165_ instanceof Player)) return; // Paper - Collision option for requiring a player participant
                  if (!this.hasPassenger(p_38165_)) {
 +                    // CraftBukkit start
 +                    org.bukkit.event.vehicle.VehicleEntityCollisionEvent collisionEvent = new org.bukkit.event.vehicle.VehicleEntityCollisionEvent((org.bukkit.entity.Vehicle) this.getBukkitEntity(), p_38165_.getBukkitEntity());

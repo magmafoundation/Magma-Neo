@@ -318,7 +318,7 @@
 +    }
 +
 +    public boolean addEffect(MobEffectInstance p_147208_, @Nullable Entity p_147209_, org.bukkit.event.entity.EntityPotionEffectEvent.Cause cause) {
-+        org.spigotmc.AsyncCatcher.catchOp("effect add"); // Spigot
++        // org.spigotmc.AsyncCatcher.catchOp("effect add"); // Spigot // Paper - move to API
 +        if (isTickingEffects) {
 +            effectsToProcess.add(new ProcessableEffect(p_147208_, cause));
 +            return true;
@@ -1310,7 +1310,32 @@
      public abstract void setItemSlot(EquipmentSlot p_21036_, ItemStack p_21037_);
  
      public Iterable<ItemStack> getHandSlots() {
-@@ -2064,15 +_,18 @@
+@@ -2052,27 +_,43 @@
+         return this.hasEffect(MobEffects.JUMP) ? 0.1F * ((float)this.getEffect(MobEffects.JUMP).getAmplifier() + 1.0F) : 0.0F;
+     }
+ 
++    protected long lastJumpTime = 0L; // Paper - Prevent excessive velocity through repeated crits
+     @VisibleForTesting
+     public void jumpFromGround() {
+         float f = this.getJumpPower();
+         if (!(f <= 1.0E-5F)) {
+             Vec3 vec3 = this.getDeltaMovement();
++            // Paper start - Prevent excessive velocity through repeated crits
++            long time = System.nanoTime();
++            boolean canCrit = true;
++            if (this instanceof net.minecraft.world.entity.player.Player) {
++                canCrit = false;
++                if (time - this.lastJumpTime > (long)(0.250e9)) {
++                    this.lastJumpTime = time;
++                    canCrit = true;
++                }
++            }
++            // Paper end - Prevent excessive velocity through repeated crits
+             this.setDeltaMovement(vec3.x, (double)f, vec3.z);
+             if (this.isSprinting()) {
+                 float f1 = this.getYRot() * (float) (Math.PI / 180.0);
++                if (canCrit) // Paper - Prevent excessive velocity through repeated crits
+                 this.addDeltaMovement(new Vec3((double)(-Mth.sin(f1)) * 0.2, 0.0, (double)Mth.cos(f1) * 0.2));
              }
  
              this.hasImpulse = true;
@@ -1438,6 +1463,36 @@
              }
          } else {
              this.noJumpDelay = 0;
+@@ -2683,7 +_,7 @@
+ 
+         this.level().getProfiler().pop();
+         this.level().getProfiler().push("freezing");
+-        if (!this.level().isClientSide && !this.isDeadOrDying()) {
++        if (!this.level().isClientSide && !this.isDeadOrDying() && !this.freezeLocked) { // Paper - Freeze Tick Lock API
+             int i = this.getTicksFrozen();
+             if (this.isInPowderSnow && this.canFreeze()) {
+                 this.setTicksFrozen(Math.min(this.getTicksRequiredToFreeze(), i + 1));
+@@ -2707,6 +_,20 @@
+ 
+         this.pushEntities();
+         this.level().getProfiler().pop();
++        // Paper start - Add EntityMoveEvent
++        if (((ServerLevel) this.level()).hasEntityMoveEvent && !(this instanceof net.minecraft.world.entity.player.Player)) {
++            if (this.xo != this.getX() || this.yo != this.getY() || this.zo != this.getZ() || this.yRotO != this.getYRot() || this.xRotO != this.getXRot()) {
++                org.bukkit.Location from = new org.bukkit.Location(this.level().getWorld(), this.xo, this.yo, this.zo, this.yRotO, this.xRotO);
++                org.bukkit.Location to = new org.bukkit.Location(this.level().getWorld(), this.getX(), this.getY(), this.getZ(), this.getYRot(), this.getXRot());
++                io.papermc.paper.event.entity.EntityMoveEvent event = new io.papermc.paper.event.entity.EntityMoveEvent(this.getBukkitLivingEntity(), from, to.clone());
++                if (!event.callEvent()) {
++                    this.absMoveTo(from.getX(), from.getY(), from.getZ(), from.getYaw(), from.getPitch());
++                } else if (!to.equals(event.getTo())) {
++                    this.absMoveTo(event.getTo().getX(), event.getTo().getY(), event.getTo().getZ(), event.getTo().getYaw(), event.getTo().getPitch());
++                }
++            }
++        }
++        // Paper end - Add EntityMoveEvent
+         if (!this.level().isClientSide && this.isSensitiveToWater() && this.isInWaterRainOrBubble()) {
+             this.hurt(this.damageSources().drown(), 1.0F);
+         }
 @@ -2720,6 +_,8 @@
          boolean flag = this.getSharedFlag(7);
          if (flag && !this.onGround() && !this.isPassenger() && !this.hasEffect(MobEffects.LEVITATION)) {
@@ -1494,6 +1549,27 @@
                  }
              }
          }
+@@ -2812,7 +_,7 @@
+     public void stopRiding() {
+         Entity entity = this.getVehicle();
+         super.stopRiding();
+-        if (entity != null && entity != this.getVehicle() && !this.level().isClientSide) {
++        if (entity != null && entity != this.getVehicle() && !this.level().isClientSide && entity.valid) { // Paper - don't process on world gen
+             this.dismountVehicle(entity);
+         }
+     }
+@@ -2891,9 +_,8 @@
+         } else {
+             Vec3 vec3 = new Vec3(this.getX(), this.getEyeY(), this.getZ());
+             Vec3 vec31 = new Vec3(p_147185_.getX(), p_147185_.getEyeY(), p_147185_.getZ());
+-            return vec31.distanceTo(vec3) > 128.0
+-                ? false
+-                : this.level().clip(new ClipContext(vec3, vec31, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this)).getType() == HitResult.Type.MISS;
++            // Paper - diff on change - used in CraftLivingEntity#hasLineOfSight(Location) and CraftWorld#lineOfSightExists
++            return vec31.distanceToSqr(vec3) > 128.0D * 128.0D ? false : this.level().clip(new ClipContext(vec3, vec31, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this)).getType() == HitResult.Type.MISS; // Paper - Perf: Use distance squared
+         }
+     }
+ 
 @@ -2913,13 +_,20 @@
  
      @Override
@@ -1570,7 +1646,7 @@
              if (!this.level().isClientSide) {
                  this.setLivingEntityFlag(1, true);
                  this.setLivingEntityFlag(2, p_21159_ == InteractionHand.OFF_HAND);
-@@ -3111,12 +_,48 @@
+@@ -3111,12 +_,49 @@
              } else {
                  if (!this.useItem.isEmpty() && this.isUsingItem()) {
                      this.triggerItemUseEffects(this.useItem, 16);
@@ -1587,6 +1663,7 @@
 +                        event = new org.bukkit.event.player.PlayerItemConsumeEvent((org.bukkit.entity.Player) this.getBukkitEntity(), craftItem, hand); // Paper
 +                        this.level().getCraftServer().getPluginManager().callEvent(event);
 +                        if (event.isCancelled()) {
++                            this.stopUsingItem(); // Paper - event is using an item, clear active item to reset its use
 +                            // Update client
 +                            if (this.useItem.getItem() instanceof net.minecraft.world.item.SuspiciousStewItem itemSuspiciousStew) {
 +                                itemSuspiciousStew.cancelUsingItem(serverPlayer, this.useItem);

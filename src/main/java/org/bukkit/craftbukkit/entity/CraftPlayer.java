@@ -271,7 +271,7 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
 
         void sendPacket(Packet<?> packet);
 
-        void kickPlayer(Component reason);
+        void kickPlayer(Component reason, org.bukkit.event.player.PlayerKickEvent.Cause cause); // Paper - kick event causes
     }
 
     public record CookieFuture(ResourceLocation key, CompletableFuture<byte[]> future) {
@@ -635,7 +635,7 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
         org.spigotmc.AsyncCatcher.catchOp("player kick"); // Spigot
         if (getHandle().connection == null) return;
 
-        getHandle().connection.disconnect(CraftChatMessage.fromStringOrEmpty(message, true));
+        getHandle().transferCookieConnection.kickPlayer(CraftChatMessage.fromStringOrEmpty(message, true), org.bukkit.event.player.PlayerKickEvent.Cause.PLUGIN); // Paper - kick event cause
     }
 
     // Paper start
@@ -648,10 +648,15 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
 
     @Override
     public void kick(final net.kyori.adventure.text.Component message) {
+        kick(message, org.bukkit.event.player.PlayerKickEvent.Cause.PLUGIN);
+    }
+
+    @Override
+    public void kick(net.kyori.adventure.text.Component message, org.bukkit.event.player.PlayerKickEvent.Cause cause) {
         org.spigotmc.AsyncCatcher.catchOp("player kick");
         final ServerGamePacketListenerImpl connection = this.getHandle().connection;
         if (connection != null) {
-            connection.disconnect(message == null ? net.kyori.adventure.text.Component.empty() : message);
+            connection.disconnect(message == null ? net.kyori.adventure.text.Component.empty() : message, cause);
         }
     }
 
@@ -678,6 +683,14 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
     }
     // Paper end
 
+    // Paper start - Add sendOpLevel API
+    @Override
+    public void sendOpLevel(byte level) {
+        Preconditions.checkArgument(level >= 0 && level <= 4, "Level must be within [0, 4]");
+        this.getHandle().getServer().getPlayerList().sendPlayerPermissionLevel(this.getHandle(), level, false);
+    }
+    // Paper end - Add sendOpLevel API
+
     @Override
     public void setCompassTarget(Location loc) {
         Preconditions.checkArgument(loc != null, "Location cannot be null");
@@ -701,7 +714,7 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
 
         // Paper start - Improve chat handling
         if (ServerGamePacketListenerImpl.isChatMessageIllegal(msg)) {
-            this.getHandle().connection.disconnect(Component.translatable("multiplayer.disconnect.illegal_characters"));
+            this.getHandle().connection.disconnect(Component.translatable("multiplayer.disconnect.illegal_characters"), org.bukkit.event.player.PlayerKickEvent.Cause.ILLEGAL_CHARACTERS); // Paper - kick event causes
         } else {
             if (msg.startsWith("/")) {
                 this.getHandle().connection.handleCommand(msg);
@@ -916,6 +929,32 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
         ClientboundBlockUpdatePacket packet = new ClientboundBlockUpdatePacket(CraftLocation.toBlockPosition(loc), ((CraftBlockData) block).getState());
         getHandle().connection.send(packet);
     }
+
+    // Paper start
+    @Override
+    public void sendMultiBlockChange(final Map<? extends io.papermc.paper.math.Position, BlockData> blockChanges) {
+        if (this.getHandle().connection == null) return;
+
+        Map<SectionPos, it.unimi.dsi.fastutil.shorts.Short2ObjectMap<net.minecraft.world.level.block.state.BlockState>> sectionMap = new HashMap<>();
+
+        for (Map.Entry<? extends io.papermc.paper.math.Position, BlockData> entry : blockChanges.entrySet()) {
+            BlockData blockData = entry.getValue();
+            BlockPos blockPos = io.papermc.paper.util.MCUtil.toBlockPos(entry.getKey());
+            SectionPos sectionPos = SectionPos.of(blockPos);
+
+            it.unimi.dsi.fastutil.shorts.Short2ObjectMap<net.minecraft.world.level.block.state.BlockState> sectionData = sectionMap.computeIfAbsent(sectionPos, key -> new it.unimi.dsi.fastutil.shorts.Short2ObjectArrayMap<>());
+            sectionData.put(SectionPos.sectionRelativePos(blockPos), ((CraftBlockData) blockData).getState());
+        }
+
+        for (Map.Entry<SectionPos, it.unimi.dsi.fastutil.shorts.Short2ObjectMap<net.minecraft.world.level.block.state.BlockState>> entry : sectionMap.entrySet()) {
+            SectionPos sectionPos = entry.getKey();
+            it.unimi.dsi.fastutil.shorts.Short2ObjectMap<net.minecraft.world.level.block.state.BlockState> blockData = entry.getValue();
+
+            net.minecraft.network.protocol.game.ClientboundSectionBlocksUpdatePacket packet = new net.minecraft.network.protocol.game.ClientboundSectionBlocksUpdatePacket(sectionPos, blockData);
+            this.getHandle().connection.send(packet);
+        }
+    }
+    // Paper end
 
     @Override
     public void sendBlockChanges(Collection<org.bukkit.block.BlockState> blocks) {
@@ -1647,7 +1686,7 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
         Preconditions.checkArgument(mode != null, "GameMode cannot be null");
         if (getHandle().connection == null) return;
 
-        getHandle().setGameMode(GameType.byId(mode.getValue()));
+        getHandle().setGameMode(GameType.byId(mode.getValue()), org.bukkit.event.player.PlayerGameModeChangeEvent.Cause.PLUGIN, null); // Paper - Expand PlayerGameModeChangeEvent
     }
 
     @Override
@@ -2699,7 +2738,7 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
 
     @Override
     public <T> void spawnParticle(Particle particle, double x, double y, double z, int count, double offsetX, double offsetY, double offsetZ, double extra, T data, boolean force) {
-        ClientboundLevelParticlesPacket packetplayoutworldparticles = new ClientboundLevelParticlesPacket(CraftParticle.createParticleParam(particle, data), force, (float) x, (float) y, (float) z, (float) offsetX, (float) offsetY, (float) offsetZ, (float) extra, count);
+        ClientboundLevelParticlesPacket packetplayoutworldparticles = new ClientboundLevelParticlesPacket(CraftParticle.createParticleParam(particle, data), force, x, y, z, (float) offsetX, (float) offsetY, (float) offsetZ, (float) extra, count); // Paper - fix x/y/z precision loss
         getHandle().connection.send(packetplayoutworldparticles);
     }
 
@@ -3036,6 +3075,13 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
     @Override
     public void resetCooldown() {
         getHandle().resetAttackStrengthTicker();
+    }
+    // Paper end
+
+    // Paper start - brand support
+    @Override
+    public String getClientBrandName() {
+        return getHandle().clientBrandName;
     }
     // Paper end
 

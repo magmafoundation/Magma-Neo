@@ -1,5 +1,17 @@
 --- a/net/minecraft/world/entity/boss/wither/WitherBoss.java
 +++ b/net/minecraft/world/entity/boss/wither/WitherBoss.java
+@@ -79,6 +_,11 @@
+             && p_348303_.attackable();
+     private static final TargetingConditions TARGETING_CONDITIONS = TargetingConditions.forCombat().range(20.0).selector(LIVING_ENTITY_SELECTOR);
+ 
++    // Paper start
++    private boolean canPortal = false;
++    public void setCanTravelThroughPortals(boolean canPortal) { this.canPortal = canPortal; }
++    // Paper end
++
+     public WitherBoss(EntityType<? extends WitherBoss> p_31437_, Level p_31438_) {
+         super(p_31437_, p_31438_);
+         this.moveControl = new FlyingMoveControl(this, 10, false);
 @@ -263,14 +_,38 @@
              int j = this.getInvulnerableTicks() - 1;
              this.bossEvent.setProgress(1.0F - (float)j / 220.0F);
@@ -101,3 +113,12 @@
              this.discard();
          } else {
              this.noActionTime = 0;
+@@ -552,7 +_,7 @@
+ 
+     @Override
+     public boolean canUsePortal(boolean p_352936_) {
+-        return false;
++        return this.canPortal; // Paper
+     }
+ 
+     @Override

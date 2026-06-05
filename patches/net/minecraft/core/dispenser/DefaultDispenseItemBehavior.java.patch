@@ -1,7 +1,10 @@
 --- a/net/minecraft/core/dispenser/DefaultDispenseItemBehavior.java
 +++ b/net/minecraft/core/dispenser/DefaultDispenseItemBehavior.java
-@@ -10,6 +_,17 @@
+@@ -8,25 +_,49 @@
+ import net.minecraft.world.level.block.DispenserBlock;
+ 
  public class DefaultDispenseItemBehavior implements DispenseItemBehavior {
++    private Direction direction; // Paper - cache facing direction
      private static final int DEFAULT_ACCURACY = 6;
  
 +    // CraftBukkit start
@@ -17,9 +20,17 @@
 +
      @Override
      public final ItemStack dispense(BlockSource p_302432_, ItemStack p_123392_) {
++        direction = p_302432_.state().getValue(DispenserBlock.FACING); // Paper - cache facing direction
          ItemStack itemstack = this.execute(p_302432_, p_123392_);
-@@ -22,11 +_,22 @@
-         Direction direction = p_302420_.state().getValue(DispenserBlock.FACING);
+         this.playSound(p_302432_);
+-        this.playAnimation(p_302432_, p_302432_.state().getValue(DispenserBlock.FACING));
++        this.playAnimation(p_302432_, direction); // Paper - cache facing direction
+         return itemstack;
+     }
+ 
+     protected ItemStack execute(BlockSource p_302420_, ItemStack p_123386_) {
+-        Direction direction = p_302420_.state().getValue(DispenserBlock.FACING);
++        // Paper - cached enum direction
          Position position = DispenserBlock.getDispensePosition(p_302420_);
          ItemStack itemstack = p_123386_.split(1);
 -        spawnItem(p_302420_.level(), itemstack, 6, direction, position);

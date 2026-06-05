@@ -174,7 +174,7 @@ public class CraftBlockState implements org.bukkit.block.BlockState {
 
     @Override
     public Material getType() {
-        return CraftBlockType.minecraftToBukkit(data.getBlock());
+        return this.data.getBukkitMaterial(); // Paper - optimise getType calls
     }
 
     public void setFlag(int flag) {
@@ -339,4 +339,11 @@ public class CraftBlockState implements org.bukkit.block.BlockState {
     public org.bukkit.block.BlockState copy(Location location) {
         return new CraftBlockState(this, location);
     }
+
+    // Paper start
+    @Override
+    public boolean isCollidable() {
+        return this.data.getBlock().hasCollision;
+    }
+    // Paper end
 }

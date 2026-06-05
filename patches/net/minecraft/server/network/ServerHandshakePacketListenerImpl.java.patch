@@ -1,6 +1,6 @@
 --- a/net/minecraft/server/network/ServerHandshakePacketListenerImpl.java
 +++ b/net/minecraft/server/network/ServerHandshakePacketListenerImpl.java
-@@ -13,6 +_,15 @@
+@@ -13,9 +_,19 @@
  import net.minecraft.server.MinecraftServer;
  
  public class ServerHandshakePacketListenerImpl implements ServerHandshakePacketListener {
@@ -16,6 +16,10 @@
      private static final Component IGNORE_STATUS_REASON = Component.translatable("disconnect.ignoring_status_request");
      private final MinecraftServer server;
      private final Connection connection;
++    private static final boolean BYPASS_HOSTCHECK = Boolean.getBoolean("Paper.bypassHostCheck"); // Paper
+ 
+     public ServerHandshakePacketListenerImpl(MinecraftServer p_9969_, Connection p_9970_) {
+         this.server = p_9969_;
 @@ -24,6 +_,7 @@
  
      @Override
@@ -24,7 +28,7 @@
          switch (p_9975_.intention()) {
              case LOGIN:
                  this.beginLogin(p_9975_, false);
-@@ -50,22 +_,116 @@
+@@ -50,22 +_,122 @@
              default:
                  throw new UnsupportedOperationException("Invalid intention " + p_9975_.intention());
          }
@@ -39,6 +43,7 @@
          this.connection.setupOutboundProtocol(LoginProtocols.CLIENTBOUND);
 +        // CraftBukkit start - Connection throttle
 +        try {
++            if (!(this.connection.channel.localAddress() instanceof io.netty.channel.unix.DomainSocketAddress)) { // Paper - Unix domain socket support; the connection throttle is useless when you have a Unix domain socket
 +            long currentTime = System.currentTimeMillis();
 +            long connectionThrottle = this.server.server.getConnectionThrottle();
 +            java.net.InetAddress address = ((java.net.InetSocketAddress) this.connection.getRemoteAddress()).getAddress();
@@ -64,21 +69,24 @@
 +                    }
 +                }
 +            }
++            } // Paper - Unix domain socket support
 +        } catch (Throwable t) {
 +            org.apache.logging.log4j.LogManager.getLogger().debug("Failed to check connection throttle", t);
 +        }
 +        // CraftBukkit end
          if (p_320524_.protocolVersion() != SharedConstants.getCurrentVersion().getProtocolVersion()) {
-             Component component;
+-            Component component;
 -            if (p_320524_.protocolVersion() < 754) {
 -                component = Component.translatable("multiplayer.disconnect.outdated_client", SharedConstants.getCurrentVersion().getName());
++            net.kyori.adventure.text.Component adventureComponent; // Paper - Fix hex colors not working in some kick messages
 +            if (p_320524_.protocolVersion() < SharedConstants.getCurrentVersion().getProtocolVersion()) { // Spigot - SPIGOT-7546: Handle version check correctly for outdated client message
-+                component = Component.literal( java.text.MessageFormat.format( org.spigotmc.SpigotConfig.outdatedClientMessage.replaceAll("'", "''"), SharedConstants.getCurrentVersion().getName() ) ); // Spigot
++                adventureComponent = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(java.text.MessageFormat.format(org.spigotmc.SpigotConfig.outdatedClientMessage.replaceAll("'", "''"), SharedConstants.getCurrentVersion().getName())); // Spigot // Paper - Fix hex colors not working in some kick messages
              } else {
 -                component = Component.translatable("multiplayer.disconnect.incompatible", SharedConstants.getCurrentVersion().getName());
-+                component = Component.literal( java.text.MessageFormat.format( org.spigotmc.SpigotConfig.outdatedServerMessage.replaceAll("'", "''"), SharedConstants.getCurrentVersion().getName() ) ); // Spigot
++                adventureComponent = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(java.text.MessageFormat.format(org.spigotmc.SpigotConfig.outdatedServerMessage.replaceAll("'", "''"), SharedConstants.getCurrentVersion().getName())); // Spigot // Paper - Fix hex colors not working in some kick messages
              }
  
++            Component component = io.papermc.paper.adventure.PaperAdventure.asVanilla(adventureComponent); // Paper - Fix hex colors not working in some kick messages
              this.connection.send(new ClientboundLoginDisconnectPacket(component));
              this.connection.disconnect(component);
          } else {
@@ -119,9 +127,12 @@
 +            String[] split = p_320524_.hostName().split("\00");
 +            if (!handledByEvent && proxyLogicEnabled) { // Paper
 +                // if (org.spigotmc.SpigotConfig.bungee) { // Paper - comment out, we check above!
-+                if ( ( split.length == 3 || split.length == 4 ) && ( HOST_PATTERN.matcher( split[1] ).matches() ) ) {
++                if ( ( split.length == 3 || split.length == 4 ) && ( ServerHandshakePacketListenerImpl.BYPASS_HOSTCHECK || ServerHandshakePacketListenerImpl.HOST_PATTERN.matcher( split[1] ).matches() ) ) { // Paper - Add bypass host check
++                    // Paper start - Unix domain socket support
++                    java.net.SocketAddress socketAddress = this.connection.getRemoteAddress();
 +                    connection.hostname = split[0];
-+                    connection.address = new java.net.InetSocketAddress(split[1], ((java.net.InetSocketAddress) connection.getRemoteAddress()).getPort());
++                    this.connection.address = new java.net.InetSocketAddress(split[1], socketAddress instanceof java.net.InetSocketAddress ? ((java.net.InetSocketAddress) socketAddress).getPort() : 0);
++                    // Paper end - Unix domain socket support
 +                    connection.spoofedUUID = com.mojang.util.UndashedUuid.fromStringLenient( split[2] );
 +                } else
 +                {

@@ -42,7 +42,7 @@ public class CraftArrow extends CraftAbstractArrow implements Arrow {
             removeCustomEffect(effect.getType());
         }
         getHandle().addEffect(CraftPotionUtil.fromBukkit(effect));
-        getHandle().updateColor();
+        // this.getHandle().updateColor(); // Paper - already done above
         return true;
     }
 
@@ -50,7 +50,7 @@ public class CraftArrow extends CraftAbstractArrow implements Arrow {
     public void clearCustomEffects() {
         PotionContents old = getHandle().getPotionContents();
         getHandle().setPotionContents(new PotionContents(old.potion(), old.customColor(), List.of()));
-        getHandle().updateColor();
+        // this.getHandle().updateColor(); // Paper - already done above
     }
 
     @Override
@@ -116,16 +116,17 @@ public class CraftArrow extends CraftAbstractArrow implements Arrow {
 
     @Override
     public void setColor(Color color) {
-        int colorRGB = (color == null) ? -1 : color.asRGB();
+        int colorRGB = (color == null) ? net.minecraft.world.entity.projectile.Arrow.NO_EFFECT_COLOR : color.asARGB(); // Paper
         PotionContents old = getHandle().getPotionContents();
         getHandle().setPotionContents(new PotionContents(old.potion(), Optional.of(colorRGB), old.customEffects()));
     }
 
     @Override
     public Color getColor() {
-        if (getHandle().getColor() <= -1) {
+        int color = this.getHandle().getColor(); // Paper
+        if (color == net.minecraft.world.entity.projectile.Arrow.NO_EFFECT_COLOR) { // Paper
             return null;
         }
-        return Color.fromRGB(getHandle().getColor());
+        return Color.fromARGB(color); // Paper
     }
 }

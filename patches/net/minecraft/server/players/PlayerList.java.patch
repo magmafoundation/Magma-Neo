@@ -1,6 +1,6 @@
 --- a/net/minecraft/server/players/PlayerList.java
 +++ b/net/minecraft/server/players/PlayerList.java
-@@ -128,8 +_,17 @@
+@@ -128,15 +_,27 @@
      private boolean allowCommandsForAllPlayers;
      private static final boolean ALLOW_LOGOUTIVATOR = false;
      private int sendAllPlayerInfoIn;
@@ -18,8 +18,9 @@
          this.server = p_203842_;
          this.registries = p_251844_;
          this.maxPlayers = p_203845_;
-@@ -137,6 +_,8 @@
+         this.playerIo = p_203844_;
      }
++    abstract public void loadAndSaveFiles(); // Paper - fix converting txt to json file; moved from DedicatedPlayerList constructor
  
      public void placeNewPlayer(Connection p_11262_, ServerPlayer p_11263_, CommonListenerCookie p_301988_) {
 +        p_11263_.isRealPlayer = true; // Paper
@@ -94,7 +95,7 @@
          servergamepacketlistenerimpl.send(new ClientboundUpdateRecipesPacket(this.server.getRecipeManager().getOrderedRecipes()));
          this.sendPlayerPermissionLevel(p_11263_);
          p_11263_.getStats().markAllDirty();
-@@ -214,25 +_,83 @@
+@@ -214,25 +_,93 @@
              mutablecomponent = Component.translatable("multiplayer.player.joined.renamed", p_11263_.getDisplayName(), s);
          }
  
@@ -171,6 +172,16 @@
          this.sendActivePlayerEffects(p_11263_);
 +        // Paper start - Fire PlayerJoinEvent when Player is actually ready; move vehicle into method so it can be called above - short circuit around that code
 +        this.onPlayerJoinFinish(p_11263_, serverlevel1, s1);
++        // Paper start - Send empty chunk, so players aren't stuck in the world loading screen with our chunk system not sending chunks when dead
++        if (p_11263_.isDeadOrDying()) {
++            net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome> plains = serverlevel1.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.BIOME)
++                    .getHolderOrThrow(net.minecraft.world.level.biome.Biomes.PLAINS);
++            p_11263_.connection.send(new net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket(
++                    new net.minecraft.world.level.chunk.EmptyLevelChunk(serverlevel1, p_11263_.chunkPosition(), plains),
++                    serverlevel1.getLightEngine(), (java.util.BitSet)null, (java.util.BitSet) null)
++            );
++        }
++        // Paper end - Send empty chunk
 +    }
 +
 +    private void mountSavedVehicle(ServerPlayer p_11263_, ServerLevel serverlevel1, Optional<CompoundTag> optional1) {
@@ -272,13 +283,18 @@
          this.playerIo.save(p_11277_);
          ServerStatsCounter serverstatscounter = this.stats.get(p_11277_.getUUID());
          if (serverstatscounter != null) {
-@@ -350,16 +_,46 @@
+@@ -350,16 +_,69 @@
          }
      }
  
 +    // Magma
 +    public net.kyori.adventure.text.Component magma$quitMessage;
 +    public net.kyori.adventure.text.Component magma$leaveMessage;
++
++    public void setQuitMessage(net.kyori.adventure.text.Component message) {
++        magma$quitMessage = message;
++    }
++
      public void remove(ServerPlayer p_11287_) {
 +        net.neoforged.neoforge.event.EventHooks.firePlayerLoggedOut(p_11287_);
          ServerLevel serverlevel = p_11287_.serverLevel();
@@ -292,7 +308,7 @@
 +        if (magma$leaveMessage == null) {
 +            magma$leaveMessage = net.kyori.adventure.text.Component.translatable("multiplayer.player.left", net.kyori.adventure.text.format.NamedTextColor.YELLOW, io.papermc.paper.configuration.GlobalConfiguration.get().messages.useDisplayNameInQuitMessage ? p_11287_.getBukkitEntity().displayName() : io.papermc.paper.adventure.PaperAdventure.asAdventure(p_11287_.getDisplayName()));
 +        }
-+        org.bukkit.event.player.PlayerQuitEvent playerQuitEvent = new org.bukkit.event.player.PlayerQuitEvent(p_11287_.getBukkitEntity(), magma$leaveMessage); // Paper - Adventure & Add API for quit reason
++        org.bukkit.event.player.PlayerQuitEvent playerQuitEvent = new org.bukkit.event.player.PlayerQuitEvent(p_11287_.getBukkitEntity(), magma$leaveMessage, p_11287_.quitReason); // Paper - Adventure & Add API for quit reason
 +        magma$leaveMessage = null;
 +        cserver.getPluginManager().callEvent(playerQuitEvent);
 +        p_11287_.getBukkitEntity().disconnect(playerQuitEvent.getQuitMessage());
@@ -309,6 +325,14 @@
 +        }
 +        // Paper end - Configurable player collision
 +
++        // Paper - Drop carried item when player has disconnected
++        if (!p_11287_.containerMenu.getCarried().isEmpty()) {
++            net.minecraft.world.item.ItemStack carried = p_11287_.containerMenu.getCarried();
++            p_11287_.containerMenu.setCarried(net.minecraft.world.item.ItemStack.EMPTY);
++            p_11287_.drop(carried, false);
++        }
++        // Paper end - Drop carried item when player has disconnected
++
          this.save(p_11287_);
          if (p_11287_.isPassenger()) {
              Entity entity = p_11287_.getRootVehicle();
@@ -316,7 +340,17 @@
                  LOGGER.debug("Removing player mount");
                  p_11287_.stopRiding();
 -                entity.getPassengersAndSelf().forEach(p_215620_ -> p_215620_.setRemoved(Entity.RemovalReason.UNLOADED_WITH_PLAYER));
-+                entity.getPassengersAndSelf().forEach(p_215620_ -> p_215620_.setRemoved(Entity.RemovalReason.UNLOADED_WITH_PLAYER, org.bukkit.event.entity.EntityRemoveEvent.Cause.PLAYER_QUIT)); // CraftBukkit - add Bukkit remove cause
++                entity.getPassengersAndSelf().forEach(p_215620_ -> {
++                    // Paper start - Fix villager boat exploit
++                    if (p_215620_ instanceof net.minecraft.world.entity.npc.AbstractVillager villager) {
++                        final net.minecraft.world.entity.player.Player human = villager.getTradingPlayer();
++                        if (human != null) {
++                            villager.setTradingPlayer(null);
++                        }
++                    }
++                    // Paper end - Fix villager boat exploit
++                    p_215620_.setRemoved(Entity.RemovalReason.UNLOADED_WITH_PLAYER, org.bukkit.event.entity.EntityRemoveEvent.Cause.PLAYER_QUIT);
++                }); // CraftBukkit - add Bukkit remove cause
              }
          }
  
@@ -363,7 +397,7 @@
 +
 +        for (int i = 0; i < this.players.size(); ++i) {
 +            entityplayer = (ServerPlayer) this.players.get(i);
-+            if (entityplayer.getUUID().equals(uuid)) {
++            if (entityplayer.getUUID().equals(uuid) || (io.papermc.paper.configuration.GlobalConfiguration.get().proxies.isProxyOnlineMode() && entityplayer.getGameProfile().getName().equalsIgnoreCase(p_11258_.getName()))) { // Paper - validate usernames
 +                list.add(entityplayer);
 +            }
 +        }
@@ -373,7 +407,7 @@
 +        while (iterator.hasNext()) {
 +            entityplayer = (ServerPlayer) iterator.next();
 +            save(entityplayer); // CraftBukkit - Force the player's inventory to be saved
-+            entityplayer.connection.disconnect(Component.translatable("multiplayer.disconnect.duplicate_login"));
++            entityplayer.connection.disconnect(Component.translatable("multiplayer.disconnect.duplicate_login"), org.bukkit.event.player.PlayerKickEvent.Cause.DUPLICATE_LOGIN); // Paper - kick event cause
 +        }
 +
 +        // Instead of kicking then returning, we need to store the kick reason
@@ -585,12 +619,28 @@
          this.ops.remove(p_11281_);
          ServerPlayer serverplayer = this.getPlayer(p_11281_.getId());
          if (serverplayer != null) {
-@@ -611,11 +_,30 @@
+@@ -598,6 +_,12 @@
+     }
+ 
+     private void sendPlayerPermissionLevel(ServerPlayer p_11227_, int p_11228_) {
++        // Paper start - Add sendOpLevel API
++        this.sendPlayerPermissionLevel(p_11227_, p_11228_, true);
++    }
++
++    public void sendPlayerPermissionLevel(ServerPlayer p_11227_, int p_11228_, boolean recalculatePermissions) {
++        // Paper end - Add sendOpLevel API
+         if (p_11227_.connection != null) {
+             byte b0;
+             if (p_11228_ <= 0) {
+@@ -611,11 +_,32 @@
              p_11227_.connection.send(new ClientboundEntityEventPacket(p_11227_, b0));
          }
  
-+        p_11227_.getBukkitEntity().recalculatePermissions(); // CraftBukkit
-         this.server.getCommands().sendCommands(p_11227_);
+-        this.server.getCommands().sendCommands(p_11227_);
++        if (recalculatePermissions) { // Paper - Add sendOpLevel API
++            p_11227_.getBukkitEntity().recalculatePermissions(); // CraftBukkit
++            this.server.getCommands().sendCommands(p_11227_);
++        } // Paper - Add sendOpLevel API
      }
  
      public boolean isWhiteListed(GameProfile p_11294_) {
@@ -730,7 +780,7 @@
 -            this.players.get(i).connection.disconnect(Component.translatable("multiplayer.disconnect.server_shutdown"));
 -        }
 -    }
-+            if (isRestarting)  this.players.get(i).connection.disconnect(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(org.spigotmc.SpigotConfig.restartMessage)); else // Paper
++            if (isRestarting)  this.players.get(i).connection.disconnect(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(org.spigotmc.SpigotConfig.restartMessage), org.bukkit.event.player.PlayerKickEvent.Cause.UNKNOWN); else // Paper - kick event cause (cause is never used here)
 +            this.players.get(i).connection.disconnect(java.util.Objects.requireNonNullElseGet(this.server.server.shutdownMessage(), net.kyori.adventure.text.Component::empty)); // CraftBukkit - add custom shutdown message // Paper - Adventure
 +        }
 +

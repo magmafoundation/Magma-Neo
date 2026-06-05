@@ -1,6 +1,13 @@
 --- a/net/minecraft/world/level/block/EndPortalBlock.java
 +++ b/net/minecraft/world/level/block/EndPortalBlock.java
-@@ -57,9 +_,13 @@
+@@ -51,15 +_,20 @@
+ 
+     @Override
+     protected void entityInside(BlockState p_53025_, Level p_53026_, BlockPos p_53027_, Entity p_53028_) {
++        if (!new io.papermc.paper.event.entity.EntityInsideBlockEvent(p_53028_.getBukkitEntity(), org.bukkit.craftbukkit.block.CraftBlock.at(p_53026_, p_53027_)).callEvent()) { return; } // Paper - Add EntityInsideBlockEvent
+         if (p_53028_.canUsePortal(false)
+             && Shapes.joinIsNotEmpty(
+                 Shapes.create(p_53028_.getBoundingBox().move((double)(-p_53027_.getX()), (double)(-p_53027_.getY()), (double)(-p_53027_.getZ()))),
                  p_53025_.getShape(p_53026_, p_53027_),
                  BooleanOp.AND
              )) {

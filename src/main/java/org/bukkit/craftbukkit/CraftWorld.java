@@ -125,7 +125,6 @@ import org.bukkit.entity.TippedArrow;
 import org.bukkit.entity.Trident;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.bukkit.event.weather.LightningStrikeEvent;
-import org.bukkit.event.world.SpawnChangeEvent;
 import org.bukkit.event.world.TimeSkipEvent;
 import org.bukkit.generator.BiomeProvider;
 import org.bukkit.generator.BlockPopulator;
@@ -211,6 +210,39 @@ public class CraftWorld extends CraftRegionAccessor implements World {
     public int getPlayerCount() {
         return world.players().size();
     }
+
+    @Override
+    public BiomeProvider vanillaBiomeProvider() {
+        net.minecraft.server.level.ServerChunkCache serverCache = this.getHandle().chunkSource;
+
+        final net.minecraft.world.level.chunk.ChunkGenerator gen = serverCache.getGenerator();
+        net.minecraft.world.level.biome.BiomeSource biomeSource;
+        if (gen instanceof org.bukkit.craftbukkit.generator.CustomChunkGenerator custom) {
+            biomeSource = custom.getDelegate().getBiomeSource();
+        } else {
+            biomeSource = gen.getBiomeSource();
+        }
+        if (biomeSource instanceof org.bukkit.craftbukkit.generator.CustomWorldChunkManager customBiomeSource) {
+            biomeSource = customBiomeSource.vanillaBiomeSource;
+        }
+        final net.minecraft.world.level.biome.BiomeSource finalBiomeSource = biomeSource;
+        final net.minecraft.world.level.biome.Climate.Sampler sampler = serverCache.randomState().sampler();
+
+        final List<Biome> possibleBiomes = finalBiomeSource.possibleBiomes().stream()
+                .map(CraftBiome::minecraftHolderToBukkit)
+                .toList();
+        return new BiomeProvider() {
+            @Override
+            public Biome getBiome(final org.bukkit.generator.WorldInfo worldInfo, final int x, final int y, final int z) {
+                return CraftBiome.minecraftHolderToBukkit(finalBiomeSource.getNoiseBiome(x >> 2, y >> 2, z >> 2, sampler));
+            }
+
+            @Override
+            public List<Biome> getBiomes(final org.bukkit.generator.WorldInfo worldInfo) {
+                return possibleBiomes;
+            }
+        };
+    }
     // Paper end
 
     private static final Random rand = new Random();
@@ -245,12 +277,14 @@ public class CraftWorld extends CraftRegionAccessor implements World {
     @Override
     public boolean setSpawnLocation(int x, int y, int z, float angle) {
         try {
-            Location previousLocation = getSpawnLocation();
-            world.levelData.setSpawn(new BlockPos(x, y, z), angle);
+            // Location previousLocation = this.getSpawnLocation(); // Paper - Call SpawnChangeEvent; moved to nms.ServerLevel
+            this.world.setDefaultSpawnPos(new BlockPos(x, y, z), angle); // Paper - use ServerLevel#setDefaultSpawnPos
 
+            // Paper start - Call SpawnChangeEvent; move to nms.ServerLevel
             // Notify anyone who's listening.
-            SpawnChangeEvent event = new SpawnChangeEvent(this, previousLocation);
-            server.getPluginManager().callEvent(event);
+            // SpawnChangeEvent event = new SpawnChangeEvent(this, previousLocation);
+            // server.getPluginManager().callEvent(event);
+            // Paper end - Call SpawnChangeEvent
 
             return true;
         } catch (Exception e) {
@@ -265,7 +299,13 @@ public class CraftWorld extends CraftRegionAccessor implements World {
 
     @Override
     public Chunk getChunkAt(int x, int z) {
-        net.minecraft.world.level.chunk.LevelChunk chunk = (net.minecraft.world.level.chunk.LevelChunk) this.world.getChunk(x, z, ChunkStatus.FULL, true);
+        // Paper start - add ticket to hold chunk for a little while longer if plugin accesses it
+        net.minecraft.world.level.chunk.LevelChunk chunk = this.world.getChunkSource().getChunkAtIfLoadedImmediately(x, z);
+        if (chunk == null) {
+            this.addTicket(x, z);
+            chunk = this.world.getChunkSource().getChunk(x, z, true);
+        }
+        // Paper end
         return new CraftChunk(chunk);
     }
 
@@ -278,6 +318,12 @@ public class CraftWorld extends CraftRegionAccessor implements World {
 
         return new CraftChunk(getHandle(), x, z);
     }
+
+    // Paper start
+    private void addTicket(int x, int z) {
+        io.papermc.paper.util.MCUtil.MAIN_EXECUTOR.execute(() -> this.world.getChunkSource().addRegionTicket(TicketType.PLUGIN, new ChunkPos(x, z), 0, Unit.INSTANCE)); // Paper
+    }
+    // Paper end
 
     @Override
     public Chunk getChunkAt(Block block) {
@@ -330,7 +376,7 @@ public class CraftWorld extends CraftRegionAccessor implements World {
     public boolean unloadChunkRequest(int x, int z) {
         org.spigotmc.AsyncCatcher.catchOp("chunk unload"); // Spigot
         if (isChunkLoaded(x, z)) {
-            world.getChunkSource().removeRegionTicket(TicketType.PLUGIN, new ChunkPos(x, z), 1, Unit.INSTANCE);
+            this.world.getChunkSource().removeRegionTicket(TicketType.PLUGIN, new ChunkPos(x, z), 0, Unit.INSTANCE); // Paper
         }
 
         return true;
@@ -420,7 +466,7 @@ public class CraftWorld extends CraftRegionAccessor implements World {
         }
 
         if (chunk instanceof net.minecraft.world.level.chunk.LevelChunk) {
-            world.getChunkSource().addRegionTicket(TicketType.PLUGIN, new ChunkPos(x, z), 1, Unit.INSTANCE);
+            this.world.getChunkSource().addRegionTicket(TicketType.PLUGIN, new ChunkPos(x, z), 0, Unit.INSTANCE); // Paper
             return true;
         }
 
@@ -646,6 +692,23 @@ public class CraftWorld extends CraftRegionAccessor implements World {
         world.strikeLightning(lightning, LightningStrikeEvent.Cause.CUSTOM);
         return (LightningStrike) lightning.getBukkitEntity();
     }
+
+    // Paper start - Add methods to find targets for lightning strikes
+    @Override
+    public Location findLightningRod(Location location) {
+        return this.world.findLightningRod(io.papermc.paper.util.MCUtil.toBlockPosition(location))
+                .map(blockPos -> io.papermc.paper.util.MCUtil.toLocation(this.world, blockPos)
+                        // get the actual rod pos
+                        .subtract(0, 1, 0))
+                .orElse(null);
+    }
+
+    @Override
+    public Location findLightningTarget(Location location) {
+        final BlockPos pos = this.world.findLightningTargetAround(io.papermc.paper.util.MCUtil.toBlockPosition(location), true);
+        return pos == null ? null : io.papermc.paper.util.MCUtil.toLocation(this.world, pos);
+    }
+    // Paper end - Add methods to find targets for lightning strikes
 
     @Override
     public boolean generateTree(Location loc, TreeType type) {
@@ -1304,7 +1367,11 @@ public class CraftWorld extends CraftRegionAccessor implements World {
         Preconditions.checkArgument(material != null, "Material cannot be null");
         Preconditions.checkArgument(material.isBlock(), "Material.%s must be a block", material);
 
-        FallingBlockEntity entity = FallingBlockEntity.fallCB(world, BlockPos.containing(location.getX(), location.getY(), location.getZ()), CraftBlockType.bukkitToMinecraft(material).defaultBlockState(), SpawnReason.CUSTOM);
+        // Paper start - restore API behavior for spawning falling blocks
+        FallingBlockEntity entity = new FallingBlockEntity(this.world, location.getX(), location.getY(), location.getZ(), CraftBlockType.bukkitToMinecraft(material).defaultBlockState()); // Paper
+        entity.time = 1;
+        this.world.addFreshEntity(entity, SpawnReason.CUSTOM);
+        // Paper end - restore API behavior for spawning falling blocks
         return (FallingBlock) entity.getBukkitEntity();
     }
 
@@ -1313,7 +1380,11 @@ public class CraftWorld extends CraftRegionAccessor implements World {
         Preconditions.checkArgument(location != null, "Location cannot be null");
         Preconditions.checkArgument(data != null, "BlockData cannot be null");
 
-        FallingBlockEntity entity = FallingBlockEntity.fallCB(world, BlockPos.containing(location.getX(), location.getY(), location.getZ()), ((CraftBlockData) data).getState(), SpawnReason.CUSTOM);
+        // Paper start - restore API behavior for spawning falling blocks
+        FallingBlockEntity entity = new FallingBlockEntity(this.world, location.getX(), location.getY(), location.getZ(), ((CraftBlockData) data).getState());
+        entity.time = 1;
+        this.world.addFreshEntity(entity, SpawnReason.CUSTOM);
+        // Paper end - restore API behavior for spawning falling blocks
         return (FallingBlock) entity.getBukkitEntity();
     }
 
@@ -1660,9 +1731,15 @@ public class CraftWorld extends CraftRegionAccessor implements World {
         Preconditions.checkArgument(spawnCategory != null, "SpawnCategory cannot be null");
         Preconditions.checkArgument(CraftSpawnCategory.isValidForLimits(spawnCategory), "SpawnCategory.%s are not supported", spawnCategory);
 
+        // Paper start - Add mobcaps commands
+        return this.getSpawnLimitUnsafe(spawnCategory);
+    }
+
+    public final int getSpawnLimitUnsafe(final SpawnCategory spawnCategory) {
         int limit = spawnCategoryLimit.getOrDefault(spawnCategory, -1);
         if (limit < 0) {
-            limit = server.getSpawnLimit(spawnCategory);
+            limit = this.server.getSpawnLimitUnsafe(spawnCategory);
+            // Paper end - Add mobcaps commands
         }
         return limit;
     }
@@ -1703,6 +1780,7 @@ public class CraftWorld extends CraftRegionAccessor implements World {
 
     @Override
     public void playSound(Location loc, Sound sound, org.bukkit.SoundCategory category, float volume, float pitch, long seed) {
+        org.spigotmc.AsyncCatcher.catchOp("play sound"); // Paper
         if (loc == null || sound == null || category == null) return;
 
         double x = loc.getX();
@@ -1714,6 +1792,7 @@ public class CraftWorld extends CraftRegionAccessor implements World {
 
     @Override
     public void playSound(Location loc, String sound, org.bukkit.SoundCategory category, float volume, float pitch, long seed) {
+        org.spigotmc.AsyncCatcher.catchOp("play sound"); // Paper
         if (loc == null || sound == null || category == null) return;
 
         double x = loc.getX();
@@ -1746,6 +1825,7 @@ public class CraftWorld extends CraftRegionAccessor implements World {
 
     @Override
     public void playSound(Entity entity, Sound sound, org.bukkit.SoundCategory category, float volume, float pitch, long seed) {
+        org.spigotmc.AsyncCatcher.catchOp("play sound"); // Paper
         if (!(entity instanceof CraftEntity craftEntity) || entity.getWorld() != this || sound == null || category == null) return;
 
         ClientboundSoundEntityPacket packet = new ClientboundSoundEntityPacket(CraftSound.bukkitToMinecraftHolder(sound), net.minecraft.sounds.SoundSource.valueOf(category.name()), craftEntity.getHandle(), volume, pitch, seed);
@@ -1757,6 +1837,7 @@ public class CraftWorld extends CraftRegionAccessor implements World {
 
     @Override
     public void playSound(Entity entity, String sound, org.bukkit.SoundCategory category, float volume, float pitch, long seed) {
+        org.spigotmc.AsyncCatcher.catchOp("play sound"); // Paper
         if (!(entity instanceof CraftEntity craftEntity) || entity.getWorld() != this || sound == null || category == null) return;
 
         ClientboundSoundEntityPacket packet = new ClientboundSoundEntityPacket(Holder.direct(SoundEvent.createVariableRangeEvent(ResourceLocation.parse(sound))), net.minecraft.sounds.SoundSource.valueOf(category.name()), craftEntity.getHandle(), volume, pitch, seed);
@@ -2092,6 +2173,28 @@ public class CraftWorld extends CraftRegionAccessor implements World {
         return new CraftStructureSearchResult(CraftStructure.minecraftToBukkit(found.getSecond().value()), CraftLocation.toBukkit(found.getFirst(), this));
     }
 
+    // Paper start
+    @Override
+    public double getCoordinateScale() {
+        return getHandle().dimensionType().coordinateScale();
+    }
+
+    @Override
+    public boolean isFixedTime() {
+        return getHandle().dimensionType().hasFixedTime();
+    }
+
+    @Override
+    public Collection<org.bukkit.Material> getInfiniburn() {
+        return com.google.common.collect.Sets.newHashSet(com.google.common.collect.Iterators.transform(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getTagOrEmpty(this.getHandle().dimensionType().infiniburn()).iterator(), blockHolder -> CraftBlockType.minecraftToBukkit(blockHolder.value())));
+    }
+
+    @Override
+    public void sendGameEvent(Entity sourceEntity, org.bukkit.GameEvent gameEvent, Vector position) {
+        getHandle().gameEvent(sourceEntity != null ? ((CraftEntity) sourceEntity).getHandle() : null, net.minecraft.core.registries.BuiltInRegistries.GAME_EVENT.getHolder(org.bukkit.craftbukkit.util.CraftNamespacedKey.toMinecraft(gameEvent.getKey())).orElseThrow(), org.bukkit.craftbukkit.util.CraftVector.toBlockPos(position));
+    }
+    // Paper end
+
     @Override
     public BiomeSearchResult locateNearestBiome(Location origin, int radius, Biome... biomes) {
         return locateNearestBiome(origin, radius, 32, 64, biomes);
@@ -2219,6 +2322,7 @@ public class CraftWorld extends CraftRegionAccessor implements World {
         ca.spottedleaf.moonrise.common.util.ChunkSystem.scheduleChunkLoad(this.getHandle(), x, z, gen, ChunkStatus.FULL, true, priority, (c) -> {
             net.minecraft.server.MinecraftServer.getServer().scheduleOnMain(() -> {
                 net.minecraft.world.level.chunk.LevelChunk chunk = (net.minecraft.world.level.chunk.LevelChunk) c;
+                if (chunk != null) this.addTicket(x, z); // Paper
                 ret.complete(chunk == null ? null : new CraftChunk(chunk));
             });
         });

@@ -1,6 +1,21 @@
 --- a/net/minecraft/world/entity/TamableAnimal.java
 +++ b/net/minecraft/world/entity/TamableAnimal.java
-@@ -220,11 +_,15 @@
+@@ -91,8 +_,12 @@
+     @Override
+     public boolean handleLeashAtDistance(Entity p_352258_, float p_352278_) {
+         if (this.isInSittingPose()) {
+-            if (p_352278_ > 10.0F) {
+-                this.dropLeash(true, true);
++            if (p_352278_ > (float) this.level().paperConfig().misc.maxLeashDistance.or(Leashable.LEASH_TOO_FAR_DIST)) { // Paper - Configurable max leash distance
++                // Paper start - Expand EntityUnleashEvent
++                org.bukkit.event.entity.EntityUnleashEvent event = new org.bukkit.event.entity.EntityUnleashEvent(this.getBukkitEntity(), org.bukkit.event.entity.EntityUnleashEvent.UnleashReason.DISTANCE, true);
++                if (!event.callEvent()) return false;
++                this.dropLeash(true, event.isDropLeash());
++                // Paper end - Expand EntityUnleashEvent
+             }
+ 
+             return false;
+@@ -220,11 +_,20 @@
  
      @Override
      public void die(DamageSource p_21809_) {
@@ -14,7 +29,12 @@
 +
 +        if (this.dead)
 +        if (!this.level().isClientSide && this.level().getGameRules().getBoolean(GameRules.RULE_SHOWDEATHMESSAGES) && this.getOwner() instanceof ServerPlayer) {
-+            this.getOwner().sendSystemMessage(deathMessage);
++            // Paper start - Add TameableDeathMessageEvent
++            io.papermc.paper.event.entity.TameableDeathMessageEvent event = new io.papermc.paper.event.entity.TameableDeathMessageEvent((org.bukkit.entity.Tameable) getBukkitEntity(), io.papermc.paper.adventure.PaperAdventure.asAdventure(this.getCombatTracker().getDeathMessage()));
++            if (event.callEvent()) {
++                this.getOwner().sendSystemMessage(io.papermc.paper.adventure.PaperAdventure.asVanilla(event.deathMessage()));
++            }
++            // Paper end - Add TameableDeathMessageEvent
 +        }
 +
      }

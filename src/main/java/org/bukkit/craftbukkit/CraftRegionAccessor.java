@@ -76,6 +76,13 @@ public abstract class CraftRegionAccessor implements RegionAccessor {
         return CraftBiome.minecraftHolderToBukkit(getHandle().getNoiseBiome(x >> 2, y >> 2, z >> 2));
     }
 
+    // Paper start
+    @Override
+    public Biome getComputedBiome(int x, int y, int z) {
+        return CraftBiome.minecraftHolderToBukkit(this.getHandle().getBiome(new BlockPos(x, y, z)));
+    }
+    // Paper end
+
     @Override
     public void setBiome(Location location, Biome biome) {
         setBiome(location.getBlockX(), location.getBlockY(), location.getBlockZ(), biome);
@@ -508,4 +515,32 @@ public abstract class CraftRegionAccessor implements RegionAccessor {
 
         throw new IllegalArgumentException("Cannot spawn an entity for " + clazz.getName());
     }
+
+    // Paper start
+    @Override
+    public io.papermc.paper.world.MoonPhase getMoonPhase() {
+        return io.papermc.paper.world.MoonPhase.getPhase(this.getHandle().dayTime() / 24000L);
+    }
+
+    @Override
+    public org.bukkit.NamespacedKey getKey() {
+        return org.bukkit.craftbukkit.util.CraftNamespacedKey.fromMinecraft(this.getHandle().getLevel().dimension().location());
+    }
+
+    public boolean lineOfSightExists(Location from, Location to) {
+        Preconditions.checkArgument(from != null, "from parameter in lineOfSightExists cannot be null");
+        Preconditions.checkArgument(to != null, "to parameter in lineOfSightExists cannot be null");
+        if (from.getWorld() != to.getWorld()) {
+            return false;
+        }
+
+        net.minecraft.world.phys.Vec3 start = new net.minecraft.world.phys.Vec3(from.getX(), from.getY(), from.getZ());
+        net.minecraft.world.phys.Vec3 end = new net.minecraft.world.phys.Vec3(to.getX(), to.getY(), to.getZ());
+        if (end.distanceToSqr(start) > 128D * 128D) {
+            return false; // Return early if the distance is greater than 128 blocks
+        }
+
+        return this.getHandle().clip(new net.minecraft.world.level.ClipContext(start, end, net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, net.minecraft.world.phys.shapes.CollisionContext.empty())).getType() == net.minecraft.world.phys.HitResult.Type.MISS;
+    }
+    // Paper end
 }

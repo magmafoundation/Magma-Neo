@@ -1,14 +1,26 @@
 --- a/net/minecraft/server/level/ServerPlayerGameMode.java
 +++ b/net/minecraft/server/level/ServerPlayerGameMode.java
-@@ -54,12 +_,19 @@
+@@ -51,28 +_,46 @@
+     }
+ 
+     public boolean changeGameModeForPlayer(GameType p_143474_) {
++        // Paper start - Expand PlayerGameModeChangeEvent
++        org.bukkit.event.player.PlayerGameModeChangeEvent event = this.changeGameModeForPlayer(p_143474_, org.bukkit.event.player.PlayerGameModeChangeEvent.Cause.UNKNOWN, null);
++        return event != null && event.isCancelled();
++    }
++
++    @Nullable
++    public org.bukkit.event.player.PlayerGameModeChangeEvent changeGameModeForPlayer(GameType p_143474_, org.bukkit.event.player.PlayerGameModeChangeEvent.Cause cause, @Nullable net.kyori.adventure.text.Component cancelMessage) {
++        // Paper end - Expand PlayerGameModeChangeEvent
          if (p_143474_ == this.gameModeForPlayer) {
-             return false;
+-            return false;
++            return null; // Paper - Expand PlayerGameModeChangeEvent
          } else {
 +            // CraftBukkit start
-+            org.bukkit.event.player.PlayerGameModeChangeEvent event = new org.bukkit.event.player.PlayerGameModeChangeEvent(player.getBukkitEntity(), org.bukkit.GameMode.getByValue(p_143474_.getId()));
++            org.bukkit.event.player.PlayerGameModeChangeEvent event = new org.bukkit.event.player.PlayerGameModeChangeEvent(this.player.getBukkitEntity(), org.bukkit.GameMode.getByValue(p_143474_.getId()), cause, cancelMessage); // Paper
 +            level.getCraftServer().getPluginManager().callEvent(event);
 +            if (event.isCancelled()) {
-+                return false;
++                return event; // Paper - Expand PlayerGameModeChangeEvent
 +            }
 +            // CraftBukkit end
              this.setGameModeForPlayer(p_143474_, this.previousGameModeForPlayer);
@@ -21,7 +33,13 @@
              this.level.updateSleepingPlayerList();
              if (p_143474_ == GameType.CREATIVE) {
                  this.player.resetCurrentImpulseContext();
-@@ -72,7 +_,10 @@
+             }
+ 
+-            return true;
++            return event; // Paper - Expand PlayerGameModeChangeEvent
+         }
+     }
+ 
      protected void setGameModeForPlayer(GameType p_9274_, @Nullable GameType p_9275_) {
          this.previousGameModeForPlayer = p_9275_;
          this.gameModeForPlayer = p_9274_;
@@ -261,7 +279,7 @@
 +
 +        BlockEntity blockentity = this.level.getBlockEntity(p_9281_);
 +        Block block = blockstate1.getBlock();
-+        if (block instanceof GameMasterBlock && !this.player.canUseGameMasterBlocks()) {
++        if (block instanceof GameMasterBlock && !this.player.canUseGameMasterBlocks() && !(block instanceof net.minecraft.world.level.block.CommandBlock && (this.player.isCreative() && this.player.getBukkitEntity().hasPermission("minecraft.commandblock")))) { // Paper - command block permission
 +            this.level.sendBlockUpdated(p_9281_, blockstate1, blockstate1, 3);
 +            return false;
 +        } else if (this.player.blockActionRestricted(this.level, p_9281_, this.gameModeForPlayer)) {

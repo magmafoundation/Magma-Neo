@@ -11,31 +11,56 @@ public class CraftShulkerBullet extends AbstractProjectile implements ShulkerBul
         super(server, entity);
     }
 
-    @Override
-    public ProjectileSource getShooter() {
-        return getHandle().projectileSource;
-    }
-
-    @Override
-    public void setShooter(ProjectileSource shooter) {
-        if (shooter instanceof Entity) {
-            getHandle().setOwner(((CraftEntity) shooter).getHandle());
-        } else {
-            getHandle().setOwner(null);
-        }
-        getHandle().projectileSource = shooter;
-    }
+    // Paper - moved to AbstractProjectile
 
     @Override
     public org.bukkit.entity.Entity getTarget() {
-        return getHandle().getTarget() != null ? getHandle().getTarget().getBukkitEntity() : null;
+        return this.getHandle().getTarget() != null ? this.getHandle().getTarget().getBukkitEntity() : null;
     }
 
     @Override
     public void setTarget(org.bukkit.entity.Entity target) {
-        Preconditions.checkState(!getHandle().generation, "Cannot set target during world generation");
+        Preconditions.checkState(!this.getHandle().generation, "Cannot set target during world generation");
 
-        getHandle().setTarget(target == null ? null : ((CraftEntity) target).getHandle());
+        this.getHandle().setTarget(target == null ? null : ((CraftEntity) target).getHandle());
+    }
+
+    @Override
+    public org.bukkit.util.Vector getTargetDelta() {
+        net.minecraft.world.entity.projectile.ShulkerBullet bullet = this.getHandle();
+        return new org.bukkit.util.Vector(bullet.targetDeltaX, bullet.targetDeltaY, bullet.targetDeltaZ);
+    }
+
+    @Override
+    public void setTargetDelta(org.bukkit.util.Vector vector) {
+        net.minecraft.world.entity.projectile.ShulkerBullet bullet = this.getHandle();
+        bullet.targetDeltaX = vector.getX();
+        bullet.targetDeltaY = vector.getY();
+        bullet.targetDeltaZ = vector.getZ();
+    }
+
+    @Override
+    public org.bukkit.block.BlockFace getCurrentMovementDirection() {
+        net.minecraft.core.Direction dir = this.getHandle().currentMoveDirection;
+        if (dir == null) {
+            return null; // random dir
+        }
+        return org.bukkit.craftbukkit.block.CraftBlock.notchToBlockFace(dir);
+    }
+
+    @Override
+    public void setCurrentMovementDirection(org.bukkit.block.BlockFace movementDirection) {
+        this.getHandle().currentMoveDirection = org.bukkit.craftbukkit.block.CraftBlock.blockFaceToNotch(movementDirection);
+    }
+
+    @Override
+    public int getFlightSteps() {
+        return this.getHandle().flightSteps;
+    }
+
+    @Override
+    public void setFlightSteps(int steps) {
+        this.getHandle().flightSteps = steps;
     }
 
     @Override

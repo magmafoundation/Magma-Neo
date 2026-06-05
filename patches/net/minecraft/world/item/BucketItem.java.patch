@@ -1,5 +1,15 @@
 --- a/net/minecraft/world/item/BucketItem.java
 +++ b/net/minecraft/world/item/BucketItem.java
+@@ -29,6 +_,9 @@
+ import net.minecraft.world.phys.HitResult;
+ 
+ public class BucketItem extends Item implements DispensibleContainerItem {
++
++    private static @Nullable ItemStack itemLeftInHandAfterPlayerBucketEmptyEvent = null; // Paper - Fix PlayerBucketEmptyEvent result itemstack
++
+     public final Fluid content;
+ 
+     public BucketItem(Fluid p_40689_, Item.Properties p_40690_) {
 @@ -55,12 +_,23 @@
              } else if (this.content == Fluids.EMPTY) {
                  BlockState blockstate1 = p_40703_.getBlockState(blockpos);
@@ -38,6 +48,20 @@
                      this.checkExtraContent(p_40704_, p_40703_, itemstack, blockpos2);
                      if (p_40704_ instanceof ServerPlayer) {
                          CriteriaTriggers.PLACED_BLOCK.trigger((ServerPlayer)p_40704_, blockpos2, itemstack);
+@@ -90,6 +_,13 @@
+     }
+ 
+     public static ItemStack getEmptySuccessItem(ItemStack p_40700_, Player p_40701_) {
++        // Paper start - Fix PlayerBucketEmptyEvent result itemstack
++        if (itemLeftInHandAfterPlayerBucketEmptyEvent != null) {
++            ItemStack itemInHand = itemLeftInHandAfterPlayerBucketEmptyEvent;
++            itemLeftInHandAfterPlayerBucketEmptyEvent = null;
++            return itemInHand;
++        }
++        // Paper end - Fix PlayerBucketEmptyEvent result itemstack
+         return !p_40701_.hasInfiniteMaterials() ? new ItemStack(Items.BUCKET) : p_40700_;
+     }
+ 
 @@ -98,7 +_,33 @@
      }
  
@@ -72,7 +96,7 @@
          if (!(this.content instanceof FlowingFluid flowingfluid)) {
              return false;
          } else {
-@@ -125,8 +_,24 @@
+@@ -125,8 +_,25 @@
              }
  
              boolean flag1 = flag2;
@@ -86,6 +110,7 @@
 +                    ((ServerPlayer) p_150716_).getBukkitEntity().updateInventory(); // SPIGOT-4541
 +                    return false;
 +                }
++                itemLeftInHandAfterPlayerBucketEmptyEvent = event.getItemStack() != null ? event.getItemStack().equals(org.bukkit.craftbukkit.inventory.CraftItemStack.asNewCraftStack(net.minecraft.world.item.Items.BUCKET)) ? null : org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(event.getItemStack()) : ItemStack.EMPTY; // Paper - Fix PlayerBucketEmptyEvent result itemstack
 +            }
 +            // CraftBukkit end
              if (!flag1) {

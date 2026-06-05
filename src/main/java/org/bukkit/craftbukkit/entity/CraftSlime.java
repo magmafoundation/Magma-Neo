@@ -15,7 +15,7 @@ public class CraftSlime extends CraftMob implements Slime, CraftEnemy {
 
     @Override
     public void setSize(int size) {
-        getHandle().setSize(size, true);
+        this.getHandle().setSize(size, /* true */ getHandle().isAlive()); // Paper - fix dead slime setSize invincibility
     }
 
     @Override

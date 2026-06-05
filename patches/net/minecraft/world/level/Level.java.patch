@@ -28,7 +28,7 @@
 +    public boolean captureBlockStates = false;
 +    public boolean captureTreeGeneration = false;
 +    public java.util.Map<net.minecraft.core.BlockPos, org.bukkit.craftbukkit.block.CraftBlockState> capturedBlockStates = new java.util.LinkedHashMap<>(); // Paper
-+    public java.util.Map<net.minecraft.core.BlockPos, net.minecraft.world.level.block.entity.BlockEntity> capturedTileEntities = new java.util.HashMap<>();
++    public java.util.Map<net.minecraft.core.BlockPos, net.minecraft.world.level.block.entity.BlockEntity> capturedTileEntities = new java.util.LinkedHashMap<>(); // Paper - Retain block place order when capturing blockstates
 +    public List<net.minecraft.world.entity.item.ItemEntity> captureDrops;
 +    public final it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<org.bukkit.entity.SpawnCategory> ticksPerSpawnCategory = new it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap<>();
 +    public boolean populating;
@@ -200,7 +200,7 @@
      public boolean isInWorldBounds(BlockPos p_46740_) {
          return !this.isOutsideBuildHeight(p_46740_) && isInWorldBoundsHorizontal(p_46740_);
      }
-@@ -187,10 +_,65 @@
+@@ -187,8 +_,70 @@
          return this.getChunk(SectionPos.blockToSectionCoord(p_46746_.getX()), SectionPos.blockToSectionCoord(p_46746_.getZ()));
      }
  
@@ -227,9 +227,17 @@
 +    }
 +
      public LevelChunk getChunk(int p_46727_, int p_46728_) {
-         return (LevelChunk)this.getChunk(p_46727_, p_46728_, ChunkStatus.FULL);
-     }
- 
+-        return (LevelChunk)this.getChunk(p_46727_, p_46728_, ChunkStatus.FULL);
++        // Paper start - Perf: make sure loaded chunks get the inlined variant of this function
++        net.minecraft.server.level.ServerChunkCache cps = ((net.minecraft.server.level.ServerLevel)this).getChunkSource();
++        LevelChunk ifLoaded = cps.getChunkAtIfLoadedImmediately(p_46727_, p_46728_);
++        if (ifLoaded != null) {
++            return ifLoaded;
++        }
++        return (LevelChunk) cps.getChunk(p_46727_, p_46728_, ChunkStatus.FULL, true); // Paper - avoid a method jump
++        // Paper end - Perf: make sure loaded chunks get the inlined variant of this function
++    }
++
 +    // Paper start - if loaded
 +    @Nullable
 +    @Override
@@ -261,11 +269,9 @@
 +    public final FluidState getFluidIfLoaded(BlockPos blockposition) {
 +        ChunkAccess chunk = this.getChunkIfLoadedImmediately(blockposition.getX() >> 4, blockposition.getZ() >> 4);
 +        return chunk == null ? null : chunk.getFluidState(blockposition);
-+    }
-+
+     }
+ 
      @Nullable
-     @Override
-     public ChunkAccess getChunk(int p_46502_, int p_46503_, ChunkStatus p_331611_, boolean p_46505_) {
 @@ -202,13 +_,35 @@
          }
      }

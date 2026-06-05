@@ -123,7 +123,7 @@ public class CraftAreaEffectCloud extends CraftEntity implements AreaEffectCloud
 
     @Override
     public Color getColor() {
-        return Color.fromRGB(getHandle().potionContents.getColor());
+        return Color.fromRGB(this.getHandle().potionContents.getColor() & 0x00FFFFFF); // Paper - skip alpha channel
     }
 
     @Override
@@ -141,7 +141,7 @@ public class CraftAreaEffectCloud extends CraftEntity implements AreaEffectCloud
             removeCustomEffect(effect.getType());
         }
         getHandle().addEffect(CraftPotionUtil.fromBukkit(effect));
-        getHandle().updateColor();
+        // this.getHandle().updateColor(); // Paper - already done above
         return true;
     }
 
@@ -149,7 +149,7 @@ public class CraftAreaEffectCloud extends CraftEntity implements AreaEffectCloud
     public void clearCustomEffects() {
         PotionContents old = getHandle().potionContents;
         getHandle().setPotionContents(new PotionContents(old.potion(), old.customColor(), List.of()));
-        getHandle().updateColor();
+        // this.getHandle().updateColor(); // Paper - already done above
     }
 
     @Override
@@ -227,4 +227,17 @@ public class CraftAreaEffectCloud extends CraftEntity implements AreaEffectCloud
             getHandle().setOwner(null);
         }
     }
+
+    // Paper start - owner API
+    @Override
+    public java.util.UUID getOwnerUniqueId() {
+        return this.getHandle().ownerUUID;
+    }
+
+    @Override
+    public void setOwnerUniqueId(final java.util.UUID ownerUuid) {
+        this.getHandle().setOwner(null);
+        this.getHandle().ownerUUID = ownerUuid;
+    }
+    // Paper end
 }

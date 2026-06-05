@@ -5,7 +5,7 @@
      public static final BlockEntityType<VaultBlockEntity> VAULT = register("vault", BlockEntityType.Builder.of(VaultBlockEntity::new, Blocks.VAULT));
      private final BlockEntityType.BlockEntitySupplier<? extends T> factory;
 +    // Neo: This field will be modified by BlockEntityTypeAddBlocksEvent event. Please use the event to add to this field for vanilla or other mod's BlockEntityTypes.
-     private final Set<Block> validBlocks;
+     public final Set<Block> validBlocks;
      private final Type<?> dataType;
      private final Holder.Reference<BlockEntityType<?>> builtInRegistryHolder = BuiltInRegistries.BLOCK_ENTITY_TYPE.createIntrusiveHolder(this);
 @@ -295,6 +_,13 @@

@@ -22,7 +22,7 @@
 +    }
 +
 +    @Override
-+    public void kickPlayer(Component reason) {
++    public void kickPlayer(Component reason, org.bukkit.event.player.PlayerKickEvent.Cause cause) { // Paper - kick event causes - during login, no event can be called.
 +        disconnect(reason);
 +    }
 +    // CraftBukkit end
@@ -33,11 +33,12 @@
      private static final int MAX_TICKS_BEFORE_LOGIN = 600;
      private final byte[] challenge;
      final MinecraftServer server;
-@@ -59,6 +_,7 @@
+@@ -59,6 +_,8 @@
      public GameProfile authenticatedProfile;
      private final String serverId = "";
      private final boolean transferred;
 +    private net.minecraft.server.level.ServerPlayer player; // CraftBukkit
++    public boolean iKnowThisMayNotBeTheBestIdeaButPleaseDisableUsernameValidation = false; // Paper - username validation overriding
  
      public ServerLoginPacketListenerImpl(MinecraftServer p_10027_, Connection p_10028_, boolean p_320815_) {
          this.server = p_10027_;
@@ -67,20 +68,31 @@
  
          if (this.state == ServerLoginPacketListenerImpl.State.WAITING_FOR_DUPE_DISCONNECT
              && !this.isPlayerAlreadyInWorld(Objects.requireNonNull(this.authenticatedProfile))) {
-@@ -112,6 +_,13 @@
+@@ -112,10 +_,23 @@
          return this.requestedUsername != null ? this.requestedUsername + " (" + s + ")" : s;
      }
  
 +    // CraftBukkit start
 +    @Deprecated
 +    public void disconnect(String s) {
-+        disconnect(Component.literal(s));
++        disconnect(io.papermc.paper.adventure.PaperAdventure.asVanilla(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(s))); // Paper - Fix hex colors not working in some kick messages
 +    }
 +    // CraftBukkit end
 +
      @Override
      public void handleHello(ServerboundHelloPacket p_10047_) {
          Validate.validState(this.state == ServerLoginPacketListenerImpl.State.HELLO, "Unexpected hello packet");
+-        Validate.validState(StringUtil.isValidPlayerName(p_10047_.name()), "Invalid characters in username");
++        // Paper start - Validate usernames
++        if (io.papermc.paper.configuration.GlobalConfiguration.get().proxies.isProxyOnlineMode()
++                && io.papermc.paper.configuration.GlobalConfiguration.get().unsupportedSettings.performUsernameValidation
++                && !this.iKnowThisMayNotBeTheBestIdeaButPleaseDisableUsernameValidation) {
++            Validate.validState(StringUtil.isReasonablePlayerName(p_10047_.name()), "Invalid characters in username", new Object[0]);
++        }
++        // Paper end - Validate usernames
+         this.requestedUsername = p_10047_.name();
+         GameProfile gameprofile = this.server.getSingleplayerProfile();
+         if (gameprofile != null && this.requestedUsername.equalsIgnoreCase(gameprofile.getName())) {
 @@ -125,7 +_,24 @@
                  this.state = ServerLoginPacketListenerImpl.State.KEY;
                  this.connection.send(new ClientboundHelloPacket("", this.server.getKeyPair().getPublic().getEncoded(), this.challenge, true));

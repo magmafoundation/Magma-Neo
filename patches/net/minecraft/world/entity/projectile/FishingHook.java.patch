@@ -105,7 +105,7 @@
                  this.playSound(SoundEvents.FISHING_BOBBER_SPLASH, 0.25F, 1.0F + (this.random.nextFloat() - this.random.nextFloat()) * 0.4F);
                  double d3 = this.getY() + 0.5;
                  serverlevel.sendParticles(
-@@ -371,12 +_,15 @@
+@@ -371,14 +_,24 @@
              }
  
              if (this.timeUntilLured <= 0) {
@@ -120,11 +120,20 @@
 -            this.timeUntilLured = Mth.nextInt(this.random, 100, 600);
 -            this.timeUntilLured = this.timeUntilLured - this.lureSpeed;
 +            // CraftBukkit start - logic to modify fishing wait time
-+            this.timeUntilLured -= (this.applyLure) ? (this.lureSpeed >= this.maxWaitTime ? this.timeUntilLured - 1 : this.lureSpeed ) : 0; // Paper - Fix Lure infinite loop
++            this.resetTimeUntilLured(); // Paper - more projectile api - extract time until lured reset logic
 +            // CraftBukkit end
          }
      }
++
++    // Paper start - more projectile api - extract time until lured reset logic
++    public void resetTimeUntilLured() {
++        this.timeUntilLured = Mth.nextInt(this.random, this.minWaitTime, this.maxWaitTime);
++        this.timeUntilLured -= (this.applyLure) ? (this.lureSpeed >= this.maxWaitTime ? this.timeUntilLured - 1 : this.lureSpeed ) : 0; // Paper - Fix Lure infinite loop
++    }
++    // Paper end - more projectile api - extract time until lured reset logic
  
+     private boolean calculateOpenWater(BlockPos p_37159_) {
+         FishingHook.OpenWaterType fishinghook$openwatertype = FishingHook.OpenWaterType.INVALID;
 @@ -441,7 +_,16 @@
          Player player = this.getPlayerOwner();
          if (!this.level().isClientSide && player != null && !this.shouldStopFishing(player)) {
@@ -142,7 +151,7 @@
                  this.pullEntity(this.hookedIn);
                  CriteriaTriggers.FISHING_ROD_HOOKED.trigger((ServerPlayer)player, p_37157_, this, Collections.emptyList());
                  this.level().broadcastEntityEvent(this, (byte)31);
-@@ -451,14 +_,30 @@
+@@ -451,22 +_,48 @@
                      .withParameter(LootContextParams.ORIGIN, this.position())
                      .withParameter(LootContextParams.TOOL, p_37157_)
                      .withParameter(LootContextParams.THIS_ENTITY, this)
@@ -160,9 +169,16 @@
                  CriteriaTriggers.FISHING_ROD_HOOKED.trigger((ServerPlayer)player, p_37157_, this, list);
  
                  for (ItemStack itemstack : list) {
-                     ItemEntity itementity = new ItemEntity(this.level(), this.getX(), this.getY(), this.getZ(), itemstack);
+-                    ItemEntity itementity = new ItemEntity(this.level(), this.getX(), this.getY(), this.getZ(), itemstack);
++                    // Paper start - new ItemEntity would throw if for whatever reason (mostly shitty datapacks) the itemstack1 turns out to be empty
++                    // if the item stack is empty we instead just have our entityitem as null
++                    ItemEntity itementity = null;
++                    if (!itemstack.isEmpty()) {
++                        itementity = new ItemEntity(this.level(), this.getX(), this.getY(), this.getZ(), itemstack);
++                    }
++                    // Paper end
 +                    // CraftBukkit start
-+                    org.bukkit.event.player.PlayerFishEvent playerFishEvent = new org.bukkit.event.player.PlayerFishEvent((org.bukkit.entity.Player) player.getBukkitEntity(), itementity.getBukkitEntity(), (org.bukkit.entity.FishHook) this.getBukkitEntity(), org.bukkit.event.player.PlayerFishEvent.State.CAUGHT_FISH);
++                    org.bukkit.event.player.PlayerFishEvent playerFishEvent = new org.bukkit.event.player.PlayerFishEvent((org.bukkit.entity.Player) player.getBukkitEntity(), itementity != null ? itementity.getBukkitEntity() : null, (org.bukkit.entity.FishHook) this.getBukkitEntity(), org.bukkit.event.player.PlayerFishEvent.State.CAUGHT_FISH); // Paper - entityitem may be null // Paper - Add hand parameter to PlayerFishEvent
 +                    playerFishEvent.setExpToDrop(this.random.nextInt(6) + 1);
 +                    this.level().getCraftServer().getPluginManager().callEvent(playerFishEvent);
 +
@@ -173,9 +189,15 @@
                      double d0 = player.getX() - this.getX();
                      double d1 = player.getY() - this.getY();
                      double d2 = player.getZ() - this.getZ();
-@@ -466,7 +_,7 @@
-                     itementity.setDeltaMovement(d0 * 0.1, d1 * 0.1 + Math.sqrt(Math.sqrt(d0 * d0 + d1 * d1 + d2 * d2)) * 0.08, d2 * 0.1);
-                     this.level().addFreshEntity(itementity);
+                     double d3 = 0.1;
+-                    itementity.setDeltaMovement(d0 * 0.1, d1 * 0.1 + Math.sqrt(Math.sqrt(d0 * d0 + d1 * d1 + d2 * d2)) * 0.08, d2 * 0.1);
+-                    this.level().addFreshEntity(itementity);
++                    // Paper start - entity item can be null, so we need to check against this
++                    if (itementity != null) {
++                        itementity.setDeltaMovement(d0 * 0.1D, d1 * 0.1D + Math.sqrt(Math.sqrt(d0 * d0 + d1 * d1 + d2 * d2)) * 0.08D, d2 * 0.1D);
++                        this.level().addFreshEntity(itementity);
++                    }
++                    // Paper end
                      player.level()
 -                        .addFreshEntity(new ExperienceOrb(player.level(), player.getX(), player.getY() + 0.5, player.getZ() + 0.5, this.random.nextInt(6) + 1));
 +                        .addFreshEntity(new ExperienceOrb(player.level(), player.getX(), player.getY() + 0.5, player.getZ() + 0.5, this.random.nextInt(6) + 1, org.bukkit.entity.ExperienceOrb.SpawnReason.FISHING, this.getPlayerOwner(), this)); // Paper

@@ -31,7 +31,7 @@
          this.textFilterClient = TextFilterClient.createFromConfig(p_214793_.getProperties().textFilteringConfig);
          this.serverLinks = createServerLinks(p_214793_);
      }
-@@ -103,18 +_,83 @@
+@@ -103,26 +_,101 @@
          Thread thread = new Thread("Server console handler") {
              @Override
              public void run() {
@@ -117,8 +117,27 @@
 +
          thread.setDaemon(true);
          thread.setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandler(LOGGER));
-         thread.start();
-@@ -132,6 +_,19 @@
+-        thread.start();
++        // thread.start(); // Paper - Enhance console tab completions for brigadier commands; moved down
+         LOGGER.info("Starting minecraft server version {}", SharedConstants.getCurrentVersion().getName());
+         if (Runtime.getRuntime().maxMemory() / 1024L / 1024L < 512L) {
+             LOGGER.warn("To start the server with more ram, launch it as \"java -Xmx1024M -Xms1024M -jar minecraft_server.jar\"");
+         }
+ 
++        // Paper start - detect running as root
++        if (io.papermc.paper.util.ServerEnvironment.userIsRootOrAdmin()) {
++            DedicatedServer.LOGGER.warn("****************************");
++            DedicatedServer.LOGGER.warn("YOU ARE RUNNING THIS SERVER AS AN ADMINISTRATIVE OR ROOT USER. THIS IS NOT ADVISED.");
++            DedicatedServer.LOGGER.warn("YOU ARE OPENING YOURSELF UP TO POTENTIAL RISKS WHEN DOING THIS.");
++            DedicatedServer.LOGGER.warn("FOR MORE INFORMATION, SEE https://madelinemiller.dev/blog/root-minecraft-server/");
++            DedicatedServer.LOGGER.warn("****************************");
++        }
++        // Paper end - detect running as root
++
+         LOGGER.info("Loading properties");
+         DedicatedServerProperties dedicatedserverproperties = this.settings.getProperties();
+         if (this.isSingleplayer()) {
+@@ -132,6 +_,28 @@
              this.setPreventProxyConnections(dedicatedserverproperties.preventProxyConnections);
              this.setLocalIp(dedicatedserverproperties.serverIp);
          }
@@ -128,17 +147,64 @@
 +        org.spigotmc.SpigotConfig.registerCommands();
 +        // Spigot end
 +        io.papermc.paper.util.ObfHelper.INSTANCE.getClass(); // Paper - load mappings for stacktrace deobf and etc.
-+        com.destroystokyo.paper.VersionHistoryManager.INSTANCE.getClass(); // Paper - load version history now
 +        // Paper start - initialize global and world-defaults configuration
 +        this.paperConfigurations.initializeGlobalConfiguration(this.registryAccess());
 +        this.paperConfigurations.initializeWorldDefaultsConfiguration(this.registryAccess());
 +        // Paper end - initialize global and world-defaults configuration
++        // Paper start - fix converting txt to json file; convert old users earlier after PlayerList creation but before file load/save
++        if (this.convertOldUsers()) {
++            this.getProfileCache().save(false); // Paper
++        }
++        this.getPlayerList().loadAndSaveFiles(); // Must be after convertNames
++        // Paper end - fix converting txt to json file
++        org.spigotmc.WatchdogThread.doStart(org.spigotmc.SpigotConfig.timeoutTime, org.spigotmc.SpigotConfig.restartOnCrash); // Paper - start watchdog thread
++        thread.start(); // Paper - Enhance console tab completions for brigadier commands; start console thread after MinecraftServer.console & PaperConfig are initialized
 +        io.papermc.paper.command.PaperCommands.registerCommands(this); // Paper - setup /paper command
 +        com.destroystokyo.paper.Metrics.PaperMetrics.startMetrics(); // Paper - start metrics
++        com.destroystokyo.paper.VersionHistoryManager.INSTANCE.getClass(); // Paper - load version history now
++        io.papermc.paper.brigadier.PaperBrigadierProviderImpl.INSTANCE.getClass(); // Paper - init PaperBrigadierProvider
  
          this.setPvpAllowed(dedicatedserverproperties.pvp);
          this.setFlightAllowed(dedicatedserverproperties.allowFlight);
-@@ -161,23 +_,34 @@
+@@ -140,6 +_,20 @@
+         this.setEnforceWhitelist(dedicatedserverproperties.enforceWhitelist);
+         this.worldData.setGameType(dedicatedserverproperties.gamemode);
+         LOGGER.info("Default game type: {}", dedicatedserverproperties.gamemode);
++        // Paper start - Unix domain socket support
++        java.net.SocketAddress bindAddress;
++        if (this.getLocalIp().startsWith("unix:")) {
++            if (!io.netty.channel.epoll.Epoll.isAvailable()) {
++                DedicatedServer.LOGGER.error("**** INVALID CONFIGURATION!");
++                DedicatedServer.LOGGER.error("You are trying to use a Unix domain socket but you're not on a supported OS.");
++                return false;
++            } else if (!io.papermc.paper.configuration.GlobalConfiguration.get().proxies.velocity.enabled && !org.spigotmc.SpigotConfig.bungee) {
++                DedicatedServer.LOGGER.error("**** INVALID CONFIGURATION!");
++                DedicatedServer.LOGGER.error("Unix domain sockets require IPs to be forwarded from a proxy.");
++                return false;
++            }
++            bindAddress = new io.netty.channel.unix.DomainSocketAddress(this.getLocalIp().substring("unix:".length()));
++        } else {
+         InetAddress inetaddress = null;
+         if (!this.getLocalIp().isEmpty()) {
+             inetaddress = InetAddress.getByName(this.getLocalIp());
+@@ -148,12 +_,15 @@
+         if (this.getPort() < 0) {
+             this.setPort(dedicatedserverproperties.serverPort);
+         }
++            bindAddress = new java.net.InetSocketAddress(inetaddress, this.getPort());
++        }
++        // Paper end - Unix domain socket support
+ 
+         this.initializeKeyPair();
+         LOGGER.info("Starting Minecraft server on {}:{}", this.getLocalIp().isEmpty() ? "*" : this.getLocalIp(), this.getPort());
+ 
+         try {
+-            this.getConnection().startTcpServerListener(inetaddress, this.getPort());
++            this.getConnection().bind(bindAddress); // Paper - Unix domain socket support
+         } catch (IOException ioexception) {
+             LOGGER.warn("**** FAILED TO BIND TO PORT!");
+             LOGGER.warn("The exception was: {}", ioexception.toString());
+@@ -161,23 +_,30 @@
              return false;
          }
  
@@ -165,11 +231,10 @@
              LOGGER.warn("To change this, set \"online-mode\" to \"true\" in the server.properties file.");
          }
  
-         if (this.convertOldUsers()) {
+-        if (this.convertOldUsers()) {
 -            this.getProfileCache().save();
-+            this.getProfileCache().save(false); // Paper - Perf: Async GameProfileCache saving
-         }
- 
+-        }
+-
          if (!OldUsersConverter.serverReadyAfterUserconversion(this)) {
              return false;
          } else {

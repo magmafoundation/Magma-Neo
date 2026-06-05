@@ -1,0 +1,45 @@
+--- a/net/minecraft/world/level/block/TargetBlock.java
++++ b/net/minecraft/world/level/block/TargetBlock.java
+@@ -42,6 +_,11 @@
+     @Override
+     protected void onProjectileHit(Level p_57381_, BlockState p_57382_, BlockHitResult p_57383_, Projectile p_57384_) {
+         int i = updateRedstoneOutput(p_57381_, p_57382_, p_57383_, p_57384_);
++        // Paper start - Add TargetHitEvent
++    }
++
++    private static void awardTargetHitCriteria(Projectile p_57384_, BlockHitResult p_57383_, int i) {
++        // Paper end - Add TargetHitEvent
+         if (p_57384_.getOwner() instanceof ServerPlayer serverplayer) {
+             serverplayer.awardStat(Stats.TARGET_HIT);
+             CriteriaTriggers.TARGET_BLOCK_HIT.trigger(serverplayer, p_57384_, p_57383_.getLocation(), i);
+@@ -51,9 +_,30 @@
+     private static int updateRedstoneOutput(LevelAccessor p_57392_, BlockState p_57393_, BlockHitResult p_57394_, Entity p_57395_) {
+         int i = getRedstoneStrength(p_57394_, p_57394_.getLocation());
+         int j = p_57395_ instanceof AbstractArrow ? 20 : 8;
++        // Paper start - Add TargetHitEvent
++        boolean shouldAward = false;
++        if (p_57395_ instanceof Projectile) {
++            final Projectile projectile = (Projectile) p_57395_;
++            final org.bukkit.craftbukkit.block.CraftBlock craftBlock = org.bukkit.craftbukkit.block.CraftBlock.at(p_57392_, p_57394_.getBlockPos());
++            final org.bukkit.block.BlockFace blockFace = org.bukkit.craftbukkit.block.CraftBlock.notchToBlockFace(p_57394_.getDirection());
++            final io.papermc.paper.event.block.TargetHitEvent targetHitEvent = new io.papermc.paper.event.block.TargetHitEvent((org.bukkit.entity.Projectile) projectile.getBukkitEntity(), craftBlock, blockFace, i);
++            if (targetHitEvent.callEvent()) {
++                i = targetHitEvent.getSignalStrength();
++                shouldAward = true;
++            } else {
++                return i;
++            }
++        }
++        // Paper end - Add TargetHitEvent
+         if (!p_57392_.getBlockTicks().hasScheduledTick(p_57394_.getBlockPos(), p_57393_.getBlock())) {
+             setOutputPower(p_57392_, p_57393_, i, p_57394_.getBlockPos(), j);
+         }
++
++        // Paper start - Award Hit Criteria after Block Update
++        if (shouldAward) {
++            awardTargetHitCriteria((Projectile) p_57395_, p_57394_, i);
++        }
++        // Paper end - Award Hit Criteria after Block Update
+ 
+         return i;
+     }

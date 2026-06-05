@@ -1,6 +1,6 @@
 --- a/net/minecraft/world/entity/Entity.java
 +++ b/net/minecraft/world/entity/Entity.java
-@@ -128,7 +_,107 @@
+@@ -128,7 +_,108 @@
  import net.minecraft.world.scores.Team;
  import org.slf4j.Logger;
  
@@ -9,6 +9,7 @@
 +
 +    // CraftBukkit start
 +    private static final int CURRENT_LEVEL = 2;
++    public boolean preserveMotion = true; // Paper - Fix Entity Teleportation and cancel velocity if teleported; keep initial motion on first setPositionRotation
 +    static boolean isLevelAtLeast(CompoundTag tag, int level) {
 +        return tag.contains("Bukkit.updateLevel") && tag.getInt("Bukkit.updateLevel") >= level;
 +    }
@@ -133,7 +134,7 @@
      private final Set<TagKey<Fluid>> fluidOnEyes = new HashSet<>();
      public int invulnerableTime;
      protected boolean firstTick = true;
-@@ -244,6 +_,67 @@
+@@ -244,6 +_,68 @@
      @Nullable
      private BlockState inBlockState = null;
  
@@ -167,6 +168,7 @@
 +    private org.bukkit.util.Vector origin;
 +    @org.jetbrains.annotations.Nullable
 +    private UUID originWorld;
++    public boolean freezeLocked = false; // Paper - Freeze Tick Lock API
 +
 +    public void setOrigin(@javax.annotation.Nonnull org.bukkit.Location location) {
 +        this.origin = location.toVector();
@@ -310,6 +312,17 @@
          this.setYRot(p_19916_ % 360.0F);
          this.setXRot(p_19917_ % 360.0F);
      }
+@@ -389,8 +_,8 @@
+     }
+ 
+     public void setPos(double p_20210_, double p_20211_, double p_20212_) {
+-        this.setPosRaw(p_20210_, p_20211_, p_20212_);
+-        this.setBoundingBox(this.makeBoundingBox());
++        this.setPosRaw(p_20210_, p_20211_, p_20212_, true); // Paper - Block invalid positions and bounding box; force update
++        //this.setBoundingBox(this.makeBoundingBox()); // Paper - Block invalid positions and bounding box; move into setPosRaw
+     }
+ 
+     protected AABB makeBoundingBox() {
 @@ -419,6 +_,15 @@
          this.baseTick();
      }
@@ -317,7 +330,7 @@
 +    // CraftBukkit start
 +    public void postTick() {
 +        // No clean way to break out of ticking once the entity has been copied to a new world, so instead we move the portalling later in the tick cycle
-+        if (!(this instanceof ServerPlayer)) {
++        if (!(this instanceof ServerPlayer) && this.isAlive()) { // Paper - don't attempt to teleport dead entities
 +            this.handlePortal();
 +        }
 +    }
@@ -335,6 +348,15 @@
          if (this.canSpawnSprintParticle()) {
              this.spawnSprintParticle();
          }
+@@ -459,7 +_,7 @@
+                 this.setRemainingFireTicks(this.remainingFireTicks - 1);
+             }
+ 
+-            if (this.getTicksFrozen() > 0) {
++            if (this.getTicksFrozen() > 0 && !freezeLocked) { // Paper - Freeze Tick Lock API
+                 this.setTicksFrozen(0);
+                 this.level().levelEvent(null, 1009, this.blockPosition, 1);
+             }
 @@ -467,7 +_,11 @@
  
          if (this.isInLava()) {
@@ -620,6 +642,42 @@
      }
  
      public void moveRelative(float p_19921_, Vec3 p_19922_) {
+@@ -1398,6 +_,7 @@
+         this.setXRot(Mth.clamp(p_348500_, -90.0F, 90.0F) % 360.0F);
+         this.yRotO = this.getYRot();
+         this.xRotO = this.getXRot();
++        this.setYHeadRot(p_348662_); // Paper - Update head rotation
+     }
+ 
+     public void absMoveTo(double p_20249_, double p_20250_, double p_20251_) {
+@@ -1426,11 +_,19 @@
+     }
+ 
+     public void moveTo(double p_20108_, double p_20109_, double p_20110_, float p_20111_, float p_20112_) {
++        // Paper start - Fix Entity Teleportation and cancel velocity if teleported
++        if (!preserveMotion) {
++            this.deltaMovement = Vec3.ZERO;
++        } else {
++            this.preserveMotion = false;
++        }
++        // Paper end - Fix Entity Teleportation and cancel velocity if teleported
+         this.setPosRaw(p_20108_, p_20109_, p_20110_);
+         this.setYRot(p_20111_);
+         this.setXRot(p_20112_);
+         this.setOldPosAndRot();
+         this.reapplyPosition();
++        this.setYHeadRot(p_20111_); // Paper - Update head rotation
+     }
+ 
+     public final void setOldPosAndRot() {
+@@ -1478,6 +_,7 @@
+     public void push(Entity p_20293_) {
+         if (!this.isPassengerOfSameVehicle(p_20293_)) {
+             if (!p_20293_.noPhysics && !this.noPhysics) {
++                if (this.level.paperConfig().collisions.onlyPlayersCollide && !(p_20293_ instanceof ServerPlayer || this instanceof ServerPlayer)) return; // Paper - Collision option for requiring a player participant
+                 double d0 = p_20293_.getX() - this.getX();
+                 double d1 = p_20293_.getZ() - this.getZ();
+                 double d2 = Mth.absMax(d0, d1);
 @@ -1511,7 +_,21 @@
      }
  
@@ -656,7 +714,7 @@
      public void awardKillScore(Entity p_19953_, int p_19954_, DamageSource p_19955_) {
          if (p_19953_ instanceof ServerPlayer) {
              CriteriaTriggers.ENTITY_KILLED_PLAYER.trigger((ServerPlayer)p_19953_, this, p_19955_);
-@@ -1628,14 +_,21 @@
+@@ -1628,34 +_,76 @@
      }
  
      public boolean saveAsPassenger(CompoundTag p_20087_) {
@@ -679,7 +737,20 @@
                  this.saveWithoutId(p_20087_);
                  return true;
              }
-@@ -1646,16 +_,41 @@
+         }
+     }
+ 
++    // Paper start - Entity serialization api
++    public boolean serializeEntity(CompoundTag compound) {
++        List<Entity> pass = new java.util.ArrayList<>(this.getPassengers());
++        this.passengers = ImmutableList.of();
++        boolean result = save(compound);
++        this.passengers = ImmutableList.copyOf(pass);
++        return result;
++    }
++    // Paper end - Entity serialization api
++
+     public boolean save(CompoundTag p_20224_) {
          return this.isPassenger() ? false : this.saveAsPassenger(p_20224_);
      }
  
@@ -772,7 +843,7 @@
              this.addAdditionalSaveData(p_20241_);
              if (this.isVehicle()) {
                  ListTag listtag1 = new ListTag();
-@@ -1720,6 +_,25 @@
+@@ -1720,6 +_,28 @@
                  }
              }
  
@@ -794,6 +865,9 @@
 +            if (fromNetherPortal) {
 +                p_20241_.putBoolean("Paper.FromNetherPortal", true);
 +            }
++            if (freezeLocked) {
++                p_20241_.putBoolean("Paper.FreezeLock", true);
++            }
 +            // Paper end
              return p_20241_;
          } catch (Throwable throwable) {
@@ -807,7 +881,7 @@
                  if (p_20259_.contains("Tags", 9)) {
                      this.tags.clear();
                      ListTag listtag3 = p_20259_.getList("Tags", 8);
-@@ -1801,6 +_,82 @@
+@@ -1801,6 +_,85 @@
              } else {
                  throw new IllegalStateException("Entity has invalid rotation");
              }
@@ -885,6 +959,9 @@
 +            if (spawnReason == null) {
 +                spawnReason = org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.DEFAULT;
 +            }
++            if (p_20259_.contains("Paper.FreezeLock")) {
++                freezeLocked = p_20259_.getBoolean("Paper.FreezeLock");
++            }
 +            // Paper end
 +
          } catch (Throwable throwable) {
@@ -912,19 +989,24 @@
              this.level().addFreshEntity(itementity);
              return itementity;
          }
-@@ -1904,6 +_,12 @@
+@@ -1904,7 +_,16 @@
          if (this.isAlive() && this instanceof Leashable leashable) {
              if (leashable.getLeashHolder() == p_19978_) {
                  if (!this.level().isClientSide()) {
+-                    leashable.dropLeash(true, !p_19978_.hasInfiniteMaterials());
 +                    // CraftBukkit start - fire PlayerUnleashEntityEvent
-+                    if (org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerUnleashEntityEvent(this, p_19978_, p_19979_).isCancelled()) {
++                    // Paper start - Expand EntityUnleashEvent
++                    org.bukkit.event.player.PlayerUnleashEntityEvent event = org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerUnleashEntityEvent(this, p_19978_, p_19979_, !p_19978_.hasInfiniteMaterials());
++                    if (event.isCancelled()) {
++                        // Paper end - Expand EntityUnleashEvent
 +                        ((net.minecraft.server.level.ServerPlayer) p_19978_).connection.send(new net.minecraft.network.protocol.game.ClientboundSetEntityLinkPacket(this, leashable.getLeashHolder()));
 +                        return InteractionResult.PASS;
 +                    }
 +                    // CraftBukkit end
-                     leashable.dropLeash(true, !p_19978_.hasInfiniteMaterials());
++                    leashable.dropLeash(true, event.isDropLeash()); // Paper - Expand EntityUnleashEvent
                      this.gameEvent(GameEvent.ENTITY_INTERACT, p_19978_);
                  }
+ 
 @@ -1914,6 +_,13 @@
              ItemStack itemstack = p_19978_.getItemInHand(p_19979_);
              if (itemstack.is(Items.LEAD) && leashable.canHaveALeashAttachedToIt()) {
@@ -1155,6 +1237,20 @@
      }
  
      public boolean isInvulnerable() {
+@@ -2535,6 +_,13 @@
+     }
+ 
+     public void restoreFrom(Entity p_20362_) {
++        // Paper start - Forward CraftEntity in teleport command
++        org.bukkit.craftbukkit.entity.CraftEntity bukkitEntity = p_20362_.bukkitEntity;
++        if (bukkitEntity != null) {
++            bukkitEntity.setHandle(this);
++            this.bukkitEntity = bukkitEntity;
++        }
++        // Paper end - Forward CraftEntity in teleport command
+         CompoundTag compoundtag = p_20362_.saveWithoutId(new CompoundTag());
+         compoundtag.remove("Dimension");
+         this.load(compoundtag);
 @@ -2544,6 +_,7 @@
  
      @Nullable
@@ -1163,6 +1259,21 @@
          if (this.level() instanceof ServerLevel serverlevel && !this.isRemoved()) {
              ServerLevel serverlevel1 = p_350951_.newLevel();
              List<Entity> list = this.getPassengers();
+@@ -2595,8 +_,12 @@
+ 
+     protected void removeAfterChangingDimensions() {
+         this.setRemoved(Entity.RemovalReason.CHANGED_DIMENSION);
+-        if (this instanceof Leashable leashable) {
+-            leashable.dropLeash(true, false);
++        if (this instanceof Leashable leashable && leashable.isLeashed()) { // Paper - only call if it is leashed
++            // Paper start - Expand EntityUnleashEvent
++            final org.bukkit.event.entity.EntityUnleashEvent event = new org.bukkit.event.entity.EntityUnleashEvent(this.getBukkitEntity(), org.bukkit.event.entity.EntityUnleashEvent.UnleashReason.UNKNOWN, false); // CraftBukkit
++            event.callEvent();
++            leashable.dropLeash(true, event.isDropLeash());
++            // Paper end - Expand EntityUnleashEvent
+         }
+     }
+ 
 @@ -2667,6 +_,7 @@
          return this.stringUUID;
      }
@@ -1223,6 +1334,50 @@
      }
  
      public final float getEyeHeight(Pose p_20237_) {
+@@ -2966,20 +_,35 @@
+     }
+ 
+     private Stream<Entity> getIndirectPassengersStream() {
++        if (this.passengers.isEmpty()) { return Stream.of(); } // Paper - Optimize indirect passenger iteration
+         return this.passengers.stream().flatMap(Entity::getSelfAndPassengers);
+     }
+ 
+     @Override
+     public Stream<Entity> getSelfAndPassengers() {
++        if (this.passengers.isEmpty()) { return Stream.of(); } // Paper - Optimize indirect passenger iteration
+         return Stream.concat(Stream.of(this), this.getIndirectPassengersStream());
+     }
+ 
+     @Override
+     public Stream<Entity> getPassengersAndSelf() {
++        if (this.passengers.isEmpty()) { return Stream.of(); } // Paper - Optimize indirect passenger iteration
+         return Stream.concat(this.passengers.stream().flatMap(Entity::getPassengersAndSelf), Stream.of(this));
+     }
+ 
+     public Iterable<Entity> getIndirectPassengers() {
++        // Paper start - Optimize indirect passenger iteration
++        if (this.passengers.isEmpty()) { return ImmutableList.of(); }
++        ImmutableList.Builder<Entity> indirectPassengers = ImmutableList.builder();
++        for (Entity passenger : this.passengers) {
++            indirectPassengers.add(passenger);
++            indirectPassengers.addAll(passenger.getIndirectPassengers());
++        }
++        return indirectPassengers.build();
++    }
++
++    private Iterable<Entity> getIndirectPassengers_old() {
++        // Paper end - Optimize indirect passenger iteration
+         return () -> this.getIndirectPassengersStream().iterator();
+     }
+ 
+@@ -2988,6 +_,7 @@
+     }
+ 
+     public boolean hasExactlyOnePlayerPassenger() {
++        if (this.passengers.isEmpty()) { return false; } // Paper - Optimize indirect passenger iteration
+         return this.countPlayerPassengers() == 1;
+     }
+ 
 @@ -3110,9 +_,17 @@
          return Mth.lerp(p_352259_, this.yRotO, this.yRot);
      }
@@ -1338,10 +1493,59 @@
          return this.fluidHeight.getDouble(p_204037_);
      }
  
-@@ -3323,6 +_,7 @@
+@@ -3307,7 +_,40 @@
+         return this.getZ((2.0 * this.random.nextDouble() - 1.0) * p_20263_);
+     }
+ 
++    // Paper start - Block invalid positions and bounding box
++    public static boolean checkPosition(Entity entity, double newX, double newY, double newZ) {
++        if (Double.isFinite(newX) && Double.isFinite(newY) && Double.isFinite(newZ)) {
++            return true;
++        }
++        String entityInfo;
++        try {
++            entityInfo = entity.toString();
++        } catch (Exception ex) {
++            entityInfo = "[Entity info unavailable] ";
++        }
++        LOGGER.error("New entity position is invalid! Tried to set invalid position ({},{},{}) for entity {} located at {}, entity info: {}", newX, newY, newZ, entity.getClass().getName(), entity.position, entityInfo, new Throwable());
++        return false;
++    }
++
+     public final void setPosRaw(double p_20344_, double p_20345_, double p_20346_) {
++        this.setPosRaw(p_20344_, p_20345_, p_20346_, false);
++    }
++
++    public final void setPosRaw(double p_20344_, double p_20345_, double p_20346_, boolean forceBoundingBoxUpdate) {
++        if (!checkPosition(this, p_20344_, p_20345_, p_20346_)) {
++            return;
++        }
++        // Paper end - Block invalid positions and bounding box
++        // Paper start - Fix MC-4
++        if (this instanceof ItemEntity) {
++            if (io.papermc.paper.configuration.GlobalConfiguration.get().misc.fixEntityPositionDesync) {
++                // encode/decode from ClientboundMoveEntityPacket
++                p_20344_ = Mth.lfloor(p_20344_ * 4096.0) * (1 / 4096.0);
++                p_20345_ = Mth.lfloor(p_20345_ * 4096.0) * (1 / 4096.0);
++                p_20346_ = Mth.lfloor(p_20346_ * 4096.0) * (1 / 4096.0);
++            }
++        }
++        // Paper end - Fix MC-4
+         if (this.position.x != p_20344_ || this.position.y != p_20345_ || this.position.z != p_20346_) {
+             this.position = new Vec3(p_20344_, p_20345_, p_20346_);
+             int i = Mth.floor(p_20344_);
+@@ -3323,6 +_,15 @@
  
              this.levelCallback.onMove();
          }
++
++        // Paper start - Block invalid positions and bounding box; don't allow desync of pos and AABB
++        // hanging has its own special logic
++        if (!(this instanceof net.minecraft.world.entity.decoration.HangingEntity) && (forceBoundingBoxUpdate || this.position.x != p_20344_ || this.position.y != p_20345_ || this.position.z != p_20346_)) {
++            this.setBoundingBox(this.makeBoundingBox());
++        }
++        // Paper end - Block invalid positions and bounding box
++
 +        if (this.isAddedToLevel() && !this.level.isClientSide && !this.isRemoved()) this.level.getChunk((int) Math.floor(p_20344_) >> 4, (int) Math.floor(p_20346_) >> 4); // Forge - ensure target chunk is loaded.
      }
  
@@ -1355,12 +1559,10 @@
          if (this.removalReason == null) {
              this.removalReason = p_146876_;
          }
-@@ -3449,6 +_,133 @@
- 
-     public boolean mayInteract(Level p_146843_, BlockPos p_146844_) {
+@@ -3451,6 +_,133 @@
          return true;
-+    }
-+
+     }
+ 
 +    /**
 +     * Neo: Short-lived holder of dropped item entities. Used mainly for Neo hooks and event logic.
 +     * <p>
@@ -1486,6 +1688,23 @@
 +    @Nullable
 +    public final <T> T getCapability(net.neoforged.neoforge.capabilities.EntityCapability<T, @org.jetbrains.annotations.Nullable Void> capability) {
 +        return capability.getCapability(this, null);
-     }
- 
++    }
++
      public Level level() {
+         return this.level;
+     }
+@@ -3550,4 +_,14 @@
+             return this.save;
+         }
+     }
++
++    // Paper start - Expose entity id counter
++    public static int nextEntityId() {
++        return ENTITY_COUNTER.incrementAndGet();
++    }
++
++    public boolean isTicking() {
++        return ((net.minecraft.server.level.ServerChunkCache) level.getChunkSource()).isPositionTicking(this);
++    }
++    // Paper end - Expose entity id counter
+ }

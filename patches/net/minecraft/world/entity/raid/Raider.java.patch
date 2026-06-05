@@ -8,6 +8,14 @@
              p_37866_.discard();
              this.getCurrentRaid().setLeader(this.getWave(), this);
              this.setPatrolLeader(true);
+@@ -279,6 +_,7 @@
+ 
+         @Override
+         public boolean canUse() {
++            if (!this.mob.level().getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_MOBGRIEFING) || !this.mob.canPickUpLoot()) return false; // Paper - respect game and entity rules for picking up items
+             LivingEntity livingentity = this.mob.getLastHurtByMob();
+             return this.mob.getCurrentRaid() == null
+                 && this.mob.isPatrolling()
 @@ -295,7 +_,7 @@
              for (Raider raider : this.mob
                  .level()

@@ -1,0 +1,10 @@
+--- a/net/minecraft/server/ReloadableServerRegistries.java
++++ b/net/minecraft/server/ReloadableServerRegistries.java
+@@ -61,6 +_,7 @@
+         return CompletableFuture.supplyAsync(
+             () -> {
+                 WritableRegistry<T> writableregistry = new MappedRegistry<>(p_335741_.registryKey(), Lifecycle.experimental());
++                io.papermc.paper.registry.PaperRegistryAccess.instance().registerReloadableRegistry(p_335741_.registryKey(), writableregistry); // Paper - register reloadable registry
+                 Map<ResourceLocation, JsonElement> map = new HashMap<>();
+                 String s = Registries.elementsDirPath(p_335741_.registryKey());
+                 SimpleJsonResourceReloadListener.scanDirectory(p_335893_, s, GSON, map);

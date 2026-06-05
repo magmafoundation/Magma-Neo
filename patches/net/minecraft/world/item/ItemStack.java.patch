@@ -258,7 +258,7 @@
      }
  
      public boolean isStackable() {
-@@ -411,39 +_,62 @@
+@@ -411,39 +_,70 @@
      }
  
      public boolean isDamaged() {
@@ -291,8 +291,8 @@
              if (p_220160_ == null || !p_220160_.hasInfiniteMaterials()) {
                  if (p_220158_ > 0) {
                      p_220158_ = EnchantmentHelper.processDurabilityChange(p_346256_, this, p_220158_);
-+                    if (p_220160_ instanceof ServerPlayer) {
-+                        org.bukkit.event.player.PlayerItemDamageEvent event = new org.bukkit.event.player.PlayerItemDamageEvent((org.bukkit.entity.Player) p_220160_.getBukkitEntity(), org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(this), p_220158_);
++                    if (p_220160_ instanceof ServerPlayer serverPlayer) { // Paper - Add EntityDamageItemEvent
++                        org.bukkit.event.player.PlayerItemDamageEvent event = new org.bukkit.event.player.PlayerItemDamageEvent(serverPlayer.getBukkitEntity(), org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(this), p_220158_); // Paper - Add EntityDamageItemEvent
 +                        event.getPlayer().getServer().getPluginManager().callEvent(event);
 +
 +                        if (p_220158_ != event.getDamage() || event.isCancelled()) {
@@ -303,6 +303,14 @@
 +                        }
 +
 +                        p_220158_ = event.getDamage();
++                        // Paper start - Add EntityDamageItemEvent
++                    } else if (p_220160_ != null) {
++                        io.papermc.paper.event.entity.EntityDamageItemEvent event = new io.papermc.paper.event.entity.EntityDamageItemEvent(p_220160_.getBukkitLivingEntity(), org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(this), p_220158_);
++                        if (!event.callEvent()) {
++                            return;
++                        }
++                        p_220158_ = event.getDamage();
++                        // Paper end - Add EntityDamageItemEvent
 +                    }
                      if (p_220158_ <= 0) {
                          return;

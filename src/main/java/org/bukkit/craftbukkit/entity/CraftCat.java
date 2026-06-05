@@ -138,4 +138,26 @@ public class CraftCat extends CraftTameableAnimal implements Cat {
             return getKey().hashCode();
         }
     }
+
+    // Paper start - More cat api
+    @Override
+    public void setLyingDown(boolean lyingDown) {
+        this.getHandle().setLying(lyingDown);
+    }
+
+    @Override
+    public boolean isLyingDown() {
+        return this.getHandle().isLying();
+    }
+
+    @Override
+    public void setHeadUp(boolean headUp) {
+        this.getHandle().setRelaxStateOne(headUp);
+    }
+
+    @Override
+    public boolean isHeadUp() {
+        return this.getHandle().isRelaxStateOne();
+    }
+    // Paper end - More cat api
 }

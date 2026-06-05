@@ -155,13 +155,13 @@ public class CraftInventoryPlayer extends CraftInventory implements org.bukkit.i
             case OFF_HAND:
                 return getItemInOffHand();
             case FEET:
-                return getBoots();
+                return java.util.Objects.requireNonNullElseGet(this.getBoots(), () -> new ItemStack(org.bukkit.Material.AIR)); // Paper - make nonnull
             case LEGS:
-                return getLeggings();
+                return java.util.Objects.requireNonNullElseGet(this.getLeggings(), () -> new ItemStack(org.bukkit.Material.AIR)); // Paper - make nonnull
             case CHEST:
-                return getChestplate();
+                return java.util.Objects.requireNonNullElseGet(this.getChestplate(), () -> new ItemStack(org.bukkit.Material.AIR)); // Paper - make nonnull
             case HEAD:
-                return getHelmet();
+                return java.util.Objects.requireNonNullElseGet(this.getHelmet(), () -> new ItemStack(org.bukkit.Material.AIR)); // Paper - make nonnull
             default:
                 throw new IllegalArgumentException("Not implemented. This is a bug");
         }
@@ -353,4 +353,16 @@ public class CraftInventoryPlayer extends CraftInventory implements org.bukkit.i
     public void setBootsDropChance(float chance) {
         throw new UnsupportedOperationException("Cannot set drop chance for PlayerInventory");
     }
+
+    // Paper start
+    @Override
+    public float getDropChance(EquipmentSlot slot) {
+        return 1;
+    }
+
+    @Override
+    public void setDropChance(EquipmentSlot slot, float chance) {
+        throw new UnsupportedOperationException("Cannot set drop chance for PlayerInventory");
+    }
+    // Paper end
 }

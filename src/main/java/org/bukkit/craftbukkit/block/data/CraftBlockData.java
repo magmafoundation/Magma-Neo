@@ -60,7 +60,7 @@ public class CraftBlockData implements BlockData {
 
     @Override
     public Material getMaterial() {
-        return CraftBlockType.minecraftToBukkit(state.getBlock());
+        return this.state.getBukkitMaterial(); // Paper - optimise getType calls
     }
 
     public net.minecraft.world.level.block.state.BlockState getState() {
@@ -153,7 +153,7 @@ public class CraftBlockData implements BlockData {
         return exactMatch;
     }
 
-    private static final Map<Class<? extends Enum<?>>, Enum<?>[]> ENUM_VALUES = new HashMap<>();
+    private static final Map<Class<? extends Enum<?>>, Enum<?>[]> ENUM_VALUES = new java.util.concurrent.ConcurrentHashMap<>(); // Paper - cache block data strings; make thread safe
 
     /**
      * Convert an NMS Enum (usually a EnumProperty) to its appropriate Bukkit
@@ -178,7 +178,7 @@ public class CraftBlockData implements BlockData {
      * @throws IllegalStateException if the Enum could not be converted
      */
     @SuppressWarnings("unchecked")
-    private static <N extends Enum<N> & StringRepresentable> N toNMS(Enum<?> bukkit, Class<N> nms) {
+    public static <N extends Enum<N> & StringRepresentable> N toNMS(Enum<?> bukkit, Class<N> nms) {
         if (bukkit instanceof BlockFace) {
             return (N) CraftBlock.blockFaceToNotch((BlockFace) bukkit);
         }
@@ -538,7 +538,36 @@ public class CraftBlockData implements BlockData {
         Preconditions.checkState(MAP.put(nms, bukkit) == null, "Duplicate mapping %s->%s", nms, bukkit);
     }
 
+    // Paper start - cache block data strings
+    private static Map<String, CraftBlockData> stringDataCache = new java.util.concurrent.ConcurrentHashMap<>();
+
+    static {
+        // cache all of the default states at startup, will not cache ones with the custom states inside of the
+        // brackets in a different order, though
+        reloadCache();
+    }
+
+    public static void reloadCache() {
+        stringDataCache.clear();
+        Block.BLOCK_STATE_REGISTRY.forEach(blockData -> stringDataCache.put(blockData.toString(), blockData.createCraftBlockData()));
+    }
+    // Paper end - cache block data strings
+
     public static CraftBlockData newData(BlockType blockType, String data) {
+        // Paper start - cache block data strings
+        if (blockType != null) {
+            Block block = CraftBlockType.bukkitToMinecraftNew(blockType);
+            if (block != null) {
+                net.minecraft.resources.ResourceLocation key = BuiltInRegistries.BLOCK.getKey(block);
+                data = data == null ? key.toString() : key + data;
+            }
+        }
+        CraftBlockData cached = stringDataCache.computeIfAbsent(data, s -> createNewData(null, s));
+        return (CraftBlockData) cached.clone();
+    }
+
+    private static CraftBlockData createNewData(BlockType blockType, String data) {
+        // Paper end - cache block data strings
         net.minecraft.world.level.block.state.BlockState blockData;
         Block block = blockType == null ? null : ((CraftBlockType<?>) blockType).getHandle();
         Map<Property<?>, Comparable<?>> parsed = null;
@@ -690,4 +719,32 @@ public class CraftBlockData implements BlockData {
     public BlockState createBlockState() {
         return CraftBlockStates.getBlockState(this.state, null);
     }
+
+    // Paper start - destroy speed API
+    @Override
+    public float getDestroySpeed(final ItemStack itemStack, final boolean considerEnchants) {
+        net.minecraft.world.item.ItemStack nmsItemStack = CraftItemStack.unwrap(itemStack);
+        float speed = nmsItemStack.getDestroySpeed(this.state);
+        if (speed > 1.0F && considerEnchants) {
+            final net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribute = net.minecraft.world.entity.ai.attributes.Attributes.MINING_EFFICIENCY;
+            // Logic sourced from AttributeInstance#calculateValue
+            final double initialBaseValue = attribute.value().getDefaultValue();
+            final org.apache.commons.lang3.mutable.MutableDouble modifiedBaseValue = new org.apache.commons.lang3.mutable.MutableDouble(initialBaseValue);
+            final org.apache.commons.lang3.mutable.MutableDouble baseValMul = new org.apache.commons.lang3.mutable.MutableDouble(1);
+            final org.apache.commons.lang3.mutable.MutableDouble totalValMul = new org.apache.commons.lang3.mutable.MutableDouble(1);
+
+            net.minecraft.world.item.enchantment.EnchantmentHelper.forEachModifier(
+                    nmsItemStack, net.minecraft.world.entity.EquipmentSlot.MAINHAND, (attributeHolder, attributeModifier) -> {
+                        switch (attributeModifier.operation()) {
+                            case ADD_VALUE -> modifiedBaseValue.add(attributeModifier.amount());
+                            case ADD_MULTIPLIED_BASE -> baseValMul.add(attributeModifier.amount());
+                            case ADD_MULTIPLIED_TOTAL -> totalValMul.setValue(totalValMul.doubleValue() * (1D + attributeModifier.amount()));
+                        }
+                    });
+            final double actualModifier = modifiedBaseValue.doubleValue() * baseValMul.doubleValue() * totalValMul.doubleValue();
+            speed += (float) attribute.value().sanitizeValue(actualModifier);
+        }
+        return speed;
+    }
+    // Paper end - destroy speed API
 }

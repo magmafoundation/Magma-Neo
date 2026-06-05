@@ -61,7 +61,18 @@
          this.noPhysics = this.isSpectator();
          if (this.isSpectator()) {
              this.setOnGround(false);
-@@ -260,7 +_,7 @@
+@@ -256,11 +_,18 @@
+ 
+         if (this.isSleeping()) {
+             this.sleepCounter++;
++            // Paper start - Add PlayerDeepSleepEvent
++            if (this.sleepCounter == SLEEP_DURATION) {
++                if (!new io.papermc.paper.event.player.PlayerDeepSleepEvent((org.bukkit.entity.Player) getBukkitEntity()).callEvent()) {
++                    this.sleepCounter = Integer.MIN_VALUE;
++                }
++            }
++            // Paper end - Add PlayerDeepSleepEvent
+             if (this.sleepCounter > 100) {
                  this.sleepCounter = 100;
              }
  
@@ -111,10 +122,16 @@
          if (this.canPlayerFitWithinBlocksAndEntitiesWhen(Pose.SWIMMING)) {
              Pose pose;
              if (this.isFallFlying()) {
-@@ -481,6 +_,13 @@
+@@ -481,6 +_,19 @@
          }
      }
  
++    // Paper start - special close for unloaded inventory
++    public void closeUnloadedInventory(org.bukkit.event.inventory.InventoryCloseEvent.Reason reason) {
++        this.containerMenu = this.inventoryMenu;
++    }
++    // Paper end - special close for unloaded inventory
++
 +    // Paper start - Inventory close reason; unused code, but to keep signatures aligned
 +    public void closeContainer(org.bukkit.event.inventory.InventoryCloseEvent.Reason reason) {
 +        closeContainer();
@@ -187,6 +204,18 @@
          if (p_36179_.isEmpty()) {
              return null;
          } else {
+@@ -697,6 +_,11 @@
+             }
+ 
+             double d0 = this.getEyeY() - 0.3F;
++            // Paper start
++            ItemStack tmp = p_36179_.copy();
++            p_36179_.setCount(0);
++            p_36179_ = tmp;
++            // Paper end
+             ItemEntity itementity = new ItemEntity(this.level(), this.getX(), d0, this.getZ(), p_36179_);
+             itementity.setPickUpDelay(40);
+             if (p_36181_) {
 @@ -722,11 +_,43 @@
                  );
              }
@@ -463,7 +492,7 @@
                  if (p_36347_.getType().is(EntityTypeTags.REDIRECTABLE_PROJECTILE)
                      && p_36347_ instanceof Projectile projectile
                      && projectile.deflect(ProjectileDeflection.AIM_DEFLECT, this, this, true)) {
-@@ -1170,19 +_,29 @@
+@@ -1170,19 +_,30 @@
                          && !this.isPassenger()
                          && p_36347_ instanceof LivingEntity
                          && !this.isSprinting();
@@ -474,6 +503,7 @@
 +                    flag1 = flag1 && !this.level().paperConfig().entities.behavior.disablePlayerCrits; // Paper - Toggleable player crits
                      if (flag1) {
 -                        f *= 1.5F;
++                        damagesource = damagesource.critical(true); // Paper start - critical damage API
 +                        f *= critEvent.getDamageMultiplier();
                      }
  

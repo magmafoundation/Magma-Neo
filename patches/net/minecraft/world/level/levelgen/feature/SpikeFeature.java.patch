@@ -1,0 +1,10 @@
+--- a/net/minecraft/world/level/levelgen/feature/SpikeFeature.java
++++ b/net/minecraft/world/level/levelgen/feature/SpikeFeature.java
+@@ -123,6 +_,7 @@
+                 p_225248_.nextFloat() * 360.0F,
+                 0.0F
+             );
++            endcrystal.generatedByDragonFight = true; // Paper - Fix invulnerable end crystals
+             p_225247_.addFreshEntity(endcrystal);
+             BlockPos blockpos1 = endcrystal.blockPosition();
+             this.setBlock(p_225247_, blockpos1.below(), Blocks.BEDROCK.defaultBlockState());

@@ -50,4 +50,16 @@ public final class CraftCherryLeaves extends org.bukkit.craftbukkit.block.data.C
     public void setWaterlogged(boolean waterlogged) {
         set(WATERLOGGED, waterlogged);
     }
+
+    // Paper start
+    @Override
+    public int getMaximumDistance() {
+        return getMax(DISTANCE);
+    }
+
+    @Override
+    public int getMinimumDistance() {
+        return getMin(DISTANCE);
+    }
+    // Paper end
 }

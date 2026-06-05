@@ -50,6 +50,22 @@
                              if (!this.level.isInWorldBounds(blockpos)) {
                                  break;
                              }
+@@ -249,6 +_,15 @@
+ 
+                             if (f > 0.0F && this.damageCalculator.shouldBlockExplode(this, this.level, blockpos, blockstate, f)) {
+                                 set.add(blockpos);
++                                // Paper start - prevent headless pistons from forming
++                                if (!io.papermc.paper.configuration.GlobalConfiguration.get().unsupportedSettings.allowHeadlessPistons && blockstate.getBlock() == net.minecraft.world.level.block.Blocks.MOVING_PISTON) {
++                                    net.minecraft.world.level.block.entity.BlockEntity extension = this.level.getBlockEntity(blockpos);
++                                    if (extension instanceof net.minecraft.world.level.block.piston.PistonMovingBlockEntity blockEntity && blockEntity.isSourcePiston()) {
++                                        net.minecraft.core.Direction direction = blockstate.getValue(net.minecraft.world.level.block.piston.PistonHeadBlock.FACING);
++                                        set.add(blockpos.relative(direction.getOpposite()));
++                                    }
++                                }
++                                // Paper end - prevent headless pistons from forming
+                             }
+ 
+                             d4 += d0 * 0.3F;
 @@ -268,7 +_,8 @@
          int i1 = Mth.floor(this.y + (double)f2 + 1.0);
          int j2 = Mth.floor(this.z - (double)f2 - 1.0);

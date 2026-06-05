@@ -62,6 +62,14 @@
              this.clearFire();
          }
  
+@@ -201,6 +_,7 @@
+ 
+             this.inGroundTime++;
+         } else {
++            if (tickCount > 200) this.tickDespawn(); // Paper - tick despawnCounter regardless after 10 seconds
+             this.inGroundTime = 0;
+             Vec3 vec32 = this.position();
+             Vec3 vec33 = vec32.add(vec3);
 @@ -224,8 +_,10 @@
                      }
                  }
@@ -75,6 +83,26 @@
                      this.hasImpulse = true;
                      if (projectiledeflection != ProjectileDeflection.NONE) {
                          break;
+@@ -291,6 +_,19 @@
+         }
+     }
+ 
++    // Paper start - Fix cancelling ProjectileHitEvent for piercing arrows
++    @Override
++    public ProjectileDeflection preHitTargetOrDeflectSelf(HitResult hitResult) {
++        if (hitResult instanceof EntityHitResult entityHitResult && this.hitCancelled && this.getPierceLevel() > 0) {
++            if (this.piercingIgnoreEntityIds == null) {
++                this.piercingIgnoreEntityIds = new IntOpenHashSet(5);
++            }
++            this.piercingIgnoreEntityIds.add(entityHitResult.getEntity().getId());
++        }
++        return super.preHitTargetOrDeflectSelf(hitResult);
++    }
++    // Paper end - Fix cancelling ProjectileHitEvent for piercing arrows
++
+     @Override
+     protected double getDefaultGravity() {
+         return 0.05;
 @@ -319,7 +_,8 @@
  
      protected void tickDespawn() {
@@ -93,7 +121,11 @@
                  this.discard();
                  return;
              }
-@@ -376,7 +_,14 @@
+@@ -373,10 +_,18 @@
+             livingentity1.setLastHurtMob(entity);
+         }
+ 
++        if (this.isCritArrow()) damagesource = damagesource.critical(); // Paper - add critical damage API
          boolean flag = entity.getType() == EntityType.ENDERMAN;
          int i = entity.getRemainingFireTicks();
          if (this.isOnFire() && !flag) {

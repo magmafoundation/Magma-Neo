@@ -103,5 +103,37 @@ public abstract class CraftFurnace<T extends AbstractFurnaceBlockEntity> extends
         snapshot.cookSpeedMultiplier = multiplier;
         snapshot.cookingTotalTime = AbstractFurnaceBlockEntity.getTotalCookTime(this.isPlaced() ? this.world.getHandle() : null, snapshot.recipeType, snapshot, snapshot.cookSpeedMultiplier); // Update the snapshot's current total cook time to scale with the newly set multiplier
     }
+
+    @Override
+    public int getRecipeUsedCount(org.bukkit.NamespacedKey furnaceRecipe) {
+        return this.getSnapshot().getRecipesUsed().getInt(org.bukkit.craftbukkit.util.CraftNamespacedKey.toMinecraft(furnaceRecipe));
+    }
+
+    @Override
+    public boolean hasRecipeUsedCount(org.bukkit.NamespacedKey furnaceRecipe) {
+        return this.getSnapshot().getRecipesUsed().containsKey(org.bukkit.craftbukkit.util.CraftNamespacedKey.toMinecraft(furnaceRecipe));
+    }
+
+    @Override
+    public void setRecipeUsedCount(org.bukkit.inventory.CookingRecipe<?> furnaceRecipe, int count) {
+        final net.minecraft.resources.ResourceLocation location = org.bukkit.craftbukkit.util.CraftNamespacedKey.toMinecraft(furnaceRecipe.getKey());
+        java.util.Optional<net.minecraft.world.item.crafting.RecipeHolder<?>> nmsRecipe = (this.isPlaced() ? this.world.getHandle().getRecipeManager() : net.minecraft.server.MinecraftServer.getServer().getRecipeManager()).byKey(location);
+        com.google.common.base.Preconditions.checkArgument(nmsRecipe.isPresent() && nmsRecipe.get().value() instanceof net.minecraft.world.item.crafting.AbstractCookingRecipe, furnaceRecipe.getKey() + " is not recognized as a valid and registered furnace recipe");
+        if (count > 0) {
+            this.getSnapshot().getRecipesUsed().put(location, count);
+        } else {
+            this.getSnapshot().getRecipesUsed().removeInt(location);
+        }
+    }
+
+    @Override
+    public void setRecipesUsed(java.util.Map<org.bukkit.inventory.CookingRecipe<?>, Integer> recipesUsed) {
+        this.getSnapshot().getRecipesUsed().clear();
+        recipesUsed.forEach((recipe, integer) -> {
+            if (integer != null) {
+                this.setRecipeUsedCount(recipe, integer);
+            }
+        });
+    }
     // Paper end
 }

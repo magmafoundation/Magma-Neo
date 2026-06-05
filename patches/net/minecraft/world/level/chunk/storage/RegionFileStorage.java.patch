@@ -61,3 +61,16 @@
          RegionFile regionfile = this.getRegionFile(p_63709_);
          if (p_63710_ == null) {
              regionfile.clear(p_63709_);
+@@ -107,4 +_,12 @@
+     public RegionStorageInfo info() {
+         return this.info;
+     }
++
++    // Paper start - don't write garbage data to disk if writing serialization fails
++    public static final class RegionFileSizeException extends RuntimeException {
++        public RegionFileSizeException(String message) {
++            super(message);
++        }
++    }
++    // Paper end - don't write garbage data to disk if writing serialization fails
+ }

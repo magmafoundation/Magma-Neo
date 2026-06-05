@@ -1,6 +1,12 @@
 --- a/net/minecraft/server/level/ServerEntity.java
 +++ b/net/minecraft/server/level/ServerEntity.java
-@@ -67,8 +_,12 @@
+@@ -62,13 +_,17 @@
+     private Vec3 lastSentMovement;
+     private int tickCount;
+     private int teleportDelay;
+-    private List<Entity> lastPassengers = Collections.emptyList();
++    private List<Entity> lastPassengers = com.google.common.collect.ImmutableList.of(); // Paper - optimize passenger checks
+     private boolean wasRiding;
      private boolean wasOnGround;
      @Nullable
      private List<SynchedEntityData.DataValue<?>> trackedDataValues;
@@ -41,7 +47,7 @@
 +        if (this.entity instanceof ItemFrame itemframe) {
 +            if (true || this.tickCount % 10 == 0) { // CraftBukkit - Moved below, should always enter this block
 +                ItemStack itemstack = itemframe.getItem();
-+                if (this.tickCount % 10 == 0 && itemstack.get(DataComponents.MAP_ID) != null) { // CraftBukkit - Moved this.tickCounter % 10 logic here so item frames do not enter the other blocks
++                if (this.level.paperConfig().maps.itemFrameCursorUpdateInterval > 0 && this.tickCount % this.level.paperConfig().maps.itemFrameCursorUpdateInterval == 0 && itemstack.getItem() instanceof MapItem) { // CraftBukkit - Moved this.tickCounter % 10 logic here so item frames do not enter the other blocks // Paper - Make item frame map cursor update interval configurable
 +                    MapId mapid = itemstack.get(DataComponents.MAP_ID);
 +                    MapItemSavedData mapitemsaveddata = MapItem.getSavedData(itemstack, this.level);
 +                    if (mapitemsaveddata != null) {

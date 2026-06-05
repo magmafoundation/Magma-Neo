@@ -27,7 +27,6 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -283,7 +282,7 @@ public final class CraftServer implements Server {
     protected final DedicatedServer console;
     protected final DedicatedPlayerList playerList;
     private final Map<String, World> worlds = new LinkedHashMap<String, World>();
-    private final Map<Class<?>, Registry<?>> registries = new HashMap<>();
+    // private final Map<Class<?>, Registry<?>> registries = new HashMap<>(); // Paper - replace with RegistryAccess
     private YamlConfiguration configuration;
     private YamlConfiguration commandsConfiguration;
     private final Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
@@ -307,7 +306,9 @@ public final class CraftServer implements Server {
     private final List<CraftPlayer> playerView;
     public int reloadCount;
     public Set<String> activeCompatibilities = Collections.emptySet();
+    private final io.papermc.paper.datapack.PaperDatapackManager datapackManager; // Paper
     public static Exception excessiveVelEx; // Paper - Velocity warnings
+    private final io.papermc.paper.logging.SysoutCatcher sysoutCatcher = new io.papermc.paper.logging.SysoutCatcher(); // Paper
 
     static {
         ConfigurationSerialization.registerClass(CraftOfflinePlayer.class);
@@ -383,7 +384,7 @@ public final class CraftServer implements Server {
         overrideSpawnLimits();
         console.autosavePeriod = configuration.getInt("ticks-per.autosave");
         warningState = WarningState.value(configuration.getString("settings.deprecated-verbose"));
-        TicketType.PLUGIN.timeout = configuration.getInt("chunk-gc.period-in-ticks");
+        TicketType.PLUGIN.timeout = Math.min(20, this.configuration.getInt("chunk-gc.period-in-ticks")); // Paper - cap plugin loads to 1 second
         minimumAPI = ApiVersion.getOrCreateVersion(configuration.getString("settings.minimum-api"));
         loadIcon();
         loadCompatibilities();
@@ -393,6 +394,7 @@ public final class CraftServer implements Server {
         if (configuration.getBoolean("settings.use-map-color-cache")) {
             MapPalette.setMapColorCache(new CraftMapColorCache(logger));
         }
+        datapackManager = new io.papermc.paper.datapack.PaperDatapackManager(console.getPackRepository()); // Paper
     }
 
     public boolean getCommandBlockOverride(String command) {
@@ -432,6 +434,7 @@ public final class CraftServer implements Server {
     }
 
     private void loadCompatibilities() {
+        if (true) return; // Paper - Big nope
         ConfigurationSection compatibilities = configuration.getConfigurationSection("settings.compatibility");
         if (compatibilities == null) {
             activeCompatibilities = Collections.emptySet();
@@ -974,7 +977,7 @@ public final class CraftServer implements Server {
     public void waitForAsyncTasksShutdown() {
         int pollCount = 0;
         // Wait for at most 5 seconds for plugins to close their threads
-        while (pollCount < 10*5 && getScheduler().getActiveWorkers().size() > 0) {
+        while (pollCount < 10 * 5 && getScheduler().getActiveWorkers().size() > 0) {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {}
@@ -987,8 +990,7 @@ public final class CraftServer implements Server {
                     "Nag author(s): '%s' of '%s' about the following: %s",
                     plugin.getPluginMeta().getAuthors(),
                     plugin.getPluginMeta().getDisplayName(),
-                    "This plugin is not properly shutting down its async tasks when it is being shut down. This task may throw errors during the final shutdown logs and might not complete before process dies."
-            ));
+                    "This plugin is not properly shutting down its async tasks when it is being shut down. This task may throw errors during the final shutdown logs and might not complete before process dies."));
             if (console.isDebugging()) io.papermc.paper.util.TraceUtil.dumpTraceForThread(worker.getThread(), "still running"); // Paper - Debugging
         }
     }
@@ -1090,9 +1092,15 @@ public final class CraftServer implements Server {
         File folder = new File(getWorldContainer(), name);
         World world = getWorld(name);
 
-        if (world != null) {
-            return world;
+        // Paper start
+        World worldByKey = this.getWorld(creator.key());
+        if (world != null || worldByKey != null) {
+            if (world == worldByKey) {
+                return world;
+            }
+            throw new IllegalArgumentException("Cannot create a world with key " + creator.key() + " and name " + name + " one (or both) already match a world that exists");
         }
+        // Paper end
 
         if (folder.exists()) {
             Preconditions.checkArgument(folder.isDirectory(), "File (%s) exists and isn't a folder", name);
@@ -1192,7 +1200,7 @@ public final class CraftServer implements Server {
         List<CustomSpawner> list = ImmutableList.of(new PhantomSpawner(), new PatrolSpawner(), new CatSpawner(), new VillageSiege(), new WanderingTraderSpawner(worlddata));
         LevelStem worlddimension = iregistry.get(actualDimension);
 
-        org.bukkit.generator.WorldInfo worldInfo = new CraftWorldInfo(worlddata, worldSession, creator.environment(), worlddimension.type().value());
+        org.bukkit.generator.WorldInfo worldInfo = new CraftWorldInfo(worlddata, worldSession, creator.environment(), worlddimension.type().value(), worlddimension.generator(), this.getHandle().getServer().registryAccess()); // Paper - Expose vanilla BiomeProvider from WorldInfo
         if (biomeProvider == null && generator != null) {
             biomeProvider = generator.getDefaultBiomeProvider(worldInfo);
         }
@@ -1204,7 +1212,7 @@ public final class CraftServer implements Server {
         } else if (name.equals(levelName + "_the_end")) {
             worldKey = net.minecraft.world.level.Level.END;
         } else {
-            worldKey = ResourceKey.create(Registries.DIMENSION, ResourceLocation.withDefaultNamespace(name.toLowerCase(Locale.ROOT)));
+            worldKey = ResourceKey.create(Registries.DIMENSION, ResourceLocation.fromNamespaceAndPath(creator.key().namespace(), creator.key().value()));
         }
 
         // If set to not keep spawn in memory (changed from default) then adjust rule accordingly
@@ -1265,7 +1273,7 @@ public final class CraftServer implements Server {
 
         try {
             if (save) {
-                handle.save(null, true, true);
+                handle.save(null, true, false);  // Paper - Fix saving in unloadWorld
             }
 
             handle.getChunkSource().close(save);
@@ -1300,6 +1308,15 @@ public final class CraftServer implements Server {
         }
         return null;
     }
+
+    // Paper start
+    @Override
+    public World getWorld(net.kyori.adventure.key.Key worldKey) {
+        ServerLevel worldServer = console.getLevel(ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, io.papermc.paper.adventure.PaperAdventure.asVanilla(worldKey)));
+        if (worldServer == null) return null;
+        return worldServer.getWorld();
+    }
+    // Paper end
 
     public void addWorld(World world) {
         // Check if a World already exists with the UID.
@@ -1861,6 +1878,27 @@ public final class CraftServer implements Server {
         return result;
     }
 
+    // Paper start
+    @Override
+    @Nullable
+    public OfflinePlayer getOfflinePlayerIfCached(String name) {
+        Preconditions.checkArgument(name != null, "Name cannot be null");
+        Preconditions.checkArgument(!name.isEmpty(), "Name cannot be empty");
+
+        OfflinePlayer result = getPlayerExact(name);
+        if (result == null) {
+            GameProfile profile = console.getProfileCache().getProfileIfCached(name);
+
+            if (profile != null) {
+                result = getOfflinePlayer(profile);
+            }
+        } else {
+            offlinePlayers.remove(result.getUniqueId());
+        }
+        return result;
+    }
+    // Paper end
+
     @Override
     public OfflinePlayer getOfflinePlayer(UUID id) {
         Preconditions.checkArgument(id != null, "UUID id cannot be null");
@@ -2016,6 +2054,13 @@ public final class CraftServer implements Server {
     public ConsoleCommandSender getConsoleSender() {
         return console.console;
     }
+
+    // Paper start
+    @Override
+    public CommandSender createCommandSender(final java.util.function.Consumer<? super net.kyori.adventure.text.Component> feedback) {
+        return new io.papermc.paper.commands.FeedbackForwardingSender(feedback, this);
+    }
+    // Paper end
 
     public EntityMetadataStore getEntityMetadata() {
         return entityMetadata;
@@ -2187,6 +2232,14 @@ public final class CraftServer implements Server {
 
     @Override
     public int getSpawnLimit(SpawnCategory spawnCategory) {
+        // Paper start - Add mobcaps commands
+        return this.getSpawnLimitUnsafe(spawnCategory);
+    }
+
+    public int getSpawnLimitUnsafe(final SpawnCategory spawnCategory) {
+        // Paper end - Add mobcaps commands
+        Preconditions.checkArgument(spawnCategory != null, "SpawnCategory cannot be null");
+        Preconditions.checkArgument(CraftSpawnCategory.isValidForLimits(spawnCategory), "SpawnCategory." + spawnCategory + " does not have a spawn limit.");
         return spawnCategoryLimit.getOrDefault(spawnCategory, -1);
     }
 
@@ -2530,6 +2583,15 @@ public final class CraftServer implements Server {
                     return (org.bukkit.Tag<T>) new CraftEntityTag(BuiltInRegistries.ENTITY_TYPE, entityTagKey);
                 }
             }
+            // Paper start
+            case org.bukkit.Tag.REGISTRY_GAME_EVENTS -> {
+                Preconditions.checkArgument(clazz == org.bukkit.GameEvent.class, "Game Event namespace must have GameEvent type");
+                TagKey<net.minecraft.world.level.gameevent.GameEvent> gameEventTagKey = TagKey.create(net.minecraft.core.registries.Registries.GAME_EVENT, key);
+                if (net.minecraft.core.registries.BuiltInRegistries.GAME_EVENT.getTag(gameEventTagKey).isPresent()) {
+                    return (org.bukkit.Tag<T>) new io.papermc.paper.CraftGameEventTag(net.minecraft.core.registries.BuiltInRegistries.GAME_EVENT, gameEventTagKey);
+                }
+            }
+            // Paper end
             default -> throw new IllegalArgumentException();
         }
 
@@ -2562,6 +2624,13 @@ public final class CraftServer implements Server {
                 net.minecraft.core.Registry<EntityType<?>> entityTags = BuiltInRegistries.ENTITY_TYPE;
                 return entityTags.getTags().map(pair -> (org.bukkit.Tag<T>) new CraftEntityTag(entityTags, pair.getFirst())).collect(ImmutableList.toImmutableList());
             }
+            // Paper start
+            case org.bukkit.Tag.REGISTRY_GAME_EVENTS -> {
+                Preconditions.checkArgument(clazz == org.bukkit.GameEvent.class);
+                net.minecraft.core.Registry<net.minecraft.world.level.gameevent.GameEvent> gameEvents = net.minecraft.core.registries.BuiltInRegistries.GAME_EVENT;
+                return gameEvents.getTags().map(pair -> (org.bukkit.Tag<T>) new io.papermc.paper.CraftGameEventTag(gameEvents, pair.getFirst())).collect(ImmutableList.toImmutableList());
+            }
+            // Paper end
             default -> throw new IllegalArgumentException();
         }
     }
@@ -2603,7 +2672,7 @@ public final class CraftServer implements Server {
 
     @Override
     public <T extends Keyed> Registry<T> getRegistry(Class<T> aClass) {
-        return (Registry<T>) registries.computeIfAbsent(aClass, key -> CraftRegistry.createRegistry(aClass, console.registryAccess()));
+        return io.papermc.paper.registry.RegistryAccess.registryAccess().getRegistry(aClass); // Paper - replace with RegistryAccess
     }
 
     @Deprecated
@@ -2860,6 +2929,11 @@ public final class CraftServer implements Server {
     @Override
     public com.destroystokyo.paper.entity.ai.MobGoals getMobGoals() {
         return mobGoals;
+    }
+
+    @Override
+    public io.papermc.paper.datapack.PaperDatapackManager getDatapackManager() {
+        return datapackManager;
     }
     // Paper end
 }

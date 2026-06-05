@@ -1,6 +1,15 @@
 --- a/net/minecraft/world/entity/monster/Phantom.java
 +++ b/net/minecraft/world/entity/monster/Phantom.java
-@@ -167,6 +_,11 @@
+@@ -140,7 +_,7 @@
+ 
+     @Override
+     public void aiStep() {
+-        if (this.isAlive() && this.isSunBurnTick()) {
++        if (this.isAlive() && this.shouldBurnInDay && this.isSunBurnTick()) { // Paper - shouldBurnInDay API
+             this.igniteForSeconds(8.0F);
+         }
+ 
+@@ -167,6 +_,14 @@
          }
  
          this.setPhantomSize(p_33132_.getInt("Size"));
@@ -8,11 +17,14 @@
 +        if (p_33132_.hasUUID("Paper.SpawningEntity")) {
 +            this.spawningEntity = p_33132_.getUUID("Paper.SpawningEntity");
 +        }
++        if (p_33132_.contains("Paper.ShouldBurnInDay")) {
++            this.shouldBurnInDay = p_33132_.getBoolean("Paper.ShouldBurnInDay");
++        }
 +        // Paper end
      }
  
      @Override
-@@ -176,6 +_,11 @@
+@@ -176,6 +_,12 @@
          p_33141_.putInt("AY", this.anchorPoint.getY());
          p_33141_.putInt("AZ", this.anchorPoint.getZ());
          p_33141_.putInt("Size", this.getPhantomSize());
@@ -20,11 +32,12 @@
 +        if (this.spawningEntity != null) {
 +            p_33141_.putUUID("Paper.SpawningEntity", this.spawningEntity);
 +        }
++        p_33141_.putBoolean("Paper.ShouldBurnInDay", shouldBurnInDay);
 +        // Paper end
      }
  
      @Override
-@@ -220,6 +_,18 @@
+@@ -220,6 +_,21 @@
          return entitydimensions.scale(1.0F + 0.15F * (float)i);
      }
  
@@ -38,6 +51,9 @@
 +    }
 +
 +    public void setSpawningEntity(java.util.UUID entity) { this.spawningEntity = entity; }
++    private boolean shouldBurnInDay = true;
++    public boolean shouldBurnInDay() { return shouldBurnInDay; }
++    public void setShouldBurnInDay(boolean shouldBurnInDay) { this.shouldBurnInDay = shouldBurnInDay; }
 +    // Paper end
 +
      static enum AttackPhase {

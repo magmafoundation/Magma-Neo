@@ -50,4 +50,11 @@ public final class CraftBed extends org.bukkit.craftbukkit.block.data.CraftBlock
     public java.util.Set<org.bukkit.block.BlockFace> getFaces() {
         return getValues(FACING, org.bukkit.block.BlockFace.class);
     }
+
+    // Paper start
+    @Override
+    public void setOccupied(boolean occupied) {
+        set(CraftBed.OCCUPIED, occupied);
+    }
+    // Paper end
 }

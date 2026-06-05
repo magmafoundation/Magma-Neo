@@ -1,15 +1,33 @@
 --- a/net/minecraft/world/entity/projectile/ThrownPotion.java
 +++ b/net/minecraft/world/entity/projectile/ThrownPotion.java
-@@ -86,7 +_,7 @@
+@@ -81,23 +_,32 @@
+     @Override
+     protected void onHit(HitResult p_37543_) {
+         super.onHit(p_37543_);
++        // Paper start - More projectile API
++        this.splash(p_37543_);
++    }
++
++    public void splash(@Nullable HitResult p_37543_) {
++        // Paper end - More projectile API
+         if (!this.level().isClientSide) {
+             ItemStack itemstack = this.getItem();
              PotionContents potioncontents = itemstack.getOrDefault(DataComponents.POTION_CONTENTS, PotionContents.EMPTY);
              if (potioncontents.is(Potions.WATER)) {
                  this.applyWater();
 -            } else if (potioncontents.hasEffects()) {
 +            } else if (true || potioncontents.hasEffects()) { // CraftBukkit - Call event even if no effects to apply
                  if (this.isLingering()) {
++                    makeAreaOfEffectCloud$position = p_37543_;
                      this.makeAreaOfEffectCloud(potioncontents);
                  } else {
-@@ -98,6 +_,7 @@
++                    applySplash$position = p_37543_;
+                     this.applySplash(
+-                        potioncontents.getAllEffects(), p_37543_.getType() == HitResult.Type.ENTITY ? ((EntityHitResult)p_37543_).getEntity() : null
++                        potioncontents.getAllEffects(), p_37543_ != null && p_37543_.getType() == HitResult.Type.ENTITY ? ((EntityHitResult)p_37543_).getEntity() : null
+                     );
+                 }
+             }
  
              int i = potioncontents.potion().isPresent() && potioncontents.potion().get().value().hasInstantEffects() ? 2007 : 2002;
              this.level().levelEvent(i, this.blockPosition(), potioncontents.getColor());
@@ -17,7 +35,11 @@
              this.discard();
          }
      }
-@@ -126,6 +_,7 @@
+@@ -123,9 +_,11 @@
+         }
+     }
+ 
++    private HitResult applySplash$position = null;
      private void applySplash(Iterable<MobEffectInstance> p_330815_, @Nullable Entity p_37549_) {
          AABB aabb = this.getBoundingBox().inflate(4.0, 2.0, 4.0);
          List<LivingEntity> list = this.level().getEntitiesOfClass(LivingEntity.class, aabb);
@@ -25,3 +47,97 @@
          if (!list.isEmpty()) {
              Entity entity = this.getEffectSource();
  
+@@ -139,20 +_,42 @@
+                         } else {
+                             d1 = 1.0 - Math.sqrt(d0) / 4.0;
+                         }
++                        affected.put((org.bukkit.entity.LivingEntity) livingentity.getBukkitEntity(), d1);
++                    }
++                }
++            }
++        }
++        org.bukkit.event.entity.PotionSplashEvent event = org.bukkit.craftbukkit.event.CraftEventFactory.callPotionSplashEvent(this, applySplash$position, affected);
++        applySplash$position = null;
++        if (!event.isCancelled() && list != null && !list.isEmpty()) { // do not process effects if there are no effects to process
++            Entity entity = this.getEffectSource();
++            for (org.bukkit.entity.LivingEntity victim : event.getAffectedEntities()) {
++                if (!(victim instanceof org.bukkit.craftbukkit.entity.CraftLivingEntity)) {
++                    continue;
++                }
+ 
+-                        for (MobEffectInstance mobeffectinstance : p_330815_) {
+-                            Holder<MobEffect> holder = mobeffectinstance.getEffect();
+-                            if (holder.value().isInstantenous()) {
+-                                holder.value().applyInstantenousEffect(this, this.getOwner(), livingentity, mobeffectinstance.getAmplifier(), d1);
+-                            } else {
+-                                int i = mobeffectinstance.mapDuration(p_267930_ -> (int)(d1 * (double)p_267930_ + 0.5));
+-                                MobEffectInstance mobeffectinstance1 = new MobEffectInstance(
+-                                    holder, i, mobeffectinstance.getAmplifier(), mobeffectinstance.isAmbient(), mobeffectinstance.isVisible()
+-                                );
+-                                if (!mobeffectinstance1.endsWithin(20)) {
+-                                    livingentity.addEffect(mobeffectinstance1, entity);
+-                                }
+-                            }
++                net.minecraft.world.entity.LivingEntity livingentity = ((org.bukkit.craftbukkit.entity.CraftLivingEntity) victim).getHandle();
++                double d1 = event.getIntensity(victim);
++                for (MobEffectInstance mobeffectinstance : p_330815_) {
++                    Holder<MobEffect> holder = mobeffectinstance.getEffect();
++                    // CraftBukkit start - Abide by PVP settings - for players only!
++                    if (!this.level().pvpMode && this.getOwner() instanceof net.minecraft.server.level.ServerPlayer && livingentity instanceof net.minecraft.server.level.ServerPlayer && livingentity != this.getOwner()) {
++                        MobEffect mobeffectlist = holder.value();
++                        if (mobeffectlist == net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN || mobeffectlist == net.minecraft.world.effect.MobEffects.DIG_SLOWDOWN || mobeffectlist == net.minecraft.world.effect.MobEffects.HARM || mobeffectlist == net.minecraft.world.effect.MobEffects.BLINDNESS
++                                || mobeffectlist == net.minecraft.world.effect.MobEffects.HUNGER || mobeffectlist == net.minecraft.world.effect.MobEffects.WEAKNESS || mobeffectlist == net.minecraft.world.effect.MobEffects.POISON) {
++                            continue;
++                        }
++                    }
++                    // CraftBukkit end
++                    if (holder.value().isInstantenous()) {
++                        holder.value().applyInstantenousEffect(this, this.getOwner(), livingentity, mobeffectinstance.getAmplifier(), d1);
++                    } else {
++                        int i = mobeffectinstance.mapDuration(p_267930_ -> (int) (d1 * (double) p_267930_ + 0.5));
++                        MobEffectInstance mobeffectinstance1 = new MobEffectInstance(
++                                holder, i, mobeffectinstance.getAmplifier(), mobeffectinstance.isAmbient(), mobeffectinstance.isVisible()
++                        );
++                        if (!mobeffectinstance1.endsWithin(20)) {
++                            livingentity.addEffect(mobeffectinstance1, entity, org.bukkit.event.entity.EntityPotionEffectEvent.Cause.POTION_SPLASH); // CraftBukkit - add cause
+                         }
+                     }
+                 }
+@@ -160,6 +_,7 @@
+         }
+     }
+ 
++    private @Nullable HitResult makeAreaOfEffectCloud$position;
+     private void makeAreaOfEffectCloud(PotionContents p_332124_) {
+         AreaEffectCloud areaeffectcloud = new AreaEffectCloud(this.level(), this.getX(), this.getY(), this.getZ());
+         if (this.getOwner() instanceof LivingEntity livingentity) {
+@@ -171,7 +_,15 @@
+         areaeffectcloud.setWaitTime(10);
+         areaeffectcloud.setRadiusPerTick(-areaeffectcloud.getRadius() / (float)areaeffectcloud.getDuration());
+         areaeffectcloud.setPotionContents(p_332124_);
+-        this.level().addFreshEntity(areaeffectcloud);
++        boolean noEffects = p_332124_.hasEffects(); // Paper - Fix potions splash events
++        // CraftBukkit start
++        org.bukkit.event.entity.LingeringPotionSplashEvent event = org.bukkit.craftbukkit.event.CraftEventFactory.callLingeringPotionSplashEvent(this, makeAreaOfEffectCloud$position, areaeffectcloud);
++        if (!(event.isCancelled() || areaeffectcloud.isRemoved() || (!event.allowsEmptyCreation() && (noEffects && !areaeffectcloud.potionContents.hasEffects())))) { // Paper - don't spawn area effect cloud if the effects were empty and not changed during the event handling
++            this.level().addFreshEntity(areaeffectcloud);
++        } else {
++            areaeffectcloud.discard(); // CraftBukkit - add Bukkit remove cause
++        }
++        // CraftBukkit end
+     }
+ 
+     private boolean isLingering() {
+@@ -181,7 +_,11 @@
+     private void dowseFire(BlockPos p_150193_) {
+         BlockState blockstate = this.level().getBlockState(p_150193_);
+         if (blockstate.is(BlockTags.FIRE)) {
+-            this.level().destroyBlock(p_150193_, false, this);
++            // CraftBukkit start
++            if (org.bukkit.craftbukkit.event.CraftEventFactory.callEntityChangeBlockEvent(this, p_150193_, blockstate.getFluidState().createLegacyBlock())) { // Paper - fix wrong block state
++                this.level().destroyBlock(p_150193_, false, this);
++            }
++            // CraftBukkit end
+         } else if (AbstractCandleBlock.isLit(blockstate)) {
+             AbstractCandleBlock.extinguish(null, blockstate, this.level(), p_150193_);
+         } else if (CampfireBlock.isLitCampfire(blockstate)) {

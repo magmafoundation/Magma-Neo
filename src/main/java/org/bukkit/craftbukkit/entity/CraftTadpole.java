@@ -27,4 +27,16 @@ public class CraftTadpole extends CraftFish implements org.bukkit.entity.Tadpole
     public void setAge(int age) {
         getHandle().age = age;
     }
+
+    // Paper start
+    @Override
+    public void setAgeLock(boolean lock) {
+        this.getHandle().ageLocked = lock;
+    }
+
+    @Override
+    public boolean getAgeLock() {
+        return this.getHandle().ageLocked;
+    }
+    // Paper end
 }

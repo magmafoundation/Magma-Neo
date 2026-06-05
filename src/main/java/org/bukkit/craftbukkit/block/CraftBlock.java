@@ -219,7 +219,7 @@ public class CraftBlock implements Block {
 
     @Override
     public Material getType() {
-        return CraftBlockType.minecraftToBukkit(world.getBlockState(position).getBlock());
+        return this.world.getBlockState(this.position).getBukkitMaterial(); // Paper - optimise getType calls
     }
 
     @Override
@@ -339,6 +339,13 @@ public class CraftBlock implements Block {
         return getWorld().getBiome(getX(), getY(), getZ());
     }
 
+    // Paper start
+    @Override
+    public Biome getComputedBiome() {
+        return this.getWorld().getComputedBiome(this.getX(), this.getY(), this.getZ());
+    }
+    // Paper end
+
     @Override
     public void setBiome(Biome bio) {
         getWorld().setBiome(getX(), getY(), getZ(), bio);
@@ -438,6 +445,33 @@ public class CraftBlock implements Block {
     public boolean isLiquid() {
         return getNMS().liquid();
     }
+
+    // Paper start
+    @Override
+    public boolean isBuildable() {
+        return this.getNMS().isSolid(); // This is in fact isSolid, despite the fact that isSolid below returns blocksMotion
+    }
+
+    @Override
+    public boolean isBurnable() {
+        return this.getNMS().ignitedByLava();
+    }
+
+    @Override
+    public boolean isReplaceable() {
+        return this.getNMS().canBeReplaced();
+    }
+
+    @Override
+    public boolean isSolid() {
+        return this.getNMS().blocksMotion();
+    }
+
+    @Override
+    public boolean isCollidable() {
+        return getNMS().getBlock().hasCollision;
+    }
+    // Paper end
 
     @Override
     public PistonMoveReaction getPistonMoveReaction() {
@@ -667,6 +701,15 @@ public class CraftBlock implements Block {
     @Override
     public org.bukkit.SoundGroup getBlockSoundGroup() {
         return org.bukkit.craftbukkit.CraftSoundGroup.getSoundGroup(this.getNMS().getSoundType());
+    }
+
+    @Override
+    public String translationKey() {
+        return this.getNMS().getBlock().getDescriptionId();
+    }
+
+    public boolean isValidTool(ItemStack itemStack) {
+        return getDrops(itemStack).size() != 0;
     }
     // Paper end
 }

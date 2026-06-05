@@ -13,14 +13,65 @@
  
          this.portalLocation = p_289768_.exitPortalLocation.orElse(null);
          this.gateways.addAll(p_289768_.gateways.orElseGet(() -> {
-@@ -214,6 +_,7 @@
+@@ -212,8 +_,9 @@
+             this.dragonUUID = enderdragon.getUUID();
+             LOGGER.info("Found that there's a dragon still alive ({})", enderdragon);
              this.dragonKilled = false;
-             if (!flag) {
+-            if (!flag) {
++            if (!flag && this.level.paperConfig().entities.behavior.shouldRemoveDragon) { // Paper - Toggle for removing existing dragon
                  LOGGER.info("But we didn't have a portal, let's remove it.");
 +                enderdragon.setRemovedReason(null);
                  enderdragon.discard();
                  this.dragonUUID = null;
              }
+@@ -370,12 +_,21 @@
+             this.dragonEvent.setVisible(false);
+             this.spawnExitPortal(true);
+             this.spawnNewGateway();
+-            if (!this.previouslyKilled) {
+-                this.level
+-                    .setBlockAndUpdate(
+-                        this.level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, EndPodiumFeature.getLocation(this.origin)),
+-                        Blocks.DRAGON_EGG.defaultBlockState()
+-                    );
++            // Paper start - Add DragonEggFormEvent
++            BlockPos eggPosition = this.level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, EndPodiumFeature.getLocation(this.origin));
++            org.bukkit.craftbukkit.block.CraftBlockState eggState = org.bukkit.craftbukkit.block.CraftBlockStates.getBlockState(this.level, eggPosition);
++            eggState.setData(Blocks.DRAGON_EGG.defaultBlockState());
++            io.papermc.paper.event.block.DragonEggFormEvent eggEvent = new io.papermc.paper.event.block.DragonEggFormEvent(org.bukkit.craftbukkit.block.CraftBlock.at(this.level, eggPosition), eggState,
++                    new org.bukkit.craftbukkit.boss.CraftDragonBattle(this));
++            // Paper end - Add DragonEggFormEvent
++            if (this.level.paperConfig().entities.behavior.enderDragonsDeathAlwaysPlacesDragonEgg || !this.previouslyKilled) { // Paper - Add toggle for always placing the dragon egg
++                // Paper start - Add DragonEggFormEvent
++            } else {
++                eggEvent.setCancelled(true);
++            }
++            if (eggEvent.callEvent()) {
++                eggEvent.getNewState().update(true);
++                // Paper end - Add DragonEggFormEvent
+             }
+ 
+             this.previouslyKilled = true;
+@@ -417,6 +_,11 @@
+             }
+         }
+ 
++        // Paper start - Prevent "softlocked" exit portal generation
++        if (this.portalLocation.getY() <= this.level.getMinBuildHeight()) {
++            this.portalLocation = this.portalLocation.atY(this.level.getMinBuildHeight() + 1);
++        }
++        // Paper end - Prevent "softlocked" exit portal generation
+         if (endpodiumfeature.place(
+             FeatureConfiguration.NONE, this.level, this.level.getChunkSource().getGenerator(), RandomSource.create(), this.portalLocation
+         )) {
+@@ -438,6 +_,7 @@
+             );
+             this.level.addFreshEntity(enderdragon);
+             this.dragonUUID = enderdragon.getUUID();
++            this.resetSpikeCrystals(); // Paper - Reset ender crystals on dragon spawn
+         }
+ 
+         return enderdragon;
 @@ -477,6 +_,13 @@
          return this.previouslyKilled;
      }

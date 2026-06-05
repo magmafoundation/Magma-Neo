@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.PriorityQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -642,4 +643,15 @@ public class CraftScheduler implements BukkitScheduler {
     public BukkitTask runTaskTimerAsynchronously(Plugin plugin, BukkitRunnable task, long delay, long period) throws IllegalArgumentException {
         throw new UnsupportedOperationException("Use BukkitRunnable#runTaskTimerAsynchronously(Plugin, long, long)");
     }
+
+    // Paper start - add getMainThreadExecutor
+    @Override
+    public Executor getMainThreadExecutor(Plugin plugin) {
+        Preconditions.checkArgument(plugin != null, "Plugin cannot be null");
+        return command -> {
+            Preconditions.checkArgument(command != null, "Command cannot be null");
+            this.runTask(plugin, command);
+        };
+    }
+    // Paper end
 }

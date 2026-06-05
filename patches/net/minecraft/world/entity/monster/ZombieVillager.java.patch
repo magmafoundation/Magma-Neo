@@ -28,19 +28,30 @@
      }
  
      @Override
-@@ -186,8 +_,10 @@
+@@ -183,12 +_,20 @@
+     }
+ 
+     public void startConverting(@Nullable UUID p_34384_, int p_34385_) {
++        // Paper start - missing entity behaviour api - converting without entity event
++        this.startConverting(p_34384_, p_34385_, true);
++    }
++
++    public void startConverting(@Nullable UUID p_34384_, int p_34385_, boolean broadcastEntityEvent) {
++        // Paper end - missing entity behaviour api - converting without entity event
          this.conversionStarter = p_34384_;
          this.villagerConversionTime = p_34385_;
          this.getEntityData().set(DATA_CONVERTING_ID, true);
 -        this.removeEffect(MobEffects.WEAKNESS);
 -        this.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, p_34385_, Math.min(this.level().getDifficulty().getId() - 1, 0)));
+-        this.level().broadcastEntityEvent(this, (byte)16);
 +        // CraftBukkit start
 +        this.removeEffect(MobEffects.WEAKNESS, org.bukkit.event.entity.EntityPotionEffectEvent.Cause.CONVERSION);
 +        this.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, p_34385_, Math.min(this.level().getDifficulty().getId() - 1, 0)), org.bukkit.event.entity.EntityPotionEffectEvent.Cause.CONVERSION);
 +        // CraftBukkit end
-         this.level().broadcastEntityEvent(this, (byte)16);
++        if (broadcastEntityEvent) this.level().broadcastEntityEvent(this, (byte) 16); // Paper - missing entity behaviour api - converting without entity event
      }
  
+     @Override
 @@ -213,14 +_,22 @@
      }
  

@@ -1,18 +1,55 @@
 --- a/net/minecraft/world/entity/boss/enderdragon/EndCrystal.java
 +++ b/net/minecraft/world/entity/boss/enderdragon/EndCrystal.java
-@@ -56,7 +_,11 @@
+@@ -25,6 +_,7 @@
+     );
+     private static final EntityDataAccessor<Boolean> DATA_SHOW_BOTTOM = SynchedEntityData.defineId(EndCrystal.class, EntityDataSerializers.BOOLEAN);
+     public int time;
++    public boolean generatedByDragonFight = false; // Paper - Fix invulnerable end crystals
+ 
+     public EndCrystal(EntityType<? extends EndCrystal> p_31037_, Level p_31038_) {
+         super(p_31037_, p_31038_);
+@@ -56,8 +_,23 @@
          if (this.level() instanceof ServerLevel) {
              BlockPos blockpos = this.blockPosition();
              if (((ServerLevel)this.level()).getDragonFight() != null && this.level().getBlockState(blockpos).isAir()) {
 -                this.level().setBlockAndUpdate(blockpos, BaseFireBlock.getState(this.level(), blockpos));
+-            }
 +                // CraftBukkit start
 +                if (!org.bukkit.craftbukkit.event.CraftEventFactory.callBlockIgniteEvent(this.level(), blockpos, this).isCancelled()) {
 +                    this.level().setBlockAndUpdate(blockpos, BaseFireBlock.getState(this.level(), blockpos));
 +                }
 +                // CraftBukkit end
-             }
++            }
++            // Paper start - Fix invulnerable end crystals
++            if (this.level().paperConfig().unsupportedSettings.fixInvulnerableEndCrystalExploit && this.generatedByDragonFight && this.isInvulnerable()) {
++                if (!java.util.Objects.equals(((ServerLevel) this.level()).uuid, this.getOriginWorld())
++                        || ((ServerLevel) this.level()).getDragonFight() == null
++                        || ((ServerLevel) this.level()).getDragonFight().respawnStage == null
++                        || ((ServerLevel) this.level()).getDragonFight().respawnStage.ordinal() > net.minecraft.world.level.dimension.end.DragonRespawnAnimation.SUMMONING_DRAGON.ordinal()) {
++                    this.setInvulnerable(false);
++                    this.setBeamTarget(null);
++                }
++            }
++            // Paper end - Fix invulnerable end crystals
          }
      }
+ 
+@@ -68,6 +_,7 @@
+         }
+ 
+         p_31062_.putBoolean("ShowBottom", this.showsBottom());
++        if (this.generatedByDragonFight) p_31062_.putBoolean("Paper.GeneratedByDragonFight", this.generatedByDragonFight); // Paper - Fix invulnerable end crystals
+     }
+ 
+     @Override
+@@ -76,6 +_,7 @@
+         if (p_31055_.contains("ShowBottom", 1)) {
+             this.setShowBottom(p_31055_.getBoolean("ShowBottom"));
+         }
++        if (p_31055_.contains("Paper.GeneratedByDragonFight", 1)) this.generatedByDragonFight = p_31055_.getBoolean("Paper.GeneratedByDragonFight"); // Paper - Fix invulnerable end crystals
+     }
+ 
+     @Override
 @@ -91,11 +_,29 @@
              return false;
          } else {

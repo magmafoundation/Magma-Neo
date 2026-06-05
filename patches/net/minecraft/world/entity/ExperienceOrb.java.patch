@@ -1,7 +1,7 @@
 --- a/net/minecraft/world/entity/ExperienceOrb.java
 +++ b/net/minecraft/world/entity/ExperienceOrb.java
 @@ -36,8 +_,64 @@
-     private int count = 1;
+     public int count = 1;
      private Player followingPlayer;
  
 +    // Paper start

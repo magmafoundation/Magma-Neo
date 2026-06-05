@@ -1,0 +1,63 @@
+--- a/net/minecraft/world/entity/ai/behavior/Behavior.java
++++ b/net/minecraft/world/entity/ai/behavior/Behavior.java
+@@ -14,6 +_,10 @@
+     private long endTimestamp;
+     private final int minDuration;
+     private final int maxDuration;
++    // Paper start - configurable behavior tick rate and timings
++    private final String configKey;
++    private final co.aikar.timings.Timing timing;
++    // Paper end - configurable behavior tick rate and timings
+ 
+     public Behavior(Map<MemoryModuleType<?>, MemoryStatus> p_22528_) {
+         this(p_22528_, 60);
+@@ -27,6 +_,15 @@
+         this.minDuration = p_22534_;
+         this.maxDuration = p_22535_;
+         this.entryCondition = p_22533_;
++        // Paper start - configurable behavior tick rate and timings
++        String key = io.papermc.paper.util.MappingEnvironment.reobf() ? io.papermc.paper.util.ObfHelper.INSTANCE.deobfClassName(this.getClass().getName()) : this.getClass().getName();
++        int lastSeparator = key.lastIndexOf('.');
++        if (lastSeparator != -1) {
++            key = key.substring(lastSeparator + 1);
++        }
++        this.configKey = key.toLowerCase(java.util.Locale.ROOT);
++        this.timing = co.aikar.timings.MinecraftTimings.getBehaviorTimings(configKey);
++        // Paper end - configurable behavior tick rate and timings
+     }
+ 
+     @Override
+@@ -36,11 +_,19 @@
+ 
+     @Override
+     public final boolean tryStart(ServerLevel p_22555_, E p_22556_, long p_22557_) {
++        // Paper start - configurable behavior tick rate and timings
++        int tickRate = java.util.Objects.requireNonNullElse(p_22555_.paperConfig().tickRates.behavior.get(p_22556_.getType(), this.configKey), -1);
++        if (tickRate > -1 && p_22557_ < this.endTimestamp + tickRate) {
++            return false;
++        }
++        // Paper end - configurable behavior tick rate and timings
+         if (this.hasRequiredMemories(p_22556_) && this.checkExtraStartConditions(p_22555_, p_22556_)) {
+             this.status = Behavior.Status.RUNNING;
+             int i = this.minDuration + p_22555_.getRandom().nextInt(this.maxDuration + 1 - this.minDuration);
+             this.endTimestamp = p_22557_ + (long)i;
++            this.timing.startTiming(); // Paper - behavior timings
+             this.start(p_22555_, p_22556_, p_22557_);
++            this.timing.stopTiming(); // Paper - behavior timings
+             return true;
+         } else {
+             return false;
+@@ -52,11 +_,13 @@
+ 
+     @Override
+     public final void tickOrStop(ServerLevel p_22559_, E p_22560_, long p_22561_) {
++        this.timing.startTiming(); // Paper - behavior timings
+         if (!this.timedOut(p_22561_) && this.canStillUse(p_22559_, p_22560_, p_22561_)) {
+             this.tick(p_22559_, p_22560_, p_22561_);
+         } else {
+             this.doStop(p_22559_, p_22560_, p_22561_);
+         }
++        this.timing.stopTiming(); // Paper - behavior timings
+     }
+ 
+     protected void tick(ServerLevel p_22551_, E p_22552_, long p_22553_) {

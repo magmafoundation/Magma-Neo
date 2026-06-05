@@ -56,20 +56,7 @@ public class CraftAbstractArrow extends AbstractProjectile implements AbstractAr
         getHandle().setCritArrow(critical);
     }
 
-    @Override
-    public ProjectileSource getShooter() {
-        return getHandle().projectileSource;
-    }
-
-    @Override
-    public void setShooter(ProjectileSource shooter) {
-        if (shooter instanceof Entity) {
-            getHandle().setOwner(((CraftEntity) shooter).getHandle());
-        } else {
-            getHandle().setOwner(null);
-        }
-        getHandle().projectileSource = shooter;
-    }
+    // Paper - moved to AbstractProjectile
 
     @Override
     public boolean isInBlock() {
@@ -127,6 +114,7 @@ public class CraftAbstractArrow extends AbstractProjectile implements AbstractAr
 
     @Override
     public ItemStack getWeapon() {
+        if (this.getHandle().getWeaponItem() == null) return null; // Paper - fix NPE
         return CraftItemStack.asBukkitCopy(getHandle().getWeaponItem());
     }
 
@@ -146,4 +134,36 @@ public class CraftAbstractArrow extends AbstractProjectile implements AbstractAr
     public String toString() {
         return "CraftArrow";
     }
+
+    // Paper start
+    @Override
+    public CraftItemStack getItemStack() {
+        return CraftItemStack.asCraftMirror(this.getHandle().getPickupItem());
+    }
+    @Override
+    public void setItemStack(final ItemStack stack) {
+        Preconditions.checkArgument(stack != null, "ItemStack cannot be null");
+        this.getHandle().setPickupItemStack(CraftItemStack.asNMSCopy(stack));
+    }
+
+    @Override
+    public void setLifetimeTicks(int ticks) {
+        this.getHandle().life = ticks;
+    }
+
+    @Override
+    public int getLifetimeTicks() {
+        return this.getHandle().life;
+    }
+
+    @Override
+    public org.bukkit.Sound getHitSound() {
+        return org.bukkit.craftbukkit.CraftSound.minecraftToBukkit(this.getHandle().soundEvent);
+    }
+
+    @Override
+    public void setHitSound(org.bukkit.Sound sound) {
+        this.getHandle().setSoundEvent(org.bukkit.craftbukkit.CraftSound.bukkitToMinecraft(sound));
+    }
+    // Paper end
 }
