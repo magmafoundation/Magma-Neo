@@ -24,7 +24,9 @@ import org.magmafoundation.magma.launcher.installer.MagmaInstaller
 import org.magmafoundation.magma.launcher.utils.JarTool
 import org.magmafoundation.magma.launcher.utils.ServerInitHelper
 import org.magmafoundation.magma.launcher.utils.SystemType
+import java.io.File
 import java.nio.file.spi.FileSystemProvider
+import java.time.Instant
 import java.util.function.Consumer
 import java.util.jar.Manifest
 
@@ -32,6 +34,29 @@ import java.util.jar.Manifest
 var ui: UI? = null
 
 fun main(args: Array<String>) {
+    withStartupErrorReport(File("startup-error.log")) { launch(args) }
+}
+
+internal fun withStartupErrorReport(errorLog: File, startup: () -> Unit) {
+    try {
+        startup()
+    } catch (failure: Throwable) {
+        try {
+            errorLog.writeText(
+                "Magma startup failed at ${Instant.now()}\n" +
+                    "Java version: ${System.getProperty("java.version")}\n\n" +
+                    failure.stackTraceToString(),
+                Charsets.UTF_8
+            )
+            System.err.println("Startup error saved to ${errorLog.absolutePath}")
+        } catch (reportFailure: Throwable) {
+            failure.addSuppressed(reportFailure)
+        }
+        throw failure
+    }
+}
+
+private fun launch(args: Array<String>) {
 
     ui = UI(!isArgumentPresent(args, "--no-ui"))
 

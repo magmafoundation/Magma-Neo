@@ -13,28 +13,7 @@
                          }
                      }
                  }
-@@ -166,8 +_,20 @@
-     }
- 
-     private static void applyEffects(Level p_155444_, BlockPos p_155445_, List<BlockPos> p_155446_) {
-+        // CraftBukkit start
-+        applyEffects(p_155444_, p_155445_, getRange(p_155446_));
-+    }
-+
-+    public static int getRange(List<BlockPos> p_155446_) {
-+        // CraftBukkit end
-         int i = p_155446_.size();
-         int j = i / 7 * 16;
-+        // CraftBukkit start
-+        return j;
-+    }
-+
-+    private static void applyEffects(Level p_155444_, BlockPos p_155445_, int j) { // j = effect range in blocks
-+        // CraftBukkit end
-         int k = p_155445_.getX();
-         int l = p_155445_.getY();
-         int i1 = p_155445_.getZ();
-@@ -178,13 +_,19 @@
+@@ -178,13 +_,23 @@
          if (!list.isEmpty()) {
              for (Player player : list) {
                  if (p_155445_.closerThan(player.blockPosition(), (double)j) && player.isInWaterOrRain()) {
@@ -45,6 +24,10 @@
          }
      }
  
++    public static int getRange(List<BlockPos> p_155446_) {
++        return p_155446_.size() / 7 * 16;
++    }
++
      private static void updateDestroyTarget(Level p_155409_, BlockPos p_155410_, BlockState p_155411_, List<BlockPos> p_155412_, ConduitBlockEntity p_155413_) {
 +        // CraftBukkit start - add "damageTarget" boolean
 +        updateDestroyTarget(p_155409_, p_155410_, p_155411_, p_155412_, p_155413_, true);
