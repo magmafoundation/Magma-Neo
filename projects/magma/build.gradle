@@ -167,6 +167,10 @@ tasks.register('generateMagmaLibs', dev.vankka.dependencydownload.task.GenerateD
     file = "data/magma_libraries.txt"
 }
 
+tasks.named('jar') {
+    dependsOn tasks.named('generateMagmaLibs')
+}
+
 neoDev {
     runs {
         configureEach {
